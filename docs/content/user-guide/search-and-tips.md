@@ -7,9 +7,11 @@ sidebar_position: 14
 
 ## Search
 
-The search bar at the top of the editor searches across **classes, attributes, associations, enum entries, and packages**, scoped by default to the currently selected workspace. Results are shown as a ranked list with the matching URI highlighted; clicking a result jumps to that element in the editor (selecting the right workspace, graph, package, and class as needed).
+The search bar at the top of the editor searches across **classes, attributes, associations, enum entries, and packages**, in all workspaces by default. The picker at the start of the field narrows it to the current workspace, schema, or package. Results are shown as a ranked list with the matching URI highlighted; clicking a result jumps to that element in the editor (selecting the right workspace, graph, package, and class as needed).
 
 Search is the fastest way to find, for example, every class with `Terminal` in its name across all profiles in a workspace, or every association whose role contains a given fragment.
+
+In a narrow window the search bar folds into a magnifier button so that the menu bar keeps its room. Click it or press **Ctrl+F** to open the field below the toolbar, and press **Esc** to close it again.
 
 ## Tips & keyboard shortcuts
 

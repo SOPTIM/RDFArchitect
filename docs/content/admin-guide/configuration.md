@@ -21,6 +21,8 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |
 | Session cookie `secure` flag       | `server.servlet.session.cookie.secure`  | `false` (set to `true` in production) |
 | Session cookie `SameSite` policy   | `server.servlet.session.cookie.same-site` | `lax`                      |
+| Load workspaces from Fuseki into each new session | `database.enabled` | `true`                 |
+| Share Snapshot (its endpoints)     | `snapshots.enabled`                     | `true`                       |
 
 ## Embedding RDFArchitect in another application
 
@@ -89,3 +91,8 @@ The frontend is a static SPA whose runtime variables are rewritten at container 
 | --------------------- | ---------------- | ----------------------------------------------------- |
 | `PUBLIC_BACKEND_URL`  | `/api`           | Where the frontend expects to find the backend.       |
 | `PUBLIC_EMBED_SESSION_HANDSHAKE` | `false` | Answer an embedding host's request for the session id (see [above](#letting-the-host-read-the-session-live-workspaces)). |
+| `PUBLIC_SHARE_SNAPSHOT_ENABLED` | `true` | Offer Share Snapshot. Switch it off together with the backend's `snapshots.enabled`. |
+
+## Switching off Share Snapshot
+
+A deployment without a place to keep snapshots, or one that must not keep any, switches the feature off on both sides: `SNAPSHOTS_ENABLED=false` on the backend container removes the snapshot endpoints, and `PUBLIC_SHARE_SNAPSHOT_ENABLED=false` on the frontend container removes **Share Snapshot** from the menus. The [desktop app](/user-guide/desktop-app) runs this way.

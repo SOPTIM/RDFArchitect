@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.rdf.graph.wrapper;
 
-import lombok.Getter;
-
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -40,7 +38,7 @@ import java.util.UUID;
 public class DiagramLayoutDelta
         implements DiagramLayout, TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
-    @Getter private final MRID defaultPackageMRID;
+    private volatile MRID defaultPackageMRID;
     private final RDFGraphDelta inner;
 
     public DiagramLayoutDelta(WorkspaceTransactionContext txnContext) {
@@ -50,6 +48,16 @@ public class DiagramLayoutDelta
         prefixModel.setNsPrefix(CIM.PREFIX, CIM.NAMESPACE);
         prefixModel.setNsPrefix("rdf", RDF.uri);
         this.inner = new RDFGraphDelta(emptyBase, txnContext, this);
+    }
+
+    @Override
+    public MRID getDefaultPackageMRID() {
+        return defaultPackageMRID;
+    }
+
+    @Override
+    public void restoreDefaultPackageMRID(MRID defaultPackageMRID) {
+        this.defaultPackageMRID = defaultPackageMRID;
     }
 
     /**

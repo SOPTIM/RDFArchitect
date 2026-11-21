@@ -70,7 +70,7 @@ public class DatasetFilter implements Filter {
     }
 
     private boolean hasDatasetAccess(String method, String uri, String datasetName) {
-        // Creating a workspace, and the two uploads that bring the workspace they address into
+        // Creating a workspace, and the uploads that bring the workspace they address into
         // existence, are the only requests allowed to name one that does not exist yet. An import's
         // progress also stays readable when it failed before the workspace came into existence.
         if ("PUT".equals(method)
@@ -78,7 +78,11 @@ public class DatasetFilter implements Filter {
                         || uri.matches(PREFIX + "[^/]+/graphs/[^/]+/content"))) {
             return true;
         }
-        if (uri.matches(PREFIX + "[^/]+/graphs/content/imports(/.*)?")) {
+        if ("POST".equals(method) && uri.matches(PREFIX + "[^/]+/import")) {
+            return true;
+        }
+        if (uri.matches(PREFIX + "[^/]+/imports(/.*)?")
+                || uri.matches(PREFIX + "[^/]+/graphs/content/imports(/.*)?")) {
             return true;
         }
         var datasets = databasePort.listDatasets();

@@ -747,6 +747,24 @@ public class Workspace {
         }
     }
 
+    /**
+     * Returns the change the workspace stands on, see {@link HistoryPosition#currentChangeId()}, or
+     * {@code null} while another thread is writing to it. Does not wait for that write: an import
+     * holds the workspace for as long as it runs, and the answer would be out of date the moment
+     * the write commits anyway.
+     */
+    public UUID currentChangeId() {
+        var lock = rwLock.readLock();
+        if (!lock.tryLock()) {
+            return null;
+        }
+        try {
+            return historyPosition().currentChangeId();
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /** Returns where the workspace stands in its history. */
     private HistoryPosition historyPosition() {
         var behind = changeLog.undoHistory();
@@ -839,8 +857,13 @@ public class Workspace {
         }
     }
 
+    /** Whether a graph can be stored under this name: the default graph or a URL. */
+    public static boolean isValidGraphName(String graphUri) {
+        return graphUri.equals(DEFAULT_GRAPH_NAME) || RDFUtils.isURL(graphUri);
+    }
+
     static void assertValidGraphName(String graphUri) {
-        if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
+        if (!isValidGraphName(graphUri)) {
             throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }
     }

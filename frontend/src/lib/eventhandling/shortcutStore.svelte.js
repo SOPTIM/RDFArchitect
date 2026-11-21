@@ -26,8 +26,12 @@ export const shortcutStore = {
      * @param {string[] | string[][]} keys - e.g. ["ctrl", "s"] or [["ctrl", "s"], ["ctrl", "shift", "s"]]
      * @param {(event: KeyboardEvent) => void} handler - receives the keydown event, e.g. to tell a held key by event.repeat
      * @param closeDialogs define if the shortcut should close open dialogs (default: false). If true, all open dialogs will be closed before executing the handler.
+     * @param {() => boolean} [isActive] whether the shortcut applies right now. One that does not
+     *     still keeps the browser's own action for the keys from running, but leaves them to the
+     *     next shortcut registered for the same keys, e.g. the class editor's Ctrl+S, which only
+     *     saves a class that was changed, to the desktop app's Save.
      */
-    register(id, keys, handler, closeDialogs = false) {
+    register(id, keys, handler, closeDialogs = false, isActive = null) {
         // Normalize to an array of key-combinations
         if (registry[id]) {
             console.warn(
@@ -36,7 +40,14 @@ export const shortcutStore = {
         }
         const combinations = Array.isArray(keys[0]) ? keys : [keys];
         const normalizedCombos = combinations.map(normalizeCombo);
-        registry[id] = { combos: normalizedCombos, handler, closeDialogs };
+        // Re-added rather than overwritten, so that it counts as registered last.
+        delete registry[id];
+        registry[id] = {
+            combos: normalizedCombos,
+            handler,
+            closeDialogs,
+            isActive,
+        };
         return () => this.unregister(id);
     },
 
@@ -47,24 +58,33 @@ export const shortcutStore = {
     /**
      * Called from the global keydown handler in +layout.svelte
      * Returns true if a handler was executed
+     *
+     * Of several shortcuts for the same keys, the one registered last wins: it belongs to the
+     * part of the page that opened most recently.
      */
     handleEvent(event) {
         const normalized = normalizeEvent(event);
-        for (const { combos, handler, closeDialogs } of Object.values(
-            registry,
-        )) {
-            if (combos.includes(normalized)) {
-                event.preventDefault();
-                eventStack.guardAction(() => {
-                    if (closeDialogs) {
-                        eventStack.closeAllExcept([EventType.CLASS_EDITOR]);
-                    }
-                    handler(event);
-                });
-                return true;
-            }
+        const matching = Object.values(registry)
+            .filter(({ combos }) => combos.includes(normalized))
+            .reverse();
+        if (matching.length === 0) {
+            return false;
         }
-        return false;
+        event.preventDefault();
+        const shortcut = matching.find(
+            ({ isActive }) => !isActive || isActive(),
+        );
+        if (!shortcut) {
+            return false;
+        }
+        const { handler, closeDialogs } = shortcut;
+        eventStack.guardAction(() => {
+            if (closeDialogs) {
+                eventStack.closeAllExcept([EventType.CLASS_EDITOR]);
+            }
+            handler(event);
+        });
+        return true;
     },
 };
 

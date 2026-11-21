@@ -135,6 +135,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         return getOrCreateSessionDataStore().listChanges(workspaceName);
     }
 
+    @Override
+    public UUID currentChangeId(String workspaceName) {
+        return getOrCreateSessionDataStore().currentChangeId(workspaceName);
+    }
+
     private void initializeNewDataset(SessionDataStore store, String datasetName) {
         store.enableEditing(datasetName);
         var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);

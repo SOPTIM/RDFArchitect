@@ -83,10 +83,15 @@
 
     onMount(() => {
         shortcutsUnregister.push(
-            shortcutStore.register("saveClass", ["ctrl", "s"], () => {
-                if (reactiveClass?.isValid && reactiveClass?.isModified)
-                    saveFromShortcut();
-            }),
+            shortcutStore.register(
+                "saveClass",
+                ["ctrl", "s"],
+                () => saveFromShortcut(),
+                false,
+                () =>
+                    !readonly &&
+                    !!(reactiveClass?.isValid && reactiveClass?.isModified),
+            ),
         );
     });
 

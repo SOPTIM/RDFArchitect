@@ -27,6 +27,7 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.snapshot.LoadSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnBooleanProperty(name = "snapshots.enabled", matchIfMissing = true)
 @RequestMapping("api/snapshots/{base64Token}")
 @RequiredArgsConstructor
 public class SnapshotRESTController {

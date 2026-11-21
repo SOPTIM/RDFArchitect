@@ -32,6 +32,7 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { resolveTermTarget } from "$lib/utils/deep-link.js";
     import { navigateToClass } from "$lib/utils/model-navigation.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import PropertyEditorHost from "./classEditor/PropertyEditorHost.svelte";
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
@@ -128,6 +129,8 @@
             },
         }).then(res => res.data);
     }
+
+    workspaceState.keepOneActive(() => workspaceNames);
 </script>
 
 <div class="flex h-full w-full flex-col">

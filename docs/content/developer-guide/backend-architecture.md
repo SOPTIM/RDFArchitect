@@ -115,3 +115,9 @@ The migration wizard turns one list of `SemanticClassChange` objects into two ar
 - `MigrationReportBuilder` → `MarkdownMigrationReportBuilder` — the Markdown [migration report](/user-guide/migration#the-migration-report), in a summary and a detailed variant. `SchemaMigrationService` prepends the validation reports of both schemas via `SchemaValidationReportToMarkdownService` before handing the changes over.
 
 The report renders field changes as sentences through a `switch` over `SemanticFieldChangeType`, so a new change type needs a case there — without one it silently renders as an empty line. Keep the two builders in step: a change that migrates data but never appears in the report is invisible to whoever reviews the migration.
+
+## The workspace file
+
+The workspace export and import (`services/archive/`) write and read one `.rdfa` file, a zip whose layout is described in the [user guide](/user-guide/workspace-and-importing). Each part of it — the schema, SHACL, layout and diagrams of a graph, the layout, diagrams, colours and namespaces of the workspace — is one `WorkspaceFilePart` in `services/archive/parts/` that writes the part, reads and checks it, and restores it. `WorkspaceFileParts` lists them in the order the import restores them.
+
+The import reads every part before it stores anything, so a broken file is rejected as a whole with every problem listed. A new part therefore needs no change to the export or import services: add the class and its place in `WorkspaceFileParts`. A field the import cannot do without is required by default; mark one that may be missing with `@JsonSetter(nulls = Nulls.SET)`. Anything an older importer cannot simply ignore needs a new major `FORMAT_VERSION`.

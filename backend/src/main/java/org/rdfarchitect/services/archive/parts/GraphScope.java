@@ -15,17 +15,16 @@
  *
  */
 
-package org.rdfarchitect.database.config;
+package org.rdfarchitect.services.archive.parts;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.web.reactive.config.WebFluxConfigurer;
+import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.WorkspaceTransaction;
 
-@Configuration
-public class WebFluxConfiguration implements WebFluxConfigurer {
+/** A graph of the workspace, which the parts of a graph are written from and restored into. */
+public record GraphScope(WorkspaceTransaction transaction, String uri) {
 
-    @Override
-    public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
-        configurer.defaultCodecs().maxInMemorySize(-1);
+    /** Only exists once {@link SchemaPart} restored it. */
+    public GraphContext graph() {
+        return transaction.graph(uri);
     }
 }

@@ -20,6 +20,7 @@
         faClockRotateLeft,
         faDiagramProject,
         faFileImport,
+        faFloppyDisk,
         faListCheck,
         faLock,
         faPen,
@@ -34,6 +35,11 @@
 
     import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import {
+        PUBLIC_DESKTOP,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
+    } from "$lib/config/runtime";
+    import { saveWorkspace } from "$lib/desktop/saveWorkspace.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -107,6 +113,21 @@
 </script>
 
 <ContextMenu.Content onOpenAutoFocus={loadHistoryEnds}>
+    {#if PUBLIC_DESKTOP}
+        <ContextMenu.Item.Button
+            onSelect={() => saveWorkspace(workspaceName)}
+            faIcon={faFloppyDisk}
+        >
+            Save Workspace
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={() => saveWorkspace(workspaceName, { saveAs: true })}
+            faIcon={faFloppyDisk}
+        >
+            Save Workspace As…
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
+    {/if}
     <ContextMenu.Item.Button
         onSelect={() => (showNewGraphDialog = true)}
         disabled={readonly}
@@ -157,13 +178,15 @@
             Edit Namespaces
         {/if}
     </ContextMenu.Item.Button>
-    <ContextMenu.Item.Button
-        onSelect={() => (showSnapshotDialog = true)}
-        faIcon={faShare}
-        altText="Ctrl+Shift+S"
-    >
-        Share Snapshot
-    </ContextMenu.Item.Button>
+    {#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+        <ContextMenu.Item.Button
+            onSelect={() => (showSnapshotDialog = true)}
+            faIcon={faShare}
+            altText="Ctrl+Shift+S"
+        >
+            Share Snapshot
+        </ContextMenu.Item.Button>
+    {/if}
     <ContextMenu.Item.Button
         onSelect={() => validateWorkspaceAndShowResult(workspaceName)}
         faIcon={faListCheck}
@@ -227,9 +250,11 @@
     bind:showDialog={showNamespacesDialog}
     lockedWorkspaceName={workspaceName}
 />
-<SnapshotDialog
-    bind:showDialog={showSnapshotDialog}
-    lockedWorkspaceName={workspaceName}
-/>
+{#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+    <SnapshotDialog
+        bind:showDialog={showSnapshotDialog}
+        lockedWorkspaceName={workspaceName}
+    />
+{/if}
 <RenameWorkspaceDialog bind:showDialog={showRenameDialog} {workspaceName} />
 <WorkspaceDeleteDialog bind:showDialog={showDeleteDialog} {workspaceName} />

@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.database.implementations.http;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.rdfarchitect.database.implementations.DatabaseAdminProtocol;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.slf4j.Logger;
@@ -35,6 +35,8 @@ import java.util.List;
 public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
 
     private static final Logger logger = LoggerFactory.getLogger(FusekiHttpAdminProtocol.class);
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final String url;
 
@@ -66,19 +68,22 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                var jsonResponse = response.body();
-                var jsonObject = new JSONObject(jsonResponse);
-                var datasets = jsonObject.getJSONArray("datasets");
-
+                var datasets = JSON.readTree(response.body()).path("datasets");
+                if (!datasets.isArray()) {
+                    throw new DataAccessException("Failed to list datasets: no dataset list");
+                }
                 var datasetNames = new ArrayList<String>();
-                for (var i = 0; i < datasets.length(); i++) {
-                    var dataset = datasets.getJSONObject(i);
-                    var datasetId = dataset.getString("ds.name").replace("/", "");
-                    datasetNames.add(datasetId);
+                for (var dataset : datasets) {
+                    var name = dataset.path("ds.name");
+                    if (!name.isTextual()) {
+                        throw new DataAccessException(
+                                "Failed to list datasets: a dataset has no name");
+                    }
+                    datasetNames.add(name.asText().replace("/", ""));
                 }
                 return datasetNames;
             }
-        } catch (IOException | JSONException e) {
+        } catch (IOException e) {
             throw new DataAccessException("Failed to list datasets", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -75,6 +75,8 @@ public interface ImportJobUseCase {
      * @param prefixComparison the prefixes waiting to be decided on, empty unless the state is
      *     {@code AWAITING_PREFIX_RESOLUTION}
      * @param errorMessage why the job failed, {@code null} unless its state is {@code FAILED}
+     * @param problems why a workspace archive was rejected
+     * @param notices what to know about an imported workspace archive
      */
     record ImportJobStatus(
             UUID jobId,
@@ -85,7 +87,9 @@ public interface ImportJobUseCase {
             List<String> failedImports,
             List<ImportWarning> warnings,
             List<PrefixComparison> prefixComparison,
-            String errorMessage) {}
+            String errorMessage,
+            List<String> problems,
+            List<String> notices) {}
 
     /**
      * Starts an import and returns immediately.
@@ -93,6 +97,9 @@ public interface ImportJobUseCase {
      * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
      */
     UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
+
+    /** Starts restoring a workspace archive as a new workspace; all or nothing. */
+    UUID startWorkspaceImport(String workspaceName, MultipartFile archive);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);
