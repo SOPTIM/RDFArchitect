@@ -23,6 +23,8 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shacl.vocabulary.SHACL;
+import org.apache.jena.shacl.vocabulary.SHACLM;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 
@@ -31,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class SHACLShapesFetcher {
 
@@ -201,23 +204,10 @@ public class SHACLShapesFetcher {
         return outputStream.toString(StandardCharsets.UTF_8).replaceAll(regex, "").trim();
     }
 
-    /**
-     * Copies the SHACL shape and its constraints to a new model.
-     *
-     * @param originalModel the original model containing the SHACL shapes
-     * @param newModel the new model to copy the SHACL shapes to
-     * @param subject the subject/uri of the SHACL shape
-     */
-    private void copySHACLShapeToNewModel(Model originalModel, Model newModel, RDFNode subject) {
-        var sub = subject.asResource();
-        var stmtIterator = originalModel.listStatements(sub, null, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            var stmt = stmtIterator.nextStatement();
-            newModel.add(stmt);
-            var object = stmt.getObject();
-            if (object.isAnon() || stmt.getPredicate().toString().equals(SHACL.sparql.getURI())) {
-                copySHACLShapeToNewModel(originalModel, newModel, object);
-            }
-        }
+    /** Copies a shape with what it holds inline and the SPARQL constraints it names. */
+    private static void copySHACLShapeToNewModel(
+            Model originalModel, Model newModel, RDFNode subject) {
+        GraphUtils.copyWithBlankNodes(
+                originalModel, newModel, subject.asResource(), Set.of(SHACLM.sparql));
     }
 }

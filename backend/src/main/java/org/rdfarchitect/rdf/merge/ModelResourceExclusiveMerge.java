@@ -19,9 +19,10 @@ package org.rdfarchitect.rdf.merge;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.rdf.graph.GraphUtils;
+
+import java.util.Set;
 
 public class ModelResourceExclusiveMerge implements ModelMerger {
 
@@ -43,33 +44,14 @@ public class ModelResourceExclusiveMerge implements ModelMerger {
                 .forEach(entry -> primaryPrefixes.put(entry.getKey(), entry.getValue()));
         resultModel.setNsPrefixes(primaryPrefixes);
 
-        secondary.listStatements().toSet().stream()
-                .filter(
-                        statement ->
-                                !primary.containsResource(
-                                        primary.createResource(statement.getSubject().getURI())))
-                .filter(
-                        statement ->
-                                !statement.getSubject().isAnon()) // Exclude anonymous resources
-                .forEach(statement -> copyStatementToModel(secondary, resultModel, statement));
+        // A blank subject is copied only with a named resource that leads to it.
+        secondary.listSubjects().toSet().stream()
+                .filter(Resource::isURIResource)
+                .filter(subject -> !primary.containsResource(subject))
+                .forEach(
+                        subject ->
+                                GraphUtils.copyWithBlankNodes(
+                                        secondary, resultModel, subject, Set.of()));
         return resultModel;
-    }
-
-    /**
-     * Copies a statement from the original model to the new model, including all statements related
-     * to anonymous resources.
-     *
-     * @param originalModel the original model containing the statement
-     * @param newModel the new model to which the statement will be copied
-     * @param statement the statement to copy
-     */
-    private void copyStatementToModel(Model originalModel, Model newModel, Statement statement) {
-        newModel.add(statement);
-        var object = statement.getObject();
-        if (object.isAnon()) {
-            originalModel
-                    .listStatements(object.asResource(), null, (RDFNode) null)
-                    .forEach(stmt -> copyStatementToModel(originalModel, newModel, stmt));
-        }
     }
 }
