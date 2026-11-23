@@ -30,10 +30,15 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.ErrorHandlerFactory;
+import org.rdfarchitect.services.archive.FormatVersion;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,21 +57,32 @@ public final class PartReader {
                     .setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL, Nulls.FAIL));
 
     private final Map<String, byte[]> entries;
+    private final FormatVersion formatVersion;
     private final Set<String> schemaNames;
     private final List<String> problems;
     private final String schemaName;
 
-    /** Reads the top level of the unpacked file, collecting the problems into {@code problems}. */
-    public PartReader(Map<String, byte[]> entries, Set<String> schemaNames, List<String> problems) {
-        this(entries, schemaNames, problems, null);
+    /**
+     * Reads the top level of the unpacked file, collecting the problems into {@code problems}.
+     *
+     * @param formatVersion the version the file was written in
+     */
+    public PartReader(
+            Map<String, byte[]> entries,
+            FormatVersion formatVersion,
+            Set<String> schemaNames,
+            List<String> problems) {
+        this(entries, formatVersion, schemaNames, problems, null);
     }
 
     private PartReader(
             Map<String, byte[]> entries,
+            FormatVersion formatVersion,
             Set<String> schemaNames,
             List<String> problems,
             String schemaName) {
         this.entries = entries;
+        this.formatVersion = formatVersion;
         this.schemaNames = schemaNames;
         this.problems = problems;
         this.schemaName = schemaName;
@@ -74,7 +90,12 @@ public final class PartReader {
 
     /** Reads from the folder of a schema instead of the top level. */
     public PartReader inSchema(String schemaName) {
-        return new PartReader(entries, schemaNames, problems, schemaName);
+        return new PartReader(entries, formatVersion, schemaNames, problems, schemaName);
+    }
+
+    /** The version the file was written in, which tells a part added later whether to expect it. */
+    public FormatVersion formatVersion() {
+        return formatVersion;
     }
 
     /** The schema whose folder this reads from, {@code null} at the top level. */
@@ -109,6 +130,27 @@ public final class PartReader {
                     .toGraph();
         } catch (RiotException e) {
             problem(name, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @return the text, {@code null} if the file is missing or not UTF-8
+     */
+    public String readText(String name) {
+        var content = entry(name);
+        if (content == null) {
+            return null;
+        }
+        try {
+            return StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(content))
+                    .toString();
+        } catch (CharacterCodingException _) {
+            problem(name, "the file is not UTF-8.");
             return null;
         }
     }

@@ -56,9 +56,11 @@ A separate import path for custom SHACL shapes. These are stored *next to* the s
 
 ### Import a workspace file (File → Import → Workspace (.rdfa))
 
-**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
+**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours, SHACL constraints documents and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
 
 The workspace file is a zip; rename it to `.zip` to look inside. Its top level holds the workspace, each schema sits in `schemas/<schema name>/schema.ttl` and can be used on its own, and `manifest.json` lists the schemas. The manifest's `formatVersion` (`MAJOR.MINOR`) says which RDFArchitect versions read it: any file of the same major version imports, and one with a newer minor version imports with a notice that the parts this version does not know were left out.
+
+The constraints documents sit in `shacl/`. `shacl/documents.json` lists each document with its name, the file it was imported from, whether it is enabled, its position and the names of the schemas it applies to, and `shacl/<document id>.ttl` holds its text exactly as it was saved, comments included. A document may name a schema the file does not contain; it then applies to no schema until one of that name exists. A file of format 1.0 holds no constraints documents and imports without any.
 
 ### Create an empty schema (Edit → New → Schema)
 

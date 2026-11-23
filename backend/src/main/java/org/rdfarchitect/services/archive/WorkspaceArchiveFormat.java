@@ -20,12 +20,13 @@ package org.rdfarchitect.services.archive;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class WorkspaceArchiveFormat {
 
-    public static final String FORMAT_VERSION = "1.0";
+    public static final String FORMAT_VERSION = "1.1";
 
     // Not .zip: the schema import unpacks every zip and would take layout.ttl for a schema.
     public static final String FILE_EXTENSION = ".rdfa";
@@ -37,6 +38,10 @@ public final class WorkspaceArchiveFormat {
     public static final String DIAGRAMS = "diagrams.json";
     public static final String COLORS = "colors.json";
     public static final String NAMESPACES = "namespaces.json";
+    public static final String SHAPES_DOCUMENTS = "shacl/documents.json";
+
+    /** The first version holding the workspace's shapes documents. */
+    public static final FormatVersion SHAPES_DOCUMENTS_SINCE = new FormatVersion(1, 1);
 
     // A schema name is a valid file name, so it names the folder of its schema as it is. The
     // folders get a directory of their own to never clash with the files at the top level.
@@ -47,6 +52,11 @@ public final class WorkspaceArchiveFormat {
 
     public static String schemaEntry(String schemaName, String file) {
         return SCHEMAS_DIRECTORY + schemaName + "/" + file;
+    }
+
+    /** The file holding the verbatim text of the shapes document {@code documentId}. */
+    public static String shapesDocumentEntry(UUID documentId) {
+        return "shacl/" + documentId + ".ttl";
     }
 
     public static String fileNameFor(String workspaceName) {

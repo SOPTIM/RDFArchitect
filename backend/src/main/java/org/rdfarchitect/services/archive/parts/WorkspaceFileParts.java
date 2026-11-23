@@ -45,5 +45,6 @@ public final class WorkspaceFileParts {
                     new LayoutPart<>(WorkspaceTransaction::layout),
                     new WorkspaceDiagramsPart(),
                     new ColorsPart(),
+                    new ShapesDocumentsPart(),
                     new NamespacesPart());
 }

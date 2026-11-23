@@ -77,6 +77,15 @@ class WorkspaceArchiveFormat10CompatibilityTest {
     }
 
     @Test
+    void importsWithoutShapesDocuments() {
+        importArchive();
+
+        try (var transaction = databasePort.beginTransaction("imported", ReadWrite.READ)) {
+            assertThat(transaction.shapesDocuments()).isEmpty();
+        }
+    }
+
+    @Test
     void keepsEverythingTheArchiveHolds() {
         importArchive();
 

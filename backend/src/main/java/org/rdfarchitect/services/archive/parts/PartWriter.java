@@ -27,6 +27,7 @@ import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -64,6 +65,11 @@ public final class PartWriter {
     /** Writes a graph as Turtle. */
     public void writeRdf(String name, Graph graph) {
         write(name, () -> RDFDataMgr.write(zip, graph, RDFFormat.TURTLE));
+    }
+
+    /** Writes text as it is, in UTF-8. */
+    public void writeText(String name, String text) {
+        write(name, () -> zip.write(text.getBytes(StandardCharsets.UTF_8)));
     }
 
     /** Writes a value as indented JSON. */
