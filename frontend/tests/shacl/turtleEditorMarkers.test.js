@@ -18,8 +18,8 @@
 import { flushSync, mount, unmount } from "svelte";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { reactiveProps } from "./reactiveProps.svelte.js";
 import TurtleEditor from "../../src/lib/monaco/TurtleEditor.svelte";
+import { reactiveProps } from "./reactiveProps.svelte.js";
 
 /** Just enough of Monaco to see which markers the editor sets, and against which text. */
 const fake = vi.hoisted(() => {
