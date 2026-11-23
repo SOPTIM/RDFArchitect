@@ -446,4 +446,16 @@ describe("Ctrl+S", () => {
         await vi.waitFor(() => expect(puts()).toHaveLength(1));
         expect(puts()[0].body).toBe(TYPED);
     });
+
+    test("says nothing when there is nothing to save", async () => {
+        const error = vi.spyOn(toastStore, "error");
+        openDocument("Generated shapes");
+        await vi.waitFor(() => expect(editor().value).toBe("# generated\n"));
+
+        expect(pressCtrlS().defaultPrevented).toBe(true);
+        await new Promise(resolve => setTimeout(resolve, 20));
+
+        expect(error).not.toHaveBeenCalled();
+        expect(puts()).toEqual([]);
+    });
 });

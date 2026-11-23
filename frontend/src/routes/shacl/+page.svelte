@@ -192,7 +192,15 @@
         }
         // The browser's own Save-page dialog would otherwise open over the workbench.
         event.preventDefault();
-        if (workbench && !showUnsavedDialog) {
+        saveByKeyboard();
+    }
+
+    /**
+     * Saves from the keyboard, where there is no greyed-out button to say there is nothing to
+     * save: with nothing unsaved, Ctrl+S does nothing rather than report a save that failed.
+     */
+    function saveByKeyboard() {
+        if (workbench?.dirty && !showUnsavedDialog) {
             save();
         }
     }
@@ -490,7 +498,7 @@
                                     placeholder={workbench.editorReadOnly
                                         ? undefined
                                         : "Empty document — write shapes in Turtle here."}
-                                    onSave={() => save()}
+                                    onSave={saveByKeyboard}
                                 />
                             </div>
                         </div>
