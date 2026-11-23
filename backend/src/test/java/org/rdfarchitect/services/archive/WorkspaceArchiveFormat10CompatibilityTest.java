@@ -72,8 +72,8 @@ class WorkspaceArchiveFormat10CompatibilityTest {
         assertThat(result.notices()).isEmpty();
         assertThat(result.importedSchemaNames())
                 .containsExactly(
-                        "http://graph#61970_600_2_Topology_AP_Voc_RDFS2020",
-                        "http://graph#61970_600_2_Header_AP_Voc_RDFS2020");
+                        "61970-600-2_Header-AP-Voc-RDFS2020",
+                        "61970-600-2_Topology-AP-Voc-RDFS2020");
     }
 
     @Test
@@ -99,16 +99,12 @@ class WorkspaceArchiveFormat10CompatibilityTest {
                     .hasToString(workspaceDiagrams.get("crossProfileDiagramId").asText());
             assertThat(transaction.layout().getDefaultPackageMRID().getUuid())
                     .hasToString(workspaceDiagrams.get("defaultPackageMRID").asText());
-            for (var graph : manifest.get("graphs")) {
-                var graphDiagrams =
-                        json(
-                                files.get(
-                                        "graphs/"
-                                                + graph.get("folder").asText()
-                                                + "/diagrams.json"));
+            for (var schema : manifest.get("schemas")) {
+                var schemaName = schema.asText();
+                var graphDiagrams = json(files.get("schemas/" + schemaName + "/diagrams.json"));
                 assertThat(
                                 transaction
-                                        .graph(graph.get("uri").asText())
+                                        .graph(schemaName)
                                         .getDiagramLayout()
                                         .getDefaultPackageMRID()
                                         .getUuid())
@@ -123,8 +119,7 @@ class WorkspaceArchiveFormat10CompatibilityTest {
 
         var positions =
                 new CgmesWorkspace(databasePort)
-                        .positionsOfFirstPackage(
-                                "imported", "http://graph#61970_600_2_Header_AP_Voc_RDFS2020");
+                        .positionsOfFirstPackage("imported", "61970-600-2_Header-AP-Voc-RDFS2020");
 
         assertThat(positions).isNotEmpty().containsValue("100.0,50.0");
     }

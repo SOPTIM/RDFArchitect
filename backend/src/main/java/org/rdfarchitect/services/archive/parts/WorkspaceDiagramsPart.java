@@ -29,7 +29,7 @@ import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import java.util.UUID;
 
 /**
- * The custom diagrams of the workspace, which show classes of several graphs, the cross-profile
+ * The custom diagrams of the workspace, which show classes of several schemas, the cross-profile
  * diagram and the default package the workspace layout belongs to.
  */
 public final class WorkspaceDiagramsPart
@@ -46,10 +46,7 @@ public final class WorkspaceDiagramsPart
                 source.crossProfileDiagramId(),
                 source.layout().getDefaultPackageMRID().getUuid(),
                 sorted(source.diagrams().values()).stream()
-                        .map(
-                                diagram ->
-                                        ArchivedWorkspaceDiagram.of(
-                                                diagram, out.folderBySchemaName()))
+                        .map(diagram -> ArchivedWorkspaceDiagram.of(diagram, out.schemaNames()))
                         .toList());
     }
 
@@ -70,15 +67,15 @@ public final class WorkspaceDiagramsPart
     @Override
     CustomDiagram readDiagram(ArchivedWorkspaceDiagram diagram, String where, PartReader in) {
         var valid = true;
-        for (var folder : diagram.classes().keySet()) {
-            if (!in.schemaNameByFolder().containsKey(folder)) {
+        for (var schemaName : diagram.classes().keySet()) {
+            if (!in.schemaNames().contains(schemaName)) {
                 in.problem(
                         WorkspaceArchiveFormat.DIAGRAMS,
-                        where + ": \"" + folder + "\" is not a graph of the workspace file.");
+                        where + ": \"" + schemaName + "\" is not a schema of the workspace file.");
                 valid = false;
             }
         }
-        return valid ? diagram.toCustomDiagram(in.schemaNameByFolder()) : null;
+        return valid ? diagram.toCustomDiagram() : null;
     }
 
     @Override

@@ -28,7 +28,4 @@ public record WorkspaceArchiveManifest(
         @JsonSetter(nulls = Nulls.SET) String exportedAt,
         @JsonSetter(nulls = Nulls.SET) String name,
         boolean readOnly,
-        List<GraphEntry> graphs) {
-
-    public record GraphEntry(String folder, String uri) {}
-}
+        List<String> schemas) {}

@@ -45,8 +45,7 @@ import java.util.UUID;
 
 class ExportWorkspaceServiceTest {
 
-    private static final String CORE = "http://example.org/graphs/core";
-    private static final String FOLDER = "example.org-graphs-core";
+    private static final String CORE = "core";
 
     private static final String SCHEMA =
             """
@@ -99,8 +98,7 @@ class ExportWorkspaceServiceTest {
         assertThat(manifest.get("appVersion").asText()).isEqualTo("1.2.3");
         assertThat(manifest.get("name").asText()).isEqualTo("CGMES Draft");
         assertThat(manifest.get("readOnly").asBoolean()).isTrue();
-        assertThat(manifest.get("graphs"))
-                .isEqualTo(tree("[{\"folder\": \"%s\", \"uri\": \"%s\"}]".formatted(FOLDER, CORE)));
+        assertThat(manifest.get("schemas")).isEqualTo(tree("[\"%s\"]".formatted(CORE)));
     }
 
     @Test
@@ -111,16 +109,16 @@ class ExportWorkspaceServiceTest {
     }
 
     @Test
-    void graphDiagrams_listTheirClassesByUuid_andColorsReferToGraphsByFolder() {
+    void schemaDiagrams_listTheirClassesByUuid_andColorsReferToSchemasByName() {
         var files = unzip(service.exportWorkspace("CGMES Draft"));
 
-        assertThat(json(files.get("graphs/" + FOLDER + "/diagrams.json")).get("customDiagrams"))
+        assertThat(json(files.get("schemas/" + CORE + "/diagrams.json")).get("customDiagrams"))
                 .isEqualTo(
                         tree(
                                 "[{\"diagramId\": \"%s\", \"name\": \"Core\", \"classes\": [\"%s\"]}]"
                                         .formatted(diagramId, classUuid)));
         assertThat(tree(files.get("colors.json")))
-                .isEqualTo(tree("{\"%s\": \"#abcdef\"}".formatted(FOLDER)));
+                .isEqualTo(tree("{\"%s\": \"#abcdef\"}".formatted(CORE)));
         assertThat(json(files.get("diagrams.json")).get("customDiagrams")).isEmpty();
     }
 }

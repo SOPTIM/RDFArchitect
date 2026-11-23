@@ -35,15 +35,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipInputStream;
 
 /**
- * Reads a workspace file and checks it as a whole: the manifest, then every part of every graph and
- * of the workspace. Every problem found is reported at once, nothing is stored.
+ * Reads a workspace file and checks it as a whole: the manifest, then every part of every schema
+ * and of the workspace. Every problem found is reported at once, nothing is stored.
  */
 public final class WorkspaceArchiveReader {
 
@@ -101,20 +101,19 @@ public final class WorkspaceArchiveReader {
             throw new InvalidWorkspaceArchiveException(problems);
         }
 
-        var schemaNameByFolder = readGraphEntries(manifest.graphs());
-        var in = new PartReader(entries, schemaNameByFolder, problems);
+        var schemaNames = readSchemaNames(manifest.schemas());
+        var in = new PartReader(entries, schemaNames, problems);
         var graphs = new ArrayList<WorkspaceArchive.ArchivedGraph>();
-        schemaNameByFolder.forEach(
-                (folder, uri) ->
-                        graphs.add(
-                                new WorkspaceArchive.ArchivedGraph(
-                                        uri,
-                                        WorkspaceFileParts.OF_GRAPH.stream()
-                                                .<ReadPart<GraphScope, ?>>map(
-                                                        part ->
-                                                                ReadPart.read(
-                                                                        part, in.inGraph(folder)))
-                                                .toList())));
+        for (var schemaName : schemaNames) {
+            var schemaIn = in.inSchema(schemaName);
+            graphs.add(
+                    new WorkspaceArchive.ArchivedGraph(
+                            schemaName,
+                            WorkspaceFileParts.OF_GRAPH.stream()
+                                    .<ReadPart<GraphScope, ?>>map(
+                                            part -> ReadPart.read(part, schemaIn))
+                                    .toList()));
+        }
         var workspaceParts =
                 WorkspaceFileParts.OF_WORKSPACE.stream()
                         .<ReadPart<WorkspaceTransaction, ?>>map(part -> ReadPart.read(part, in))
@@ -134,7 +133,7 @@ public final class WorkspaceArchiveReader {
                             + " plain zip archives of them are imported as schemas instead.");
             return null;
         }
-        return new PartReader(entries, Map.of(), problems)
+        return new PartReader(entries, Set.of(), problems)
                 .readJson(WorkspaceArchiveFormat.MANIFEST, new TypeReference<>() {});
     }
 
@@ -165,28 +164,18 @@ public final class WorkspaceArchiveReader {
         return true;
     }
 
-    private Map<String, String> readGraphEntries(List<WorkspaceArchiveManifest.GraphEntry> graphs) {
-        var schemaNameByFolder = new LinkedHashMap<String, String>();
-        var uris = new HashSet<String>();
-        for (var graph : graphs) {
-            var where = WorkspaceArchiveFormat.MANIFEST + ": graph \"" + graph.folder() + "\"";
-            var valid = true;
-            if (schemaNameByFolder.containsKey(graph.folder())) {
-                problems.add(where + ": two graphs are stored in this folder.");
-                valid = false;
-            }
-            if (!isValidSchemaName(graph.uri())) {
-                problems.add(where + ": \"" + graph.uri() + "\" is not a valid schema name.");
-                valid = false;
-            } else if (!uris.add(graph.uri())) {
-                problems.add(where + ": the schema name " + graph.uri() + " is used twice.");
-                valid = false;
-            }
-            if (valid) {
-                schemaNameByFolder.put(graph.folder(), graph.uri());
+    /** The schemas the manifest lists, without the ones whose name is invalid or taken twice. */
+    private Set<String> readSchemaNames(List<String> listed) {
+        var schemaNames = new LinkedHashSet<String>();
+        for (var schemaName : listed) {
+            var where = WorkspaceArchiveFormat.MANIFEST + ": schema \"" + schemaName + "\"";
+            if (!isValidSchemaName(schemaName)) {
+                problems.add(where + ": not a valid schema name.");
+            } else if (!schemaNames.add(schemaName)) {
+                problems.add(where + ": listed twice.");
             }
         }
-        return schemaNameByFolder;
+        return schemaNames;
     }
 
     private static boolean isValidSchemaName(String name) {

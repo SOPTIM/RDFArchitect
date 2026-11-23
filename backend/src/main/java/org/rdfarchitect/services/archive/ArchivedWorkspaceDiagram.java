@@ -34,26 +34,25 @@ public record ArchivedWorkspaceDiagram(
         @JsonSetter(nulls = Nulls.SET) String name,
         Map<String, List<UUID>> classes) {
 
-    public static ArchivedWorkspaceDiagram of(
-            CustomDiagram diagram, Map<String, String> folderBySchemaName) {
+    public static ArchivedWorkspaceDiagram of(CustomDiagram diagram, List<String> schemaNames) {
         var classes = new LinkedHashMap<String, List<UUID>>();
         for (var entry : diagram.getClasses()) {
-            var folder = folderBySchemaName.get(entry.getSchemaName());
-            if (folder != null) {
-                classes.computeIfAbsent(folder, _ -> new ArrayList<>()).add(entry.getUuid());
+            if (schemaNames.contains(entry.getSchemaName())) {
+                classes.computeIfAbsent(entry.getSchemaName(), _ -> new ArrayList<>())
+                        .add(entry.getUuid());
             }
         }
         return new ArchivedWorkspaceDiagram(diagram.getDiagramId(), diagram.getName(), classes);
     }
 
-    public CustomDiagram toCustomDiagram(Map<String, String> schemaNameByFolder) {
+    public CustomDiagram toCustomDiagram() {
         var classesInDiagram = new ArrayList<ClassInDiagram>();
         classes.forEach(
-                (folder, uuids) -> {
-                    var schemaName = schemaNameByFolder.get(folder);
-                    uuids.forEach(
-                            uuid -> classesInDiagram.add(new ClassInDiagram(uuid, schemaName)));
-                });
+                (schemaName, uuids) ->
+                        uuids.forEach(
+                                uuid ->
+                                        classesInDiagram.add(
+                                                new ClassInDiagram(uuid, schemaName))));
         return new CustomDiagram(diagramId, name, classesInDiagram);
     }
 }

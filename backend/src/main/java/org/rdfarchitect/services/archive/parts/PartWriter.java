@@ -27,38 +27,38 @@ import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Map;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** Writes the files of the parts into the workspace file, below the folder of their graph. */
+/** Writes the files of the parts into the workspace file, below the folder of their schema. */
 public final class PartWriter {
 
     private static final ObjectMapper JSON =
             new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private final ZipOutputStream zip;
-    private final Map<String, String> folderBySchemaName;
-    private final String folder;
+    private final List<String> schemaNames;
+    private final String schemaName;
 
-    public PartWriter(ZipOutputStream zip, Map<String, String> folderBySchemaName) {
-        this(zip, folderBySchemaName, null);
+    public PartWriter(ZipOutputStream zip, List<String> schemaNames) {
+        this(zip, schemaNames, null);
     }
 
-    private PartWriter(ZipOutputStream zip, Map<String, String> folderBySchemaName, String folder) {
+    private PartWriter(ZipOutputStream zip, List<String> schemaNames, String schemaName) {
         this.zip = zip;
-        this.folderBySchemaName = folderBySchemaName;
-        this.folder = folder;
+        this.schemaNames = schemaNames;
+        this.schemaName = schemaName;
     }
 
-    /** Writes into the folder of the graph instead of the top level. */
-    public PartWriter inGraph(String schemaName) {
-        return new PartWriter(zip, folderBySchemaName, folderBySchemaName.get(schemaName));
+    /** Writes into the folder of the schema instead of the top level. */
+    public PartWriter inSchema(String schemaName) {
+        return new PartWriter(zip, schemaNames, schemaName);
     }
 
-    /** The folder each graph is stored in, by graph URI. */
-    public Map<String, String> folderBySchemaName() {
-        return folderBySchemaName;
+    /** The schemas written to the workspace file. */
+    public List<String> schemaNames() {
+        return schemaNames;
     }
 
     /** Writes a graph as Turtle. */
@@ -72,7 +72,7 @@ public final class PartWriter {
     }
 
     private void write(String name, Content content) {
-        var path = folder == null ? name : WorkspaceArchiveFormat.graphEntry(folder, name);
+        var path = schemaName == null ? name : WorkspaceArchiveFormat.schemaEntry(schemaName, name);
         try {
             zip.putNextEntry(new ZipEntry(path));
             content.write();

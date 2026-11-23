@@ -30,5 +30,5 @@ public record WorkspaceArchive(
         List<ReadPart<WorkspaceTransaction, ?>> workspaceParts,
         List<String> notices) {
 
-    public record ArchivedGraph(String uri, List<ReadPart<GraphScope, ?>> parts) {}
+    public record ArchivedGraph(String schemaName, List<ReadPart<GraphScope, ?>> parts) {}
 }

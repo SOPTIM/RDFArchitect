@@ -20,7 +20,6 @@ package org.rdfarchitect.services.archive.exporting;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.services.archive.GraphFolderNames;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.WorkspaceArchiveManifest;
 import org.rdfarchitect.services.archive.parts.GraphScope;
@@ -32,7 +31,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.zip.ZipOutputStream;
 
 @Service
@@ -52,17 +50,14 @@ public class ExportWorkspaceService implements ExportWorkspaceUseCase {
         var bytes = new ByteArrayOutputStream();
         try (var zip = new ZipOutputStream(bytes);
                 var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            var folders = GraphFolderNames.assign(transaction.schemaNames());
-            var out = new PartWriter(zip, folders);
-            var graphEntries = new ArrayList<WorkspaceArchiveManifest.GraphEntry>();
-            folders.forEach(
-                    (schemaName, folder) -> {
-                        var scope = new GraphScope(transaction, schemaName);
-                        var graphOut = out.inGraph(schemaName);
-                        WorkspaceFileParts.OF_GRAPH.forEach(part -> part.write(scope, graphOut));
-                        graphEntries.add(
-                                new WorkspaceArchiveManifest.GraphEntry(folder, schemaName));
-                    });
+            // Sorted, so that exporting the same workspace twice gives the same file.
+            var schemaNames = transaction.schemaNames().stream().sorted().toList();
+            var out = new PartWriter(zip, schemaNames);
+            for (var schemaName : schemaNames) {
+                var scope = new GraphScope(transaction, schemaName);
+                var schemaOut = out.inSchema(schemaName);
+                WorkspaceFileParts.OF_GRAPH.forEach(part -> part.write(scope, schemaOut));
+            }
             WorkspaceFileParts.OF_WORKSPACE.forEach(part -> part.write(transaction, out));
             var manifest =
                     new WorkspaceArchiveManifest(
@@ -71,7 +66,7 @@ public class ExportWorkspaceService implements ExportWorkspaceUseCase {
                             Instant.now().toString(),
                             workspaceName,
                             readOnly,
-                            graphEntries);
+                            schemaNames);
             out.writeJson(WorkspaceArchiveFormat.MANIFEST, manifest);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

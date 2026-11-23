@@ -52,8 +52,8 @@ import java.util.UUID;
 
 class ImportWorkspaceServiceTest {
 
-    private static final String CORE = "http://example.org/graphs/core";
-    private static final String EXTENSION = "http://example.org/graphs/extension";
+    private static final String CORE = "core";
+    private static final String EXTENSION = "extension";
 
     private static final String SCHEMA =
             """

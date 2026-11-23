@@ -40,7 +40,7 @@ public final class GraphDiagramsPart extends DiagramsPart<GraphScope, ArchivedGr
                 null,
                 graph.getDiagramLayout().getDefaultPackageMRID().getUuid(),
                 sorted(graph.getCustomDiagrams().values()).stream()
-                        .map(diagram -> ArchivedGraphDiagram.of(diagram, source.uri()))
+                        .map(diagram -> ArchivedGraphDiagram.of(diagram, source.schemaName()))
                         .toList());
     }
 

@@ -44,7 +44,10 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
         var graphs = contents.graphs();
         listener.planned(
                 IntStream.range(0, graphs.size())
-                        .mapToObj(index -> new PlannedImport(index, graphs.get(index).uri(), -1))
+                        .mapToObj(
+                                index ->
+                                        new PlannedImport(
+                                                index, graphs.get(index).schemaName(), -1))
                         .toList());
 
         databasePort.createDataset(workspaceName);
@@ -63,7 +66,7 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
             databasePort.disableEditing(workspaceName);
         }
         return new WorkspaceImportResult(
-                graphs.stream().map(WorkspaceArchive.ArchivedGraph::uri).toList(),
+                graphs.stream().map(WorkspaceArchive.ArchivedGraph::schemaName).toList(),
                 contents.notices(),
                 false);
     }
@@ -81,9 +84,9 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
                 }
                 listener.started(index);
                 var graph = graphs.get(index);
-                var scope = new GraphScope(transaction, graph.uri());
+                var scope = new GraphScope(transaction, graph.schemaName());
                 graph.parts().forEach(part -> part.apply(scope));
-                listener.finished(index, Outcome.IMPORTED, graph.uri());
+                listener.finished(index, Outcome.IMPORTED, graph.schemaName());
             }
             contents.workspaceParts().forEach(part -> part.apply(transaction));
             if (listener.isCancelled()) {

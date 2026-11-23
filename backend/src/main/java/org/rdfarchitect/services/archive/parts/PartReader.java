@@ -36,9 +36,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Reads the files of the parts from the unpacked workspace file, below the folder of their graph,
+ * Reads the files of the parts from the unpacked workspace file, below the folder of their schema,
  * and collects every problem the parts find instead of stopping at the first.
  */
 public final class PartReader {
@@ -51,42 +52,39 @@ public final class PartReader {
                     .setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL, Nulls.FAIL));
 
     private final Map<String, byte[]> entries;
-    private final Map<String, String> schemaNameByFolder;
+    private final Set<String> schemaNames;
     private final List<String> problems;
-    private final String folder;
+    private final String schemaName;
 
     /** Reads the top level of the unpacked file, collecting the problems into {@code problems}. */
-    public PartReader(
-            Map<String, byte[]> entries,
-            Map<String, String> schemaNameByFolder,
-            List<String> problems) {
-        this(entries, schemaNameByFolder, problems, null);
+    public PartReader(Map<String, byte[]> entries, Set<String> schemaNames, List<String> problems) {
+        this(entries, schemaNames, problems, null);
     }
 
     private PartReader(
             Map<String, byte[]> entries,
-            Map<String, String> schemaNameByFolder,
+            Set<String> schemaNames,
             List<String> problems,
-            String folder) {
+            String schemaName) {
         this.entries = entries;
-        this.schemaNameByFolder = schemaNameByFolder;
+        this.schemaNames = schemaNames;
         this.problems = problems;
-        this.folder = folder;
+        this.schemaName = schemaName;
     }
 
-    /** Reads from the folder of a graph instead of the top level. */
-    public PartReader inGraph(String folder) {
-        return new PartReader(entries, schemaNameByFolder, problems, folder);
+    /** Reads from the folder of a schema instead of the top level. */
+    public PartReader inSchema(String schemaName) {
+        return new PartReader(entries, schemaNames, problems, schemaName);
     }
 
-    /** The graph whose folder this reads from, {@code null} at the top level. */
+    /** The schema whose folder this reads from, {@code null} at the top level. */
     public String schemaName() {
-        return folder == null ? null : schemaNameByFolder.get(folder);
+        return schemaName;
     }
 
-    /** The graph stored in each folder, by folder name. */
-    public Map<String, String> schemaNameByFolder() {
-        return schemaNameByFolder;
+    /** The schemas of the workspace file. */
+    public Set<String> schemaNames() {
+        return schemaNames;
     }
 
     /** Reports a problem with the file of the given name. */
@@ -144,7 +142,7 @@ public final class PartReader {
     }
 
     private String path(String name) {
-        return folder == null ? name : WorkspaceArchiveFormat.graphEntry(folder, name);
+        return schemaName == null ? name : WorkspaceArchiveFormat.schemaEntry(schemaName, name);
     }
 
     private static String describe(IOException e) {

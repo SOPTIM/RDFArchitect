@@ -21,10 +21,10 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.WorkspaceTransaction;
 
 /** A graph of the workspace, which the parts of a graph are written from and applied to. */
-public record GraphScope(WorkspaceTransaction transaction, String uri) {
+public record GraphScope(WorkspaceTransaction transaction, String schemaName) {
 
     /** Only exists once {@link SchemaPart} created it. */
     public GraphContext graph() {
-        return transaction.graph(uri);
+        return transaction.graph(schemaName);
     }
 }

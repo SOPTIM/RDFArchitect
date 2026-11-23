@@ -25,26 +25,24 @@ import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** The colour each graph is drawn in on the cross-profile diagram, {@code colors.json}. */
+/** The colour each schema is drawn in on the cross-profile diagram, {@code colors.json}. */
 public final class ColorsPart
         implements WorkspaceFilePart<WorkspaceTransaction, Map<String, String>> {
 
     @Override
     public void write(WorkspaceTransaction source, PartWriter out) {
         var colors = new LinkedHashMap<String, String>();
-        out.folderBySchemaName()
-                .forEach(
-                        (schemaName, folder) -> {
-                            var color = source.crossProfileColors().getColor(schemaName);
-                            if (color != null) {
-                                colors.put(folder, color);
-                            }
-                        });
+        for (var schemaName : out.schemaNames()) {
+            var color = source.crossProfileColors().getColor(schemaName);
+            if (color != null) {
+                colors.put(schemaName, color);
+            }
+        }
         out.writeJson(WorkspaceArchiveFormat.COLORS, colors);
     }
 
     /**
-     * @return the colours by graph URI
+     * @return the colours by schema name
      */
     @Override
     public Map<String, String> read(PartReader in) {
@@ -54,23 +52,22 @@ public final class ColorsPart
         if (archived == null) {
             return null;
         }
-        var colors = new LinkedHashMap<String, String>();
-        archived.forEach(
-                (folder, color) -> {
-                    var schemaName = in.schemaNameByFolder().get(folder);
-                    if (schemaName == null) {
-                        in.problem(
-                                WorkspaceArchiveFormat.COLORS,
-                                "\"" + folder + "\" is not a graph of the workspace file.");
-                    } else if (color.isBlank()) {
-                        in.problem(
-                                WorkspaceArchiveFormat.COLORS,
-                                "the graph \"" + folder + "\" has no colour.");
-                    } else {
-                        colors.put(schemaName, color);
-                    }
-                });
-        return colors.size() == archived.size() ? colors : null;
+        var valid = true;
+        for (var entry : archived.entrySet()) {
+            var schemaName = entry.getKey();
+            if (!in.schemaNames().contains(schemaName)) {
+                in.problem(
+                        WorkspaceArchiveFormat.COLORS,
+                        "\"" + schemaName + "\" is not a schema of the workspace file.");
+                valid = false;
+            } else if (entry.getValue().isBlank()) {
+                in.problem(
+                        WorkspaceArchiveFormat.COLORS,
+                        "the schema \"" + schemaName + "\" has no colour.");
+                valid = false;
+            }
+        }
+        return valid ? archived : null;
     }
 
     @Override

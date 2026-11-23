@@ -35,6 +35,6 @@ public final class SchemaPart implements WorkspaceFilePart<GraphScope, Graph> {
 
     @Override
     public void apply(GraphScope target, Graph schema) {
-        target.transaction().createGraph(target.uri(), schema);
+        target.transaction().createGraph(target.schemaName(), schema);
     }
 }

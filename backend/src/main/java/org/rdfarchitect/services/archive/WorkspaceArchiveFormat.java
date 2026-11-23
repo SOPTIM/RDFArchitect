@@ -38,15 +38,15 @@ public final class WorkspaceArchiveFormat {
     public static final String COLORS = "colors.json";
     public static final String NAMESPACES = "namespaces.json";
 
-    // Folder names come from graph URIs, so they get a directory of their own to never clash
-    // with the files at the top level.
-    private static final String GRAPHS_DIRECTORY = "graphs/";
+    // A schema name is a valid file name, so it names the folder of its schema as it is. The
+    // folders get a directory of their own to never clash with the files at the top level.
+    private static final String SCHEMAS_DIRECTORY = "schemas/";
 
     private static final Pattern UNSAFE_FILE_NAME_CHARACTERS =
             Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
 
-    public static String graphEntry(String folder, String file) {
-        return GRAPHS_DIRECTORY + folder + "/" + file;
+    public static String schemaEntry(String schemaName, String file) {
+        return SCHEMAS_DIRECTORY + schemaName + "/" + file;
     }
 
     public static String fileNameFor(String workspaceName) {

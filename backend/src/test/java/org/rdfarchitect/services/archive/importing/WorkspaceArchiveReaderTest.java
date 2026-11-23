@@ -55,10 +55,8 @@ import java.util.function.Consumer;
 
 class WorkspaceArchiveReaderTest {
 
-    private static final String CORE = "http://example.org/graphs/core";
-    private static final String EXTENSION = "http://example.org/graphs/extension";
-    private static final String CORE_FOLDER = "example.org-graphs-core";
-    private static final String EXTENSION_FOLDER = "example.org-graphs-extension";
+    private static final String CORE = "core";
+    private static final String EXTENSION = "extension";
 
     private static final String SCHEMA =
             """
@@ -108,11 +106,11 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_validArchive_givesGraphsByTheirUriAgain() {
+    void read_validArchive_givesSchemasByTheirNameAgain() {
         var contents = read(archive);
 
         assertThat(contents.graphs())
-                .extracting(WorkspaceArchive.ArchivedGraph::uri)
+                .extracting(WorkspaceArchive.ArchivedGraph::schemaName)
                 .containsExactlyInAnyOrder(CORE, EXTENSION);
         assertThat(contents.notices()).isEmpty();
     }
@@ -163,7 +161,7 @@ class WorkspaceArchiveReaderTest {
                             manifest.put("addedLater", "something");
                         });
         var files = unzip(newer);
-        files.put("graphs/" + CORE_FOLDER + "/added-later.json", "{}");
+        files.put("schemas/" + CORE + "/added-later.json", "{}");
 
         var contents = read(files);
 
@@ -177,15 +175,15 @@ class WorkspaceArchiveReaderTest {
     @Test
     void read_filesTheManifestDoesNotAskFor_areIgnored() {
         archive.put("README.md", "Exported for the review.");
-        archive.put("graphs/unknown/schema.ttl", "not even turtle");
+        archive.put("schemas/unknown/schema.ttl", "not even turtle");
 
         assertThat(read(archive).graphs()).hasSize(2);
     }
 
     @Test
     void read_reportsEveryProblemAtOnce() {
-        archive.remove("graphs/" + CORE_FOLDER + "/shacl.ttl");
-        archive.put("graphs/" + EXTENSION_FOLDER + "/schema.ttl", "<http://a> <http://b> .");
+        archive.remove("schemas/" + CORE + "/shacl.ttl");
+        archive.put("schemas/" + EXTENSION + "/schema.ttl", "<http://a> <http://b> .");
         archive.put("colors.json", "{\"gone\": \"#000000\"}");
         archive.put(
                 "diagrams.json",
@@ -201,12 +199,11 @@ class WorkspaceArchiveReaderTest {
                 .anySatisfy(
                         problem ->
                                 assertThat(problem)
-                                        .isEqualTo(
-                                                "graphs/" + CORE_FOLDER + "/shacl.ttl is missing."))
+                                        .isEqualTo("schemas/" + CORE + "/shacl.ttl is missing."))
                 .anySatisfy(
                         problem ->
                                 assertThat(problem)
-                                        .startsWith("graphs/" + EXTENSION_FOLDER + "/schema.ttl: ")
+                                        .startsWith("schemas/" + EXTENSION + "/schema.ttl: ")
                                         .contains("line: 1"))
                 .anySatisfy(problem -> assertThat(problem).startsWith("colors.json: \"gone\""))
                 .anySatisfy(
@@ -228,44 +225,37 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_graphsThatClash_areRejected() {
+    void read_schemaListedTwice_isRejected() {
         var problems =
                 problemsOf(
                         withManifest(
                                 manifest -> {
-                                    var graphs = manifest.withArray("graphs");
-                                    var second = (ObjectNode) graphs.get(1);
-                                    second.put("folder", graphs.get(0).get("folder").asText());
-                                    second.put("uri", graphs.get(0).get("uri").asText());
+                                    var schemas = manifest.withArray("schemas");
+                                    schemas.set(1, schemas.get(0));
                                 }));
 
         assertThat(problems)
                 .anySatisfy(
                         problem ->
                                 assertThat(problem)
-                                        .contains("two graphs are stored in this folder"))
-                .anySatisfy(problem -> assertThat(problem).contains("is used twice"));
+                                        .isEqualTo(
+                                                "manifest.json: schema \"%s\": listed twice."
+                                                        .formatted(CORE)));
     }
 
     @Test
-    void read_graphUriThatIsNoUri_isRejected() {
+    void read_schemaNameThatIsNoFileName_isRejected() {
         var problems =
                 problemsOf(
-                        withManifest(
-                                manifest ->
-                                        ((ObjectNode) manifest.get("graphs").get(0))
-                                                .put("uri", "not a uri")));
+                        withManifest(manifest -> manifest.withArray("schemas").set(0, "../core")));
 
         assertThat(problems)
-                .anySatisfy(
-                        problem ->
-                                assertThat(problem)
-                                        .contains("\"not a uri\" is not a valid graph URI"));
+                .contains("manifest.json: schema \"../core\": not a valid schema name.");
     }
 
     @Test
     void read_missingField_isRejectedNamingTheField() {
-        var path = "graphs/" + CORE_FOLDER + "/diagrams.json";
+        var path = "schemas/" + CORE + "/diagrams.json";
         var graphDiagrams = json(archive.get(path));
         graphDiagrams.remove("defaultPackageMRID");
         archive.put(path, ArchiveFiles.json(graphDiagrams));
@@ -303,36 +293,11 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_diagramOfAGraphThatCannotHoldClasses_isRejected() {
-        // The default graph has no URI a class of a diagram could refer to.
-        var problems =
-                problemsOf(
-                        withManifest(
-                                manifest ->
-                                        manifest.get("graphs")
-                                                .forEach(
-                                                        graph -> {
-                                                            if (graph.get("uri")
-                                                                    .asText()
-                                                                    .equals(EXTENSION)) {
-                                                                ((ObjectNode) graph)
-                                                                        .put("uri", "default");
-                                                            }
-                                                        })));
-
-        assertThat(problems)
-                .singleElement()
-                .asString()
-                .startsWith("diagrams.json: diagram " + workspaceDiagramId + ": ")
-                .contains("must be absolute");
-    }
-
-    @Test
     void read_blankColour_isRejected() {
-        archive.put("colors.json", "{\"%s\": \" \"}".formatted(CORE_FOLDER));
+        archive.put("colors.json", "{\"%s\": \" \"}".formatted(CORE));
 
         assertThat(problemsOf(zip(archive)))
-                .containsExactly("colors.json: the graph \"" + CORE_FOLDER + "\" has no colour.");
+                .containsExactly("colors.json: the schema \"" + CORE + "\" has no colour.");
     }
 
     @Test
