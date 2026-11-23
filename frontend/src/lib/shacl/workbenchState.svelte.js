@@ -175,6 +175,8 @@ export class ShapesWorkbench {
     /** Bumped by every `select`, so an answer for a document no longer selected is dropped. */
     #selection = 0;
     #saveInFlight = null;
+    /** The last change to which schemas a document applies, which the next one waits for. */
+    #schemaChanges = Promise.resolve();
     #unwatchReadOnly = null;
 
     #workspaceName;
@@ -678,6 +680,28 @@ export class ShapesWorkbench {
         return this.#update(documentId, {
             schema: schemas.length > 0 ? schemas : [""],
         });
+    }
+
+    /**
+     * Says whether a document applies to one schema, leaving the others as they are.
+     *
+     * One change after the other, each starting from the set the one before left: ticking two
+     * schemas in quick succession would otherwise send the second with the set from before the
+     * first, and undo it.
+     */
+    async setApplies(documentId, schemaName, applies) {
+        const change = this.#schemaChanges.then(() => {
+            const current =
+                this.documents.find(document => document.id === documentId)
+                    ?.schemas ?? [];
+            const others = current.filter(name => name !== schemaName);
+            return this.setSchemas(
+                documentId,
+                applies ? [...others, schemaName] : others,
+            );
+        });
+        this.#schemaChanges = change.catch(() => {});
+        return change;
     }
 
     /** The documents listed next to one another, under `schemaName` or else under no schema. */

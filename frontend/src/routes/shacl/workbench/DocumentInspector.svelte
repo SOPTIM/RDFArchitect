@@ -55,8 +55,10 @@
         ),
     );
 
-    async function setSchemas(schemas) {
-        if (!(await workbench.setSchemas(document.id, schemas))) {
+    // A change of one schema rather than a whole set: the set this component shows lags behind
+    // a change still on its way.
+    async function setApplies(schemaName, applies) {
+        if (!(await workbench.setApplies(document.id, schemaName, applies))) {
             toastStore.error(
                 "Not changed",
                 workbench.lastError ??
@@ -165,7 +167,7 @@
                     schemas={workbench.schemas}
                     selected={document.schemas ?? []}
                     readonly={workbench.readOnly}
-                    onchange={setSchemas}
+                    ontoggle={setApplies}
                 />
                 {#if absentSchemas.length > 0}
                     <ul class="mt-1 flex flex-col gap-1">
@@ -176,13 +178,7 @@
                                 {#if !workbench.readOnly}
                                     <button
                                         class="text-blue cursor-pointer underline underline-offset-2"
-                                        onclick={() =>
-                                            setSchemas(
-                                                document.schemas.filter(
-                                                    candidate =>
-                                                        candidate !== name,
-                                                ),
-                                            )}
+                                        onclick={() => setApplies(name, false)}
                                     >
                                         Forget it
                                     </button>

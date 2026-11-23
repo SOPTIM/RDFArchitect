@@ -24,10 +24,14 @@
         /** The names ticked. Can hold names with no schema behind them, which stay as they are. */
         selected = [],
         readonly = false,
+        /** Called with the names ticked after a change. */
         onchange = () => {},
+        /** Called with the schema ticked or unticked, and which. */
+        ontoggle = () => {},
     } = $props();
 
     function set(name, ticked) {
+        ontoggle(name, ticked);
         onchange(
             ticked
                 ? [...selected, name]
