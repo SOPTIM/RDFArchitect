@@ -26,6 +26,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -42,6 +43,9 @@ public final class ShapesTurtleParser {
 
     /** Code for a finding that came from the parser rather than from a shape check. */
     public static final String PARSE_ERROR_CODE = "TURTLE_PARSE_ERROR";
+
+    /** Code for an IRI the parser read but no store can be sent, see {@link UnwritableIris}. */
+    public static final String UNWRITABLE_IRI_CODE = "UNWRITABLE_IRI";
 
     /** What is reported for a document nested more deeply than it can be read. */
     public static final String TOO_DEEP =
@@ -80,7 +84,61 @@ public final class ShapesTurtleParser {
             failed = true;
             findings.add(finding(ShapesValidationFinding.Severity.ERROR, TOO_DEEP, -1, -1));
         }
-        return new Result(graph, List.copyOf(findings), failed);
+        return new Result(graph, withUnwritableIris(findings, graph), failed);
+    }
+
+    /**
+     * Reports an IRI that cannot be saved as an error, where the parser's first warning about it
+     * stood, in place of those warnings: they say less, and only as a warning.
+     */
+    private static List<ShapesValidationFinding> withUnwritableIris(
+            List<ShapesValidationFinding> findings, Graph graph) {
+        var warnings =
+                findings.stream()
+                        .filter(f -> f.getSeverity() == ShapesValidationFinding.Severity.WARNING)
+                        .map(
+                                f ->
+                                        new UnwritableIris.Warning(
+                                                f.getMessage(),
+                                                f.getLine() == null ? -1 : f.getLine(),
+                                                f.getColumn() == null ? -1 : f.getColumn()))
+                        .toList();
+        var unwritable = UnwritableIris.in(graph, warnings);
+        if (unwritable.isEmpty()) {
+            return List.copyOf(findings);
+        }
+        var result = new ArrayList<ShapesValidationFinding>();
+        var reported = new HashSet<String>();
+        for (var finding : findings) {
+            var named =
+                    finding.getSeverity() == ShapesValidationFinding.Severity.WARNING
+                            ? unwritable.stream()
+                                    .filter(found -> finding.getMessage().contains(found.iri()))
+                                    .toList()
+                            : List.<UnwritableIris.Found>of();
+            if (named.isEmpty()) {
+                result.add(finding);
+            }
+            named.stream()
+                    .filter(found -> reported.add(found.iri()))
+                    .forEach(found -> result.add(unwritable(found)));
+        }
+        unwritable.stream()
+                .filter(found -> reported.add(found.iri()))
+                .forEach(found -> result.add(unwritable(found)));
+        return List.copyOf(result);
+    }
+
+    private static ShapesValidationFinding unwritable(UnwritableIris.Found found) {
+        return ShapesValidationFinding.builder()
+                .severity(ShapesValidationFinding.Severity.ERROR)
+                .source(ShapesValidationFinding.Source.SYNTAX)
+                .code(UNWRITABLE_IRI_CODE)
+                .message(found.describe())
+                .line(found.line() > 0 ? (int) found.line() : null)
+                .column(found.column() > 0 ? (int) found.column() : null)
+                .foundInProfiles(List.of())
+                .build();
     }
 
     private static ErrorHandler collectingHandler(List<ShapesValidationFinding> findings) {

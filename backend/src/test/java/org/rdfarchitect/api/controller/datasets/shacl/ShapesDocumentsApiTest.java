@@ -305,6 +305,20 @@ class ShapesDocumentsApiTest {
     }
 
     @Test
+    void anIriNoStoreTakesIsRefusedWithWhereItStands() throws Exception {
+        var document = givenDocument("mine.ttl", SHAPES);
+
+        mockMvc.perform(
+                        put(DOCUMENTS + "/" + document.getId())
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(
+                                        "@prefix ex: <http://example.org/> .\n<ex:a|b> ex:b 1 .\n"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("[line: 2, col: 1]")))
+                .andExpect(content().string(containsString("<ex:a|b>")));
+    }
+
+    @Test
     void unreadableTurtleIsRefusedWithWhereItWentWrong() throws Exception {
         var document = givenDocument("mine.ttl", SHAPES);
 
