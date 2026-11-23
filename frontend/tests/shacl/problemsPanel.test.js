@@ -444,6 +444,25 @@ eq:Terminal a sh:NodeShape ;
         });
     });
 
+    test("says nothing about a document while a schema is being compared", () => {
+        const panel = render(DocumentInspector, {
+            workbench: fakeWorkbench({
+                selectedId: "eq",
+                comparedSchema: "EQ",
+                selected: {
+                    id: "eq",
+                    name: "eq.ttl",
+                    origin: "AUTHORED",
+                    enabled: true,
+                    schemas: [],
+                },
+            }),
+        });
+
+        expect(panel.textContent).toContain("No document open");
+        expect(panel.textContent).not.toContain("eq.ttl");
+    });
+
     describe("what the document applies to", () => {
         const EQ = "EQ";
         const SSH = "SSH";

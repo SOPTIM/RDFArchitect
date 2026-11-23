@@ -97,6 +97,7 @@
 
     async function open(documentId) {
         if (documentId === workbench.selectedId) {
+            workbench.closeComparison();
             return;
         }
         if (await onbeforeswitch()) {
@@ -262,11 +263,12 @@
           : null}
     {@const summary = summarise(result)}
     {@const selected = document.id === workbench.selectedId}
+    {@const shown = selected && !workbench.comparedSchema}
     <li class="py-px">
         <ContextMenu.Root>
             <ContextMenu.TriggerArea class="block w-full">
                 <div
-                    class="group relative flex items-center gap-2 rounded-md border px-2 py-1.5 {selected
+                    class="group relative flex items-center gap-2 rounded-md border px-2 py-1.5 {shown
                         ? 'bg-nav-active-background text-nav-active-text border-border-select'
                         : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
@@ -301,7 +303,7 @@
                     {:else}
                         <button
                             class="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left"
-                            aria-current={selected ? "true" : undefined}
+                            aria-current={shown ? "true" : undefined}
                             ondblclick={() => {
                                 if (!readOnly) {
                                     startRename(document);
@@ -399,7 +401,7 @@
             <ContextMenu.Content>
                 <ContextMenu.Item.Button
                     onSelect={() => open(document.id)}
-                    disabled={selected}
+                    disabled={shown}
                     faIcon={faFolderOpen}
                 >
                     Open
@@ -470,7 +472,7 @@
 
 {#snippet generatedRow(schema)}
     {@const id = generatedId(schema.name)}
-    {@const selected = id === workbench.selectedId}
+    {@const selected = !workbench.comparedSchema && id === workbench.selectedId}
     <li class="py-px">
         <button
             class="flex w-full cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-left {selected
@@ -545,14 +547,17 @@
     <ul class="min-h-0 flex-1 overflow-y-auto px-1.5 py-1">
         {#each workbench.schemas as schema (schema.name)}
             {@const documents = workbench.documentsOf(schema.name)}
+            {@const comparing = workbench.comparedSchema === schema.name}
             <li>
                 <div
-                    class="group hover:bg-nav-hover-background focus-within:bg-nav-hover-background relative flex items-center gap-1 rounded-md border border-transparent px-1 py-1"
+                    class="group relative flex items-center gap-1 rounded-md border px-1 py-1 {comparing
+                        ? 'bg-nav-active-background text-nav-active-text border-border-select'
+                        : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
                     {@render groupToggle(schema.name, schema.label)}
                     <button
                         class="flex min-w-0 flex-1 cursor-pointer items-baseline gap-2 text-left"
-                        aria-current={workbench.comparedSchema === schema.name ? "true" : undefined}
+                        aria-current={comparing ? "true" : undefined}
                         title={`${schema.name}\nOpen to compare this schema with its documents`}
                         onclick={() => workbench.compare(schema.name)}
                     >
