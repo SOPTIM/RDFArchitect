@@ -1030,6 +1030,29 @@ describe("saving while a save is on its way", () => {
         expect(workbench.dirty).toBe(true);
     });
 
+    test("writes what was open when Save was pressed, though another document opens meanwhile", async () => {
+        await workbench.load();
+        const typed = `${SHAPES}# typed\n`;
+        workbench.text = typed;
+        const asked = held();
+        readOnly.mockImplementationOnce(() => asked.promise);
+        server.requests.length = 0;
+
+        const saving = workbench.save();
+        await workbench.select(CUSTOM);
+        asked.release(false);
+        await saving;
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.path).toBe(`/api/workspaces/cgmes/shacl/documents/${EQ}`);
+        expect(put.body).toBe(typed);
+        expect(put.query.get("expectedRevision")).toBe(
+            await revisionOf(SHAPES),
+        );
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.dirty).toBe(false);
+    });
+
     test("a second Save waits for the first rather than failing", async () => {
         await workbench.load();
         const gate = holdRequests(entry => entry.method === "PUT");

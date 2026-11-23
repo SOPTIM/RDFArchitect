@@ -513,21 +513,24 @@ export class ShapesWorkbench {
         if (!this.selectedId || !this.#textReady) {
             return { saved: false, reason: null };
         }
+        // What is written is decided when Save is pressed: the read-only check below waits for
+        // the server, and another document can be opened meanwhile.
+        const documentId = this.selectedId;
+        const bufferKey = this.bufferKey;
+        // What is sent is what becomes saved. Reading the buffer again after the request would
+        // mark whatever was typed while it was on its way as saved, though it never was.
+        const sent = this.text;
+        const savedText = this.savedText;
         if (await this.refreshReadOnly()) {
             return { saved: false, reason: READ_ONLY };
         }
         this.saving = true;
         try {
-            const documentId = this.selectedId;
-            const bufferKey = this.bufferKey;
-            // What is sent is what becomes saved. Reading the buffer again after the request would
-            // mark whatever was typed while it was on its way as saved, though it never was.
-            const sent = this.text;
             // Names the text this edit was made to, so a document saved meanwhile — in another
             // tab, or rewound by an undo while this buffer held edits — is not overwritten unseen.
             const expectedRevision = overwrite
                 ? undefined
-                : await revisionOf(storedForm(this.savedText));
+                : await revisionOf(storedForm(savedText));
             // A document that has been emptied still has to be sent as something, or the
             // endpoint's plain-string body arrives absent and Spring rejects the request.
             const { error, response } = await replaceShapesDocumentText({
@@ -566,13 +569,13 @@ export class ShapesWorkbench {
      * The buffer stays as it is, with its history: it now holds the new document's text.
      */
     async #writeDetached() {
+        const { name, schemas } = this.detached;
+        const bufferKey = this.bufferKey;
+        const sent = this.text;
         if (await this.refreshReadOnly()) {
             return { saved: false, reason: READ_ONLY };
         }
-        const { name, schemas } = this.detached;
         const known = new Set(this.schemas.map(schema => schema.name));
-        const bufferKey = this.bufferKey;
-        const sent = this.text;
         this.saving = true;
         try {
             const { data, error } = await createShapesDocument({
