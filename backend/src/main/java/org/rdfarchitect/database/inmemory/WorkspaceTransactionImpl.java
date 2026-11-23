@@ -102,6 +102,11 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
+    public void setCrossProfileDiagramId(UUID crossProfileDiagramId) {
+        crossProfileDiagramInfo.setCrossProfileDiagramUUID(crossProfileDiagramId);
+    }
+
+    @Override
     public PrefixMapping prefixes() {
         return prefixes.readOnlyView();
     }
