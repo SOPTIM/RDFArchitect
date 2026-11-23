@@ -158,6 +158,14 @@
     // Everything that replaces what this page shows without navigating asks here first.
     $effect(() => guardUnsavedChanges(confirmDiscard));
 
+    // A question closed without one of its answers, with Escape, is answered Cancel; otherwise
+    // whoever asked would wait for ever.
+    $effect(() => {
+        if (!showUnsavedDialog) {
+            untrack(() => answerSwitch(false));
+        }
+    });
+
     /**
      * Opens the document a link asked for, once the workbench has finished loading.
      *
@@ -246,6 +254,11 @@
         if (!workbench?.dirty) {
             return true;
         }
+        // One question at a time, answered for what it was asked about: whatever asks while it
+        // is open does not go ahead.
+        if (pendingSwitch) {
+            return false;
+        }
         return new Promise(resolve => {
             pendingSwitch = resolve;
             unsavedDialogOffersSave = allowSave;
@@ -279,10 +292,15 @@
         });
     }
 
-    function answerSwitch(answer) {
+    /** Takes the open question off the page, so that it is answered exactly once. */
+    function takeSwitch() {
         const resolve = pendingSwitch;
         pendingSwitch = null;
-        resolve?.(answer);
+        return resolve;
+    }
+
+    function answerSwitch(answer) {
+        takeSwitch()?.(answer);
     }
 
     async function followLink(target) {
@@ -546,7 +564,8 @@
     onSave={async () => {
         // Only leave the document once it is actually written. A save that failed on a syntax
         // error would otherwise switch away and take the buffer with it — losing exactly the
-        // text the user had just asked to keep.
-        answerSwitch(await save());
+        // text the user had just asked to keep. Taken before the save, which closes the dialog.
+        const resolve = takeSwitch();
+        resolve?.(await save());
     }}
 />

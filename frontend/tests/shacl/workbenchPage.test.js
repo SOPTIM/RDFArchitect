@@ -176,6 +176,14 @@ async function loaded() {
     await vi.waitFor(() => expect(editor()?.value).toBe(SHAPES));
 }
 
+/** Resolves to the promise's value, or to "pending" while it has none. */
+async function settled(promise) {
+    return Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve("pending"), 50)),
+    ]);
+}
+
 vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
 }));
@@ -285,6 +293,36 @@ describe("something outside the page about to replace it", () => {
 
         expect(await agreed).toBe(true);
         expect(editor().value).toBe(SHAPES);
+    });
+
+    test("gets an answer when the question is closed without one", async () => {
+        type(TYPED);
+
+        const agreed = confirmUnsavedChanges();
+        await vi.waitFor(() => expect(unsavedQuestion()).toBeDefined());
+        unsavedQuestion().dispatchEvent(
+            new KeyboardEvent("keydown", {
+                key: "Escape",
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+        flushSync();
+
+        expect(await settled(agreed)).toBe(false);
+        expect(editor().value).toBe(TYPED);
+    });
+
+    test("asked again while the question is open, does not go ahead, and the first still gets its answer", async () => {
+        type(TYPED);
+
+        const first = confirmUnsavedChanges();
+        await vi.waitFor(() => expect(unsavedQuestion()).toBeDefined());
+        const second = confirmUnsavedChanges();
+        expect(await settled(second)).toBe(false);
+        await answer("Discard");
+
+        expect(await settled(first)).toBe(true);
     });
 });
 
