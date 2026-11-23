@@ -129,13 +129,16 @@ public class ConformanceService implements ConformanceUseCase {
      * @param ownProperties the properties this schema declares; with {@code ownClasses}, what it is
      *     asked to cover
      * @param properties every property the workspace declares
+     * @param vocabulary the namespaces this schema is written in, or the workspace's when it
+     *     declares nothing itself
      */
     private record Implied(
             Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> constraints,
             ClassHierarchy hierarchy,
             Set<String> ownClasses,
             Set<String> ownProperties,
-            Set<String> properties) {
+            Set<String> properties,
+            Set<String> vocabulary) {
 
         /**
          * Whether this schema is expected to state {@code key} itself. Profiles re-declare the
@@ -178,8 +181,7 @@ public class ConformanceService implements ConformanceUseCase {
         var asserted =
                 OtherVocabularies.leaveOut(
                         EffectiveConstraints.of(documentShapes, implies.hierarchy()),
-                        implies.hierarchy(),
-                        implies.properties());
+                        implies.vocabulary());
         var stated = new HashSet<>(asserted.constraints().keySet());
         stated.addAll(asserted.advisory().keySet());
 
@@ -302,12 +304,14 @@ public class ConformanceService implements ConformanceUseCase {
                                         reached.contains(instantiableClass.getURI())
                                                 || ownClasses.declares(instantiableClass.getURI()))
                         .getGraph();
+        var vocabulary = OtherVocabularies.of(own);
         return new Implied(
                 EffectiveConstraints.of(shapes),
                 hierarchy,
                 ownClassUris,
                 ownProperties,
-                subjectsOf(union, RDFS.domain.asNode()));
+                subjectsOf(union, RDFS.domain.asNode()),
+                vocabulary.isEmpty() ? OtherVocabularies.of(union) : vocabulary);
     }
 
     private static Set<String> ownClassesOf(Graph own) {

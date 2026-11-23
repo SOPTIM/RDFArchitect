@@ -123,6 +123,20 @@ class ConformanceAgainstOfficialFilesTest {
                 .noneMatch(finding -> finding.getMessage().contains("cannot be checked"));
     }
 
+    @Test
+    void anEmptyTypeListReadsAsAdmittingNothing() {
+        // The Simple file lists no type for Measurement.Terminal, so no value it names conforms.
+        var report = service.compare(profile("Operation"));
+
+        assertThat(report.getFindings())
+                .filteredOn(finding -> finding.getPath().equals(CIM + "Measurement.Terminal"))
+                .filteredOn(finding -> finding.getTargetClass().equals(CIM + "Analog"))
+                .singleElement()
+                .satisfies(
+                        finding ->
+                                assertThat(finding.getDocumentSays()).contains("of class nothing"));
+    }
+
     /** Imports a profile's vocabulary as a schema, with every official file named after it. */
     private GraphIdentifier profile(String name) {
         var schema = new GraphIdentifier(WORKSPACE, name);

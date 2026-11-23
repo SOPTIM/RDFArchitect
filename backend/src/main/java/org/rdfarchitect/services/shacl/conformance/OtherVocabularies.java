@@ -17,7 +17,11 @@
 
 package org.rdfarchitect.services.shacl.conformance;
 
-import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 
 import java.util.HashSet;
@@ -27,34 +31,61 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Takes out of the documents' side what is written in a vocabulary no schema of the workspace uses.
+ * Takes out of the documents' side what is written in a vocabulary the compared schema does not
+ * use.
  *
  * <p>Official NC constraints state each rule for every CIM namespace in use — the current one,
  * {@code CIM100} and {@code cim16} — and list each permitted type under all three, so one file
- * checks data of any of those versions. Only one of them can be in the workspace. Compared as they
- * stand, the other versions' shapes read as 702 classes no schema declares, and a type list that
- * also admits {@code cim16:Terminal} read as a contradiction of one that admits {@code
- * cim:ACDCTerminal}. There is nothing in the workspace to compare them with, so they are left out;
- * a term in a namespace the workspace does use is kept, so a misspelling is still reported.
+ * checks data of any of those versions. A schema is written in one of them. The rules and types of
+ * the others are about data of another version, and comparing them with the schema reads every one
+ * as a class the schema is missing, or a type list admitting {@code cim17:Switch} as a
+ * contradiction of a range in CIM 18. That holds with a CGMES schema of the other version in the
+ * same workspace, too: it is not the schema being compared. A term in a namespace the schema does
+ * use is kept, so a misspelling is still reported.
  */
 final class OtherVocabularies {
 
     private OtherVocabularies() {}
 
+    /**
+     * The namespaces a schema is written in: those of its classes and properties, and of the
+     * classes its properties belong to and point to, which a profile extending another one names
+     * without declaring them.
+     */
+    static Set<String> of(Graph schema) {
+        var namespaces = new HashSet<String>();
+        schema.stream(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode())
+                .forEach(triple -> addNamespace(namespaces, triple.getSubject()));
+        for (var predicate :
+                Set.of(RDFS.domain.asNode(), RDFS.range.asNode(), CIMS.datatype.asNode())) {
+            schema.stream(Node.ANY, predicate, Node.ANY)
+                    .forEach(
+                            triple -> {
+                                addNamespace(namespaces, triple.getSubject());
+                                addNamespace(namespaces, triple.getObject());
+                            });
+        }
+        return namespaces;
+    }
+
+    private static void addNamespace(Set<String> namespaces, Node node) {
+        if (node.isURI()) {
+            namespaces.add(namespaceOf(node.getURI()));
+        }
+    }
+
+    /**
+     * @param vocabulary the namespaces the compared schema is written in; empty when it declares
+     *     nothing, and there is no telling one vocabulary from another
+     */
     static EffectiveConstraints.Asserted leaveOut(
-            EffectiveConstraints.Asserted asserted,
-            ClassHierarchy hierarchy,
-            Set<String> properties) {
-        var known = new HashSet<String>();
-        hierarchy.declared().forEach(iri -> known.add(namespaceOf(iri)));
-        properties.forEach(iri -> known.add(namespaceOf(iri)));
-        if (known.isEmpty()) {
-            // Without a schema there is no telling one vocabulary from another.
+            EffectiveConstraints.Asserted asserted, Set<String> vocabulary) {
+        if (vocabulary.isEmpty()) {
             return asserted;
         }
         return new EffectiveConstraints.Asserted(
-                inKnown(asserted.constraints(), known),
-                inKnown(asserted.advisory(), known),
+                inKnown(asserted.constraints(), vocabulary),
+                inKnown(asserted.advisory(), vocabulary),
                 asserted.statedIn());
     }
 
@@ -74,18 +105,25 @@ final class OtherVocabularies {
 
     /**
      * The constraint with the value types of other vocabularies taken out. A type list naming only
-     * such types says nothing this workspace can check, and is read as stating no type at all.
+     * such types says nothing this schema can check, and is read as stating no type at all. A list
+     * that names no type at all admits nothing, and stays as it is.
      */
     private static EffectiveConstraints.Constraint withKnownTypes(
             EffectiveConstraints.Constraint constraint, Set<String> known) {
         var classes = known(constraint.valueClasses(), known);
-        var types = constraint.valueTypes() == null ? null : known(constraint.valueTypes(), known);
+        var types = constraint.valueTypes();
+        if (types != null && !types.isEmpty()) {
+            types = known(types, known);
+            if (types.isEmpty()) {
+                types = null;
+            }
+        }
         return new EffectiveConstraints.Constraint(
                 constraint.minCount(),
                 constraint.maxCount(),
                 constraint.dataTypes(),
                 classes,
-                types == null || types.isEmpty() ? null : types,
+                types,
                 constraint.nodeKinds(),
                 constraint.allowedValues());
     }

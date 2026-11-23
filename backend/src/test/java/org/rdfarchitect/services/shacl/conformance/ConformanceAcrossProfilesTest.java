@@ -76,25 +76,38 @@ class ConformanceAcrossProfilesTest {
     }
 
     @Test
-    void anNcProfileIsComparedAgainstTheClassesItBuildsOn() {
+    void anNcProfileIsComparedInItsOwnVocabulary() {
         var report = compareOfficial("SteadyStateInstruction");
 
-        // Generated from the NC schema alone, every constraint on a CGMES class would be "not in
-        // the
-        // schema", with that class declared right next to it.
-        assertThat(report.getCompared()).isGreaterThan(600);
+        assertThat(report.getCompared()).isGreaterThan(400);
         assertThat(report.getContradictedCount()).isZero();
         assertThat(report.getDifferentCount()).isZero();
-        // NC files also target the CIM16 classes, for older data. No schema here uses that
-        // namespace, so there is nothing to compare them with, and they are not reported as
-        // classes the schema is missing.
+        // NC files repeat every rule for the CIM versions CGMES uses, for data of those versions.
+        // The schema compared is written in CIM 18, so those rules are not compared, not even with
+        // the CGMES schema of their version that is right next to it.
         assertThat(report.getFindings())
-                .filteredOn(finding -> finding.getKind() == ConformanceFinding.Kind.NOT_IN_SCHEMA)
                 .noneSatisfy(
                         finding ->
                                 assertThat(finding.getTargetClass())
                                         .startsWith("http://iec.ch/TC57/CIM100#"))
                 .noneSatisfy(finding -> assertThat(finding.getTargetClass()).contains("cim16"));
+    }
+
+    @Test
+    void aTypeListForAnotherCimVersionIsNotAContradiction() {
+        // TopologyAction.Switch has a CIM 18 range, and the official file lists the switch types
+        // only in CIM100 and cim16. With CGMES in the workspace, CIM100 is a known vocabulary.
+        for (var profile : List.of("RemedialAction", "SteadyStateHypothesisSchedule")) {
+            var report = compareOfficial(profile);
+
+            assertThat(report.getContradictedCount()).as(profile).isZero();
+            assertThat(report.getFindings())
+                    .as(profile)
+                    .noneSatisfy(
+                            finding ->
+                                    assertThat(finding.getDocumentSays())
+                                            .contains("http://iec.ch/TC57/CIM100#"));
+        }
     }
 
     @Test
