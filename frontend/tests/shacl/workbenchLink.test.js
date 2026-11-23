@@ -24,8 +24,7 @@ import {
 
 describe("leavingNeedsConfirmation", () => {
     test("asks before unsaved changes are carried out of the workbench", () => {
-        // Switching document was already guarded; anything that navigated — the menu bar, the
-        // back button, the editor's own Ctrl+click — threw the buffer away in silence.
+        // A navigation guard sees whatever navigates: the menu bar, the back button, a link.
         expect(
             leavingNeedsConfirmation({ dirty: true, toPathname: "/mainpage" }),
         ).toBe(true);

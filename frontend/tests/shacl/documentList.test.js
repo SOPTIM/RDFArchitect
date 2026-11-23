@@ -57,7 +57,6 @@ function fakeWorkbench(overrides = {}) {
     return {
         documents: DOCUMENTS,
         schemas: SCHEMAS,
-        comparedSchema: null,
         contextSchemas: [EQ],
         documentsOf(schemaName) {
             return this.documents.filter(document =>
@@ -81,8 +80,6 @@ function fakeWorkbench(overrides = {}) {
         },
         selectedId: "eq",
         select: vi.fn(),
-        compare: vi.fn(),
-        closeComparison: vi.fn(),
         create: vi.fn().mockResolvedValue({ id: "new" }),
         importFile: vi.fn().mockResolvedValue({ id: "new" }),
         rename: vi.fn().mockResolvedValue(true),

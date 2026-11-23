@@ -19,8 +19,8 @@
  * What a new constraints document starts with.
  *
  * An empty document binds no prefixes, so the first term anyone writes into it — `sh:NodeShape`,
- * `cim:ACLineSegment` — is an undefined prefix, and completion can only offer full IRIs. The
- * workspace already knows the namespaces its schemas use, so a new document starts with those.
+ * `cim:ACLineSegment` — uses an undefined prefix. The workspace already knows the namespaces its
+ * schemas use, so a new document starts with those.
  */
 
 const STANDARD = [

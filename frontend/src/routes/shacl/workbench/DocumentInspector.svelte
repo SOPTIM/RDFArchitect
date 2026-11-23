@@ -35,10 +35,7 @@
 
     let search = $state("");
 
-    /** A comparison is about a schema, and the tree shows it so: this must not say otherwise. */
-    const document = $derived(
-        workbench.comparedSchema ? null : workbench.selected,
-    );
+    const document = $derived(workbench.selected);
     const shapes = $derived(extractOutline(workbench.text));
     const matches = $derived.by(() => {
         const wanted = search.trim().toLowerCase();
@@ -147,14 +144,8 @@
                         <dd>{document.tripleCount ?? 0}</dd>
                     </div>
                     <div class="flex gap-2">
-                        <dt class="text-text-subtle w-32 shrink-0">
-                            Validation
-                        </dt>
-                        <dd>
-                            {document.enabled
-                                ? "Takes part"
-                                : "Excluded while disabled"}
-                        </dd>
+                        <dt class="text-text-subtle w-32 shrink-0">State</dt>
+                        <dd>{document.enabled ? "Enabled" : "Disabled"}</dd>
                     </div>
                 </dl>
             </section>
@@ -162,7 +153,7 @@
             <section>
                 <h3
                     class="text-text-subtle mb-1 text-xs font-semibold uppercase"
-                    title="Decides where the document is listed and which schema's comparison reads it. It is validated against every schema of the workspace either way."
+                    title="Decides under which schemas the document is listed."
                 >
                     Applies to
                 </h3>

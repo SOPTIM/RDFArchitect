@@ -18,9 +18,17 @@
 import { describe, expect, test } from "vitest";
 
 import { newDocumentText, shapesNamespace } from "$lib/shacl/newDocument.js";
-import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
 
 const CIM = "http://iec.ch/TC57/CIM100#";
+
+/** The bindings of the `@prefix` lines a new document is written with. */
+function parsePrefixes(text) {
+    return Object.fromEntries(
+        [...text.matchAll(/^@prefix ([\w.-]*): +<([^>]*)> \.$/gm)].map(
+            ([, name, iri]) => [name, iri],
+        ),
+    );
+}
 
 describe("a new constraints document", () => {
     test("binds the SHACL vocabularies, the workspace's namespaces and its own", () => {

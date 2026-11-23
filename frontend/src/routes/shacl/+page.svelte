@@ -299,8 +299,8 @@
      * Asks about unsaved changes before the user leaves the workbench altogether.
      *
      * `confirmSwitch` only covers opening another document; without this, the same buffer was
-     * thrown away silently by anything that navigated — the menu bar, the browser's back button,
-     * a reload, or the editor's own Ctrl+click, which opens the class the cursor is on.
+     * thrown away silently by anything that navigated — the menu bar, the browser's back button
+     * or a reload.
      *
      * `beforeNavigate` runs synchronously and the dialog does not, so the navigation is cancelled
      * first and re-issued once the user has answered. A full unload is the exception: the browser
@@ -332,12 +332,12 @@
 
 <!--
   @component
-  The constraints workbench: the workspace's schemas and SHACL documents, an editor for the open
-  one, and everything validation has to say about them.
+  The constraints workbench: the workspace's schemas and SHACL documents, and an editor for the
+  open one.
 
-  Replaces the read-one-blob-of-Turtle dialog. A schema's constraints normally arrive as several
-  official files plus whatever the user adds, and a file can be about several schemas; every enabled
-  one applies and none overrides another, so the tree is about participation and reading order.
+  A schema's constraints normally arrive as several official files plus whatever the user adds, and
+  a file can be about several schemas; every enabled one applies and none overrides another, so the
+  tree is about participation and reading order.
 -->
 
 <svelte:window onkeydown={onKeydown} />

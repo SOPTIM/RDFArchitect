@@ -131,13 +131,6 @@ export class ShapesWorkbench {
     /** The workspace's schemas, as `{ name, label }`, in the order the navigation shows them. */
     schemas = $state([]);
     selectedId = $state(null);
-    /**
-     * The schema being compared with its documents, or null when a document is showing.
-     *
-     * Beside the selection rather than part of it: looking at a comparison replaces nothing, so the
-     * open document keeps its unsaved edits and there is nothing to ask about.
-     */
-    comparedSchema = $state(null);
     /** Moves with every reading of the documents, for what is derived from them elsewhere. */
     documentsRevision = $state(0);
     text = $state("");
@@ -239,7 +232,6 @@ export class ShapesWorkbench {
     get contextSchemas() {
         const known = name => this.schemas.some(schema => schema.name === name);
         const inView =
-            this.comparedSchema ??
             this.generatedSchema ??
             (this.selected ? null : this.#preferredSchema);
         if (inView) {
@@ -347,7 +339,6 @@ export class ShapesWorkbench {
 
     async select(documentId) {
         const selection = ++this.#selection;
-        this.comparedSchema = null;
         this.selectedId = documentId;
         if (documentId === null) {
             this.#replaceBuffer("");
@@ -372,16 +363,6 @@ export class ShapesWorkbench {
         }
         this.#replaceBuffer(text);
         this.#textReady = true;
-    }
-
-    /** Shows how a schema compares with its documents. The open document stays as it is. */
-    compare(schemaName) {
-        this.comparedSchema = schemaName;
-    }
-
-    /** Back from a comparison to the open document. */
-    closeComparison() {
-        this.comparedSchema = null;
     }
 
     /** Throws the unsaved edits away, as an undoable edit back to what was last saved. */
@@ -684,12 +665,6 @@ export class ShapesWorkbench {
         this.schemas = graphs
             .map(graph => ({ name: nameOf(graph), label: labelOf(graph) }))
             .sort(compareGraphs);
-        if (
-            this.comparedSchema &&
-            !this.schemas.some(schema => schema.name === this.comparedSchema)
-        ) {
-            this.comparedSchema = null;
-        }
     }
 
     async #refreshDocuments() {
@@ -742,8 +717,8 @@ export class ShapesWorkbench {
     /**
      * Puts the shapes the schema implies in the editor, read-only.
      *
-     * Fetched rather than derived here: the same generator answers the export and the conformance
-     * check, and a second implementation in the browser would be a second thing to keep true.
+     * Fetched rather than derived here: the same generator answers the SHACL export, and a second
+     * implementation in the browser would be a second thing to keep true.
      */
     async #showGenerated(selection) {
         const schemaName = this.generatedSchema;

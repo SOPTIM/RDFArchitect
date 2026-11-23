@@ -87,7 +87,6 @@
 
     async function open(documentId) {
         if (documentId === workbench.selectedId) {
-            workbench.closeComparison();
             return;
         }
         if (await onbeforeswitch()) {
@@ -244,8 +243,7 @@
 -->
 
 {#snippet documentRow(document, schemaName)}
-    {@const selected =
-        !workbench.comparedSchema && document.id === workbench.selectedId}
+    {@const selected = document.id === workbench.selectedId}
     <li class="py-px">
         <ContextMenu.Root>
             <ContextMenu.TriggerArea class="block w-full">
@@ -256,7 +254,7 @@
                 >
                     <div
                         class="shrink-0"
-                        title="Take part in validation and export"
+                        title={document.enabled ? "Enabled" : "Disabled"}
                     >
                         <CheckBoxEditControl
                             value={document.enabled}
@@ -390,9 +388,7 @@
                             )}
                         faIcon={document.enabled ? faBan : faCheck}
                     >
-                        {document.enabled
-                            ? "Exclude from validation"
-                            : "Include in validation"}
+                        {document.enabled ? "Disable" : "Enable"}
                     </ContextMenu.Item.Button>
                     <ContextMenu.Separator />
                     <ContextMenu.Item.Button
@@ -441,7 +437,7 @@
 
 {#snippet generatedRow(schema)}
     {@const id = generatedId(schema.name)}
-    {@const selected = !workbench.comparedSchema && id === workbench.selectedId}
+    {@const selected = id === workbench.selectedId}
     <li class="py-px">
         <button
             class="flex w-full cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-left {selected
@@ -516,12 +512,9 @@
     <ul class="min-h-0 flex-1 overflow-y-auto px-1.5 py-1">
         {#each workbench.schemas as schema (schema.name)}
             {@const documents = workbench.documentsOf(schema.name)}
-            {@const comparing = workbench.comparedSchema === schema.name}
             <li>
                 <div
-                    class="group relative flex items-center gap-1 rounded-md border px-1 py-1 {comparing
-                        ? 'bg-nav-active-background text-nav-active-text border-border-select'
-                        : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
+                    class="group hover:bg-nav-hover-background focus-within:bg-nav-hover-background relative flex items-center gap-1 rounded-md border border-transparent px-1 py-1"
                 >
                     {@render groupToggle(schema.name, schema.label)}
                     <span
@@ -574,7 +567,7 @@
             <li>
                 <div
                     class="flex items-center gap-1 px-1 py-1"
-                    title="These documents apply to no schema of this workspace. They are still validated."
+                    title="These documents apply to no schema of this workspace."
                 >
                     {@render groupToggle("not-assigned", "Not assigned")}
                     <span class="text-sm font-semibold">Not assigned</span>
