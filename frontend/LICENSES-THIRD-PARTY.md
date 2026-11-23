@@ -56,7 +56,7 @@
 
 ### @sveltejs/adapter-static
 - **Package:** @sveltejs/adapter-static
-- **Version:** 3.0.10
+- **Version:** 3.0.11
 - **License:** MIT
 - **URL:** [https://svelte.dev/docs/kit/adapter-static](https://svelte.dev/docs/kit/adapter-static)
 
@@ -173,7 +173,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 30.1.3
+- **Version:** 31.0.1
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
