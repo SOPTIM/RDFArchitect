@@ -69,6 +69,13 @@ import java.util.UUID;
  */
 public final class ShapesDocument {
 
+    /**
+     * What relative IRIs in a document's text resolve against, as if it began with this {@code
+     * @base}. Fixed, so that one text means the same shapes on every server, wherever it was started
+     * and whenever it is read again.
+     */
+    public static final String BASE_IRI = "urn:rdfa:shapes/";
+
     /** Where a document came from, which decides how carefully its formatting is preserved. */
     public enum Origin {
         /** Uploaded from a file — treat its text as something the user wants back unchanged. */

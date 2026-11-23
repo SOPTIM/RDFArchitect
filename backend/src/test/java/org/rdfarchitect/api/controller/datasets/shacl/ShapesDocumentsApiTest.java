@@ -45,6 +45,7 @@ import org.rdfarchitect.api.controller.datasets.shacl.export.SHACLSelectionExpor
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
@@ -249,6 +250,27 @@ class ShapesDocumentsApiTest {
         mockMvc.perform(multipart(DOCUMENTS + "/file").file(file)).andExpect(status().isOk());
 
         assertThat(textOf(onlyUploadedDocument())).contains("LineShape");
+    }
+
+    @Test
+    void anUploadResolvesRelativeIrisAgainstTheFixedBase() throws Exception {
+        var file =
+                new MockMultipartFile(
+                        "file",
+                        "relative.rdf",
+                        "application/rdf+xml",
+                        ("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
+                                        + "<rdf:Description rdf:about=\"#Shape\">"
+                                        + "<rdf:type rdf:resource=\"http://www.w3.org/ns/shacl#NodeShape\"/>"
+                                        + "</rdf:Description></rdf:RDF>")
+                                .getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart(DOCUMENTS + "/file").file(file)).andExpect(status().isOk());
+
+        var document = service.listShapesDocuments("cgmes").getFirst();
+        assertThat(service.getShapesDocumentText("cgmes", document.getId()))
+                .contains(ShapesDocument.BASE_IRI + "#Shape")
+                .doesNotContain("file:");
     }
 
     @Test

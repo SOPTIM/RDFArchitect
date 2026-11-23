@@ -912,6 +912,7 @@ public class SHACLStoringService
         var text = content == null ? "" : content;
         try {
             RDFParser.fromString(Lang.RDFXML.equals(lang) ? text.trim() : text, lang)
+                    .base(ShapesDocument.BASE_IRI)
                     .errorHandler(recordingWarnings(warnings))
                     .parse(model);
         } catch (RiotException e) {

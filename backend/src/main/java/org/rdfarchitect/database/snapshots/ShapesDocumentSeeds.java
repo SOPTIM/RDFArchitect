@@ -104,7 +104,7 @@ public final class ShapesDocumentSeeds {
     private static Graph parsedOrStored(String rawText, Graph stored) {
         try {
             var parsed = GraphFactory.createDefaultGraph();
-            RDFParser.fromString(rawText, Lang.TURTLE).parse(parsed);
+            RDFParser.fromString(rawText, Lang.TURTLE).base(ShapesDocument.BASE_IRI).parse(parsed);
             return GraphUtils.normalizeBlankNodes(parsed);
         } catch (RiotException _) {
             return stored;

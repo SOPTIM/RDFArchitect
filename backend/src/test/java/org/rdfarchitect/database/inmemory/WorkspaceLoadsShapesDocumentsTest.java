@@ -319,4 +319,26 @@ class WorkspaceLoadsShapesDocumentsTest {
             assertThat(transaction.shapesDocuments().get(id).getGraph().size()).isEqualTo(1);
         }
     }
+
+    @Test
+    void recordedTextResolvesRelativeIrisAgainstTheFixedBase() {
+        var id = UUID.randomUUID();
+        var dataset = datasetWithSchema();
+        addMetadata(
+                dataset,
+                metadata(
+                        id,
+                        "relative.ttl",
+                        null,
+                        1,
+                        true,
+                        "<#Shape> <%stargetClass> <#Line> .".formatted(SHACL_NS)));
+
+        var workspace = new Workspace("loaded", dataset);
+
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var triple = transaction.shapesDocuments().get(id).getGraph().find().next();
+            assertThat(triple.getSubject().getURI()).isEqualTo(ShapesDocument.BASE_IRI + "#Shape");
+        }
+    }
 }

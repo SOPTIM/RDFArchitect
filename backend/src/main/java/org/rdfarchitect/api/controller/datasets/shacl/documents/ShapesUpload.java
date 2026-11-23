@@ -23,6 +23,7 @@ import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.ErrorHandlerFactory;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.InvalidContentException;
 import org.springframework.http.HttpStatus;
@@ -110,6 +111,7 @@ final class ShapesUpload {
             // Without logging: this is the client's file and goes back to it as a 400.
             RDFParser.source(new ByteArrayInputStream(content))
                     .lang(lang)
+                    .base(ShapesDocument.BASE_IRI)
                     .errorHandler(ErrorHandlerFactory.errorHandlerNoLogging)
                     .parse(model);
         } catch (RiotException e) {

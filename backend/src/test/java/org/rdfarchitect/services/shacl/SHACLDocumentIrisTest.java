@@ -36,15 +36,19 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
 import org.rdfarchitect.exception.database.InvalidContentException;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * A saved document holds only IRIs that can be sent to a store.
+ * The IRIs a saved document holds: only ones that can be sent to a store, and relative ones
+ * resolved against the same base wherever the text is read.
  *
  * <p>Persisting writes every document of the workspace in one SPARQL update, so one IRI the update
  * cannot carry would make every later persist of the workspace fail.
@@ -247,5 +251,65 @@ class SHACLDocumentIrisTest {
         // The parser's own warning naming the whole IRI says the same, only as a warning.
         assertThat(result.findings())
                 .noneMatch(finding -> finding.getMessage().startsWith("Bad IRI"));
+    }
+
+    private Set<String> subjectsOf(java.util.UUID documentId) {
+        try (var transaction = databasePort.beginTransaction(WORKSPACE, ReadWrite.READ)) {
+            return transaction.shapesDocuments().get(documentId).getGraph().find().toList().stream()
+                    .map(triple -> triple.getSubject().getURI())
+                    .collect(Collectors.toSet());
+        }
+    }
+
+    @Test
+    void aRelativeIriResolvesAgainstTheFixedBase() {
+        var id =
+                service.createShapesDocument(
+                                WORKSPACE,
+                                List.of(),
+                                "relative.ttl",
+                                null,
+                                PREFIXES
+                                        + "<#Shape> a sh:NodeShape .\n"
+                                        + "<shapes/Other> a sh:NodeShape .\n",
+                                Lang.TURTLE)
+                        .getId();
+
+        assertThat(subjectsOf(id))
+                .containsExactlyInAnyOrder(
+                        ShapesDocument.BASE_IRI + "#Shape",
+                        ShapesDocument.BASE_IRI + "shapes/Other");
+    }
+
+    @Test
+    void aRelativeIriInRdfXmlResolvesAgainstTheSameBase() {
+        var rdfXml =
+                """
+                <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                  <rdf:Description rdf:about="#Shape">
+                    <rdf:type rdf:resource="http://www.w3.org/ns/shacl#NodeShape"/>
+                  </rdf:Description>
+                </rdf:RDF>
+                """;
+
+        var id =
+                service.createShapesDocument(
+                                WORKSPACE,
+                                List.of(),
+                                "relative.rdf",
+                                "relative.rdf",
+                                rdfXml,
+                                Lang.RDFXML)
+                        .getId();
+
+        assertThat(subjectsOf(id)).containsExactly(ShapesDocument.BASE_IRI + "#Shape");
+    }
+
+    @Test
+    void validationResolvesRelativeIrisTheSameWay() {
+        var result = ShapesTurtleParser.parse(PREFIXES + "<#Shape> a sh:NodeShape .\n");
+
+        assertThat(result.graph().find().next().getSubject().getURI())
+                .isEqualTo(ShapesDocument.BASE_IRI + "#Shape");
     }
 }

@@ -23,6 +23,7 @@ import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.ErrorHandler;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ public final class ShapesTurtleParser {
         boolean failed = false;
         try {
             RDFParser.fromString(turtle, Lang.TURTLE)
+                    .base(ShapesDocument.BASE_IRI)
                     .errorHandler(collectingHandler(findings))
                     .parse(graph);
         } catch (RiotException e) {
