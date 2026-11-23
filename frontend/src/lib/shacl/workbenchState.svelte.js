@@ -299,8 +299,9 @@ export class ShapesWorkbench {
      * an import, the workspace becoming read-only.
      *
      * An unsaved buffer is kept: the caller has either asked about it already, or changed nothing
-     * the buffer depends on. A clean buffer is re-read, and only replaced when the stored text
-     * actually differs, so the editor keeps its place otherwise.
+     * the buffer depends on — and when its document is gone all the same, it becomes `detached`.
+     * A clean buffer is re-read, and only replaced when the stored text actually differs, so the
+     * editor keeps its place otherwise.
      */
     async reload() {
         await this.refreshReadOnly();
