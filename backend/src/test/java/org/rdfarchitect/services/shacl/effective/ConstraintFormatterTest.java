@@ -46,7 +46,7 @@ class ConstraintFormatterTest {
                         Set.of("http://www.w3.org/ns/shacl#IRI"),
                         null);
 
-        assertThat(ConstraintFormatter.describe(constraint, prefixes))
+        assertThat(ConstraintFormatter.describe(constraint, prefixes, ClassHierarchy.NONE))
                 .contains("xsd:string")
                 .contains("sh:IRI")
                 .contains("cim:Equipment")
@@ -67,7 +67,8 @@ class ConstraintFormatterTest {
                         Set.of("http://www.w3.org/ns/shacl#IRI"),
                         null);
 
-        assertThat(ConstraintFormatter.describe(constraint, prefixes)).contains("shacl:IRI");
+        assertThat(ConstraintFormatter.describe(constraint, prefixes, ClassHierarchy.NONE))
+                .contains("shacl:IRI");
     }
 
     private static final String BASE = CIM + "Base";

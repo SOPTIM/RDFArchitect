@@ -81,14 +81,13 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void aClassDerivesFromItselfAndFromEveryAncestor() {
+    void aClassDerivesFromEveryAncestorButNotFromASibling() {
         var hierarchy = hierarchy();
 
-        assertThat(hierarchy.isSubClassOf(LEAF, LEAF)).isTrue();
-        assertThat(hierarchy.isSubClassOf(LEAF, MIDDLE)).isTrue();
-        assertThat(hierarchy.isSubClassOf(LEAF, BASE)).isTrue();
-        assertThat(hierarchy.isSubClassOf(BASE, LEAF)).isFalse();
-        assertThat(hierarchy.isSubClassOf(SIBLING, MIDDLE)).isFalse();
+        assertThat(hierarchy.roots(Set.of(LEAF, MIDDLE, BASE))).containsExactly(BASE);
+        assertThat(hierarchy.roots(Set.of(LEAF, MIDDLE))).containsExactly(MIDDLE);
+        assertThat(hierarchy.roots(Set.of(SIBLING, MIDDLE)))
+                .containsExactlyInAnyOrder(SIBLING, MIDDLE);
     }
 
     @Test
@@ -139,7 +138,8 @@ class ClassHierarchyTest {
     void noHierarchyLetsEveryClassAdmitItselfAlone() {
         assertThat(ClassHierarchy.NONE.isEmpty()).isTrue();
         assertThat(ClassHierarchy.NONE.instancesOf(Set.of(BASE))).containsExactly(BASE);
-        assertThat(ClassHierarchy.NONE.isSubClassOf(LEAF, BASE)).isFalse();
+        assertThat(ClassHierarchy.NONE.roots(Set.of(LEAF, BASE)))
+                .containsExactlyInAnyOrder(LEAF, BASE);
     }
 
     @Test
@@ -165,7 +165,6 @@ class ClassHierarchyTest {
                                 ex:Leaf rdfs:subClassOf ex:Base .
                                 """));
 
-        assertThat(cyclic.isSubClassOf(LEAF, BASE)).isTrue();
-        assertThat(cyclic.isSubClassOf(BASE, LEAF)).isTrue();
+        assertThat(cyclic.instancesOf(Set.of(BASE))).containsExactlyInAnyOrder(BASE, LEAF);
     }
 }

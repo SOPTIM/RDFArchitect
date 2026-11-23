@@ -79,7 +79,7 @@ public final class EffectiveConstraints {
             Set<String> nodeKinds,
             Set<Node> allowedValues) {
 
-        public static Constraint empty() {
+        private static Constraint empty() {
             return new Constraint(null, null, Set.of(), Set.of(), null, Set.of(), null);
         }
 
@@ -112,12 +112,7 @@ public final class EffectiveConstraints {
     public record Asserted(
             Map<Key, Constraint> constraints,
             Map<Key, Constraint> advisory,
-            Map<Key, List<String>> statedIn) {
-
-        public static Asserted empty() {
-            return new Asserted(Map.of(), Map.of(), Map.of());
-        }
-    }
+            Map<Key, List<String>> statedIn) {}
 
     /**
      * What documents require, split by whether it can fail validation, and which documents name the
@@ -268,7 +263,7 @@ public final class EffectiveConstraints {
     }
 
     /** Whether a shape reports at a severity other than {@code sh:Violation}, the default. */
-    public static boolean isAdvisory(Graph shapes, Node shape) {
+    private static boolean isAdvisory(Graph shapes, Node shape) {
         return shapes.stream(shape, SHACL.severity, Node.ANY)
                 .map(triple -> triple.getObject())
                 .anyMatch(severity -> !SHACL.Violation.equals(severity));

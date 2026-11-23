@@ -48,14 +48,10 @@ public final class ConstraintFormatter {
 
     private ConstraintFormatter() {}
 
-    /** A constraint in words, listing only what was actually stated. */
-    public static String describe(Constraint constraint, PrefixMapping prefixes) {
-        return describe(constraint, prefixes, ClassHierarchy.NONE);
-    }
-
     /**
-     * As {@link #describe(Constraint, PrefixMapping)}, naming a value type by its most general
-     * classes: a generated list of a range and every class deriving from it reads as the range.
+     * A constraint in words, listing only what was actually stated. A value type is named by its
+     * most general classes in {@code hierarchy}: a list of a range and every class deriving from it
+     * reads as the range.
      */
     public static String describe(
             Constraint constraint, PrefixMapping prefixes, ClassHierarchy hierarchy) {

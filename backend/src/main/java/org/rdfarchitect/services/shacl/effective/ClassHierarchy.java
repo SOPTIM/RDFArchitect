@@ -101,7 +101,7 @@ public final class ClassHierarchy {
     }
 
     /** Whether {@code sub} is {@code sup} or derives from it. */
-    public boolean isSubClassOf(String sub, String sup) {
+    private boolean isSubClassOf(String sub, String sup) {
         return sub.equals(sup) || descendants(sup).contains(sub);
     }
 
