@@ -24,13 +24,13 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.rdf.RDFFileLanguages;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
@@ -604,7 +604,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private boolean isGraphFile(String fileName) {
-        return fileName != null && RDFLanguages.filenameToLang(fileName) != null;
+        return fileName != null && RDFFileLanguages.of(fileName) != null;
     }
 
     /**

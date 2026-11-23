@@ -43,11 +43,16 @@ import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImpo
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 class ImportGraphsServiceTest {
 
@@ -166,6 +171,39 @@ class ImportGraphsServiceTest {
     }
 
     @Test
+    void importGraphs_hashInTheFileName_readsTheSyntaxTheExtensionNames() {
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "EQ#2.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedSchemaNames()).containsExactly("EQ#2");
+    }
+
+    @Test
+    void importGraphs_hashInTheNameOfAZipEntry_readsTheSyntaxTheExtensionNames() {
+        var zip =
+                zipFile(
+                        "schemas.zip",
+                        Map.of("EQ#2.ttl", "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(zip), null, ImportProgressListener.NOOP);
+
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedSchemaNames()).containsExactly("EQ#2");
+    }
+
+    @Test
     void importGraphs_workspaceDoesNotExistYet_hasItCreatedBeforeTheFirstGraphIsWritten() {
         var workspaceName = "ds";
 
@@ -281,6 +319,21 @@ class ImportGraphsServiceTest {
                         .formatted(cimNamespace);
         return new MockMultipartFile(
                 "files", fileName, "text/turtle", schema.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** A zip archive holding one entry per file name, in the order the map iterates them. */
+    private MockMultipartFile zipFile(String fileName, Map<String, String> entries) {
+        var bytes = new ByteArrayOutputStream();
+        try (var zip = new ZipOutputStream(bytes)) {
+            for (var entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
+        return new MockMultipartFile("files", fileName, "application/zip", bytes.toByteArray());
     }
 
     private PrefixMapping prefixMapping(String cimNamespace) {
