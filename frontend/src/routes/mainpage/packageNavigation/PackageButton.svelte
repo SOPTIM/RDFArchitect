@@ -39,16 +39,16 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import NewClassDialog from "../../NewClassDialog.svelte";
+    import PackageEditorDialog from "../packageEditorDialog.svelte";
     import ClassEntry from "./ClassEntry.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import {
         isSelectedPackage,
         packageHighlight,
     } from "./packageNavigationUtils.svelte.js";
-    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import NewClassDialog from "../../NewClassDialog.svelte";
-    import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import { startPaste } from "./paste-flow.svelte.js";
     import PasteMenuItems from "./PasteMenuItems.svelte";
 

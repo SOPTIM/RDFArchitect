@@ -17,9 +17,6 @@
 
 import { writable, get } from "svelte/store";
 
-import { type GraphKey, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     listPrimitives,
     listDatatypes,
@@ -27,6 +24,9 @@ import {
     type ClassUmlAdaptedDto,
     type Uri,
 } from "../api/generated";
+import { type GraphKey, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 
 // =============================================================================
 // Types

@@ -17,17 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { editorState, forceReloadTrigger } from "../sharedState.svelte.js";
-import { classStore } from "./classStore";
-import { crossProfileStore } from "./crossProfileStore";
-import { datatypesStore } from "./datatypesStore";
-import { customDiagramStore } from "./diagramStore";
-import { graphStore } from "./graphStore";
-import { ontologyStore } from "./ontologyStore";
-import { packageStore } from "./packageStore";
-import { loadSlot } from "./storeHelpers";
-import { type AsyncSlot, createEmptySlot } from "./storeTypes";
-import { workspaceStore } from "./workspaceStore";
 import {
     undo as sdkUndo,
     redo as sdkRedo,
@@ -42,6 +31,17 @@ import {
 } from "../api/generated/types.gen";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 import { undoConfirmStore } from "../eventhandling/undoConfirmStore.svelte.js";
+import { editorState, forceReloadTrigger } from "../sharedState.svelte.js";
+import { classStore } from "./classStore";
+import { crossProfileStore } from "./crossProfileStore";
+import { datatypesStore } from "./datatypesStore";
+import { customDiagramStore } from "./diagramStore";
+import { graphStore } from "./graphStore";
+import { ontologyStore } from "./ontologyStore";
+import { packageStore } from "./packageStore";
+import { loadSlot } from "./storeHelpers";
+import { type AsyncSlot, createEmptySlot } from "./storeTypes";
+import { workspaceStore } from "./workspaceStore";
 
 type Direction = "undo" | "redo";
 

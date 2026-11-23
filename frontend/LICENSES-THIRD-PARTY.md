@@ -74,7 +74,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.3.3
+- **Version:** 4.3.5
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -86,30 +86,30 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.72.0
+- **Version:** 8.72.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.7.0
+- **Version:** 1.7.1
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.1.1
+- **Version:** 4.2.1
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.1
+- **Version:** 10.6.2
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.20.0
+- **Version:** 2.21.0
 - **License:** MIT
 
 ### codemirror
@@ -126,13 +126,13 @@
 
 ### elkjs
 - **Package:** elkjs
-- **Version:** 0.12.0
+- **Version:** 0.12.1
 - **License:** EPL-2.0 OR GPL-3.0-or-later
 - **URL:** [https://github.com/kieler/elkjs](https://github.com/kieler/elkjs)
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.13.0
+- **Version:** 10.15.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -144,13 +144,13 @@
 
 ### eslint-plugin-import-x
 - **Package:** eslint-plugin-import-x
-- **Version:** 4.17.1
+- **Version:** 4.18.1
 - **License:** MIT
 - **URL:** [https://github.com/un-ts/eslint-plugin-import-x#readme](https://github.com/un-ts/eslint-plugin-import-x#readme)
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.23.1
+- **Version:** 3.24.1
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.13.0
+- **Version:** 17.14.0
 - **License:** MIT
 
 ### html-to-image
@@ -185,19 +185,19 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 12.2.0
+- **Version:** 12.3.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.31
+- **Version:** 8.5.33
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.9.10
+- **Version:** 3.10.1
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.2
+- **Version:** 5.57.3
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -227,7 +227,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.9.0
+- **Version:** 1.10.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -245,7 +245,7 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.3.3
+- **Version:** 4.3.5
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.72.0
+- **Version:** 8.72.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -280,13 +280,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.3.5
+- **Version:** 8.3.8
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.0.5
+- **Version:** 5.1.0
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
