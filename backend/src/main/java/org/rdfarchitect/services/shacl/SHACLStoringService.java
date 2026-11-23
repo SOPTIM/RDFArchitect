@@ -30,10 +30,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.RDFParser;
-import org.apache.jena.riot.RiotException;
-import org.apache.jena.riot.system.ErrorHandler;
-import org.apache.jena.riot.system.ErrorHandlerFactory;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
@@ -551,7 +547,7 @@ public class SHACLStoringService
             Lang lang) {
         assertEditable(workspaceName);
         var requestedName = name == null ? null : validName(name);
-        var parsed = parse(content, lang);
+        var parsed = ShapesDocumentReader.read(content, lang);
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             assertSchemasExist(transaction, schemas);
             var documentName = requestedName != null ? requestedName : freeDefaultName(transaction);
@@ -598,7 +594,7 @@ public class SHACLStoringService
         }
         // Parsed before the write lock is taken, as creating a document does: a large file takes a
         // while to read, and every other request on the workspace would wait for it.
-        var parsed = parse(turtle, Lang.TURTLE);
+        var parsed = ShapesDocumentReader.read(turtle, Lang.TURTLE);
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var document = requireDocument(transaction, documentId);
             assertRevision(document, expectedRevision);
@@ -916,72 +912,6 @@ public class SHACLStoringService
      */
     private static String storedTurtle(String content) {
         return content == null || content.isBlank() ? "" : content;
-    }
-
-    /**
-     * Parses content the client sent, reporting a syntax error as one.
-     *
-     * <p>Jena's own message carries the line and column, which is the only part of the answer the
-     * user can do anything with, so it is passed through rather than replaced. An IRI Jena only
-     * warns about but no store can be sent is refused too, see {@link UnwritableIris}.
-     */
-    private static Model parse(String content, Lang lang) {
-        var model = ModelFactory.createDefaultModel();
-        var warnings = new ArrayList<UnwritableIris.Warning>();
-        // Only RDF/XML needs this, which allows nothing before its declaration. Trimming anything
-        // else would move the line and column a syntax error reports.
-        var text = content == null ? "" : content;
-        try {
-            RDFParser.fromString(Lang.RDFXML.equals(lang) ? text.trim() : text, lang)
-                    .base(ShapesDocument.BASE_IRI)
-                    .errorHandler(recordingWarnings(warnings))
-                    .parse(model);
-        } catch (RiotException e) {
-            throw new InvalidContentException(
-                    "The constraints could not be read as %s: %s"
-                            .formatted(lang.getLabel(), e.getMessage()));
-        } catch (StackOverflowError e) {
-            // Jena parses brackets recursively, so this says something about the text and not about
-            // the server.
-            throw new InvalidContentException(ShapesTurtleParser.TOO_DEEP);
-        }
-        var unwritable = UnwritableIris.in(model.getGraph(), warnings);
-        if (!unwritable.isEmpty()) {
-            var more = unwritable.size() - 1;
-            throw new InvalidContentException(
-                    "The constraints cannot be saved: "
-                            + unwritable.getFirst().describeWithPlace()
-                            + (more > 0
-                                    ? " %d more IRI%s cannot be written either."
-                                            .formatted(more, more == 1 ? "" : "s")
-                                    : ""));
-        }
-        return ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(model.getGraph()));
-    }
-
-    /**
-     * Fails on what the parser calls an error, without logging: this is the client's text and goes
-     * back to it as a 400, so it isn't an error of this server's for Jena to log as one. Warnings
-     * are kept, as they are what places an IRI that cannot be written.
-     */
-    private static ErrorHandler recordingWarnings(List<UnwritableIris.Warning> warnings) {
-        var failing = ErrorHandlerFactory.errorHandlerNoLogging;
-        return new ErrorHandler() {
-            @Override
-            public void warning(String message, long line, long col) {
-                warnings.add(new UnwritableIris.Warning(message, line, col));
-            }
-
-            @Override
-            public void error(String message, long line, long col) {
-                failing.error(message, line, col);
-            }
-
-            @Override
-            public void fatal(String message, long line, long col) {
-                failing.fatal(message, line, col);
-            }
-        };
     }
 
     private static String serialiseToTurtle(Model model) {
