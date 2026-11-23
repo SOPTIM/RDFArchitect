@@ -24,8 +24,12 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import {
+        isInvalidSchemaName,
+        schemaNameFromFileName,
+    } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import {
@@ -33,12 +37,13 @@
         isZipFile,
         supportedRDFMediaTypes,
     } from "$lib/utils/fileUtils";
-    import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
-
     import {
-        editorState,
-        forceReloadTrigger,
-    } from "../lib/sharedState.svelte.js";
+        ImportJobRunner,
+        newWorkspaceNameError as nameErrorOfNewWorkspace,
+        openImportedWorkspace,
+    } from "$lib/utils/importJob.svelte.js";
+
+    import { editorState } from "../lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -48,9 +53,6 @@
     } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
-    const POLL_INTERVAL_MS = 300;
-    const MAX_FAILED_POLLS = 3;
-    const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
         type => type.fileExtension,
@@ -60,6 +62,11 @@
     const workspaceInputId = `workspaceNameImport-${uniqueId}`;
     const workspaceListId = `workspaceNamesImport-${uniqueId}`;
     const fileInputId = `actual-file-input-${uniqueId}`;
+    const job = new ImportJobRunner(progress => {
+        if (!progress.awaitingPrefixResolution) {
+            submittingResolutions = false;
+        }
+    });
     let workspaceNameUserInput = $state("");
     let files = $state([]);
     let fileInputValue = $state("");
@@ -68,18 +75,12 @@
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
 
-    /** Set while an import runs and until its result is dismissed; drives the progress panel. */
-    let progress = $state(null);
-    let pollTimeout = null;
-    let failedPolls = 0;
-    /** The workspace the running import writes into, applied to the editor once it is done. */
-    let importWorkspaceName = null;
-    let importJobId = null;
     /** What the comparison decided, and whether those decisions can be sent as they are. */
     let prefixResolutions = $state([]);
     let prefixResolutionsValid = $state(true);
     let submittingResolutions = $state(false);
 
+    let progress = $derived(job.progress);
     let importing = $derived(progress !== null && !progress.finished);
     let resolvingPrefixes = $derived(
         progress?.awaitingPrefixResolution ?? false,
@@ -105,23 +106,22 @@
             : !progress?.finished && !enableSubmit,
     );
     /** Why the name cannot be that of a new workspace, empty while it can. */
-    let newWorkspaceNameError = $derived.by(() => {
-        if (!forNewWorkspace) {
-            return "";
-        }
-        const name = workspaceNameUserInput.trim();
-        if (name === "") {
-            return "Enter a name for the new workspace";
-        }
-        if ([...modifiableWorkspaces, ...readOnlyWorkspaces].includes(name)) {
-            return `A workspace named "${name}" already exists`;
-        }
-        return "";
-    });
+    let newWorkspaceNameError = $derived(
+        forNewWorkspace
+            ? nameErrorOfNewWorkspace(workspaceNameUserInput, [
+                  ...modifiableWorkspaces,
+                  ...readOnlyWorkspaces,
+              ])
+            : "",
+    );
+    let fileNameViolations = $derived(
+        files.map((_, index) => schemaNameViolations(index)),
+    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
             !newWorkspaceNameError &&
+            fileNameViolations.every(violations => violations.length === 0) &&
             progress === null,
     );
 
@@ -168,7 +168,11 @@
         return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
-    function getSanitizedGraphName(fileName) {
+    /**
+     * The file name without its extension, made a valid schema name, which is how the backend names
+     * the entries of a zip as well.
+     */
+    function buildSchemaName(fileName) {
         if (!fileName) {
             return DEFAULT_GRAPH_NAME;
         }
@@ -178,24 +182,23 @@
             lastDotIndex === -1
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
-        const sanitized = baseName.replace(/\W/g, "_");
-        return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
+        return schemaNameFromFileName(baseName, DEFAULT_GRAPH_NAME);
     }
 
-    function buildGraphUri(fileName) {
-        const sanitized = getSanitizedGraphName(fileName);
-        return `${GRAPH_NAMESPACE_URI}${sanitized}`;
-    }
-
-    function ensureGraphNamespaceUri(graphUri, fallbackName) {
-        const trimmed = graphUri?.trim();
-        if (!trimmed) {
-            return buildGraphUri(fallbackName);
+    /**
+     * What is wrong with the name a file is to be imported under. Two files of the upload may not
+     * share a name, but one may take the name of an existing schema: the backend then imports it
+     * under that name with a number appended.
+     */
+    function schemaNameViolations(index) {
+        const entry = files[index];
+        if (entry.isZip) {
+            return [];
         }
-        if (trimmed.includes("://")) {
-            return trimmed;
-        }
-        return `${GRAPH_NAMESPACE_URI}${trimmed}`;
+        const otherNames = files
+            .filter((other, idx) => idx !== index && !other.isZip)
+            .map(other => other.schemaName.trim());
+        return isInvalidSchemaName(entry.schemaName, otherNames);
     }
 
     function addFiles(newFiles, directoryNames = []) {
@@ -208,9 +211,9 @@
                 }
                 return {
                     file,
-                    graphUri: isZipFile(file.name)
+                    schemaName: isZipFile(file.name)
                         ? ""
-                        : buildGraphUri(file.name),
+                        : buildSchemaName(file.name),
                     isZip: isZipFile(file.name),
                 };
             })
@@ -226,12 +229,12 @@
         files = files.filter((_, idx) => idx !== index);
     }
 
-    function updateGraphUri(index, graphUri) {
+    function updateSchemaName(index, schemaName) {
         if (files[index]?.isZip) {
             return;
         }
         files = files.map((entry, idx) =>
-            idx === index ? { ...entry, graphUri } : entry,
+            idx === index ? { ...entry, schemaName } : entry,
         );
     }
 
@@ -239,116 +242,31 @@
         return workspaceNameUserInput || DEFAULT_WORKSPACE_NAME;
     }
 
-    async function importGraphs() {
-        if (progress !== null) {
-            return;
-        }
+    function importGraphs() {
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
-        const graphUris = files.map(entry =>
-            entry.isZip
-                ? ""
-                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
+        const schemaNames = files.map(entry =>
+            entry.isZip ? "" : entry.schemaName.trim(),
         );
-
-        const currentProgress = new ImportProgress();
-        progress = currentProgress;
-        failedPolls = 0;
-        importWorkspaceName = workspaceName;
-
-        const { data, error } = await graphStore.startImport(
-            workspaceName,
-            filesToImport,
-            graphUris,
-            {
-                onUploadProgress: percent =>
-                    currentProgress.uploadProgress(percent),
-                signal: currentProgress.signal,
-            },
+        void job.start(workspaceName, options =>
+            graphStore.startImport(
+                workspaceName,
+                filesToImport,
+                schemaNames,
+                options,
+            ),
         );
-
-        if (error || !data) {
-            if (currentProgress.cancelling) {
-                currentProgress.cancelled();
-            } else {
-                currentProgress.fail(
-                    error?.message ?? "The import could not be started.",
-                );
-            }
-            return;
-        }
-
-        currentProgress.uploaded();
-        importJobId = data.jobId;
-        if (currentProgress.cancelling) {
-            // Cancelled while the files were still going up, so the job needs to hear about it.
-            await cancelImportJob(workspaceName, data.jobId);
-        }
-        pollImportStatus();
-    }
-
-    /**
-     * Polls the backend until the job is done, the prefix question included: polling is what tells
-     * the backend somebody is still there to answer it. A single timeout is kept in flight, so
-     * closing the dialog or finishing the import ends the polling.
-     */
-    function pollImportStatus() {
-        stopPolling();
-        pollTimeout = setTimeout(async () => {
-            const currentProgress = progress;
-            const jobId = importJobId;
-            if (!currentProgress || !jobId) {
-                return;
-            }
-
-            const { data, error } = await graphStore.getImportStatus(
-                importWorkspaceName,
-                jobId,
-            );
-
-            if (progress !== currentProgress) {
-                return;
-            }
-            if (error || !data) {
-                // A single missed poll is not worth giving up on, the import keeps running.
-                failedPolls += 1;
-                if (failedPolls > MAX_FAILED_POLLS) {
-                    currentProgress.fail(
-                        "The progress of the import could not be read.",
-                    );
-                    return;
-                }
-                pollImportStatus();
-                return;
-            }
-
-            failedPolls = 0;
-            currentProgress.apply(data);
-            if (!currentProgress.awaitingPrefixResolution) {
-                submittingResolutions = false;
-            }
-            if (!currentProgress.finished) {
-                pollImportStatus();
-            }
-        }, POLL_INTERVAL_MS);
-    }
-
-    function stopPolling() {
-        if (pollTimeout !== null) {
-            clearTimeout(pollTimeout);
-            pollTimeout = null;
-        }
     }
 
     /** Hands the decisions to the import; a rejected answer leaves it waiting for a new one. */
     async function submitPrefixResolutions() {
-        if (!importJobId || submittingResolutions || !prefixResolutionsValid) {
+        if (!job.jobId || submittingResolutions || !prefixResolutionsValid) {
             return;
         }
         submittingResolutions = true;
         const { error } = await graphStore.resolvePrefixConflicts(
-            importWorkspaceName,
-            importJobId,
+            job.workspaceName,
+            job.jobId,
             prefixResolutions,
         );
         if (error) {
@@ -356,46 +274,17 @@
         }
     }
 
-    function requestCancel() {
-        progress?.cancel();
-        void cancelImportJob(importWorkspaceName, importJobId);
-    }
-
     /**
-     * Ends the dialog's part in the current import: cancels it while it still runs, opens what it
-     * imported either way, and forgets it. Cancelling only stops the job where it is, so the
-     * graphs it already wrote still have to reach the editor.
+     * Ends the dialog's part in the current import and opens what it imported either way: a
+     * cancelled import keeps the graphs it already wrote.
      */
     async function dismissImport() {
-        stopPolling();
-        const currentProgress = progress;
-        const jobId = importJobId;
-        const workspaceName = importWorkspaceName;
-        progress = null;
-        importJobId = null;
-        importWorkspaceName = null;
-
-        if (!currentProgress) {
-            return;
-        }
-
-        let importedGraphUris = currentProgress.importedGraphUris;
-        if (!currentProgress.finished) {
-            currentProgress.cancel();
-            await cancelImportJob(workspaceName, jobId);
-            if (workspaceName && jobId) {
-                // The last poll can predate the file the job was on when it was told to stop, so
-                // the status is read once more to catch what still made it through.
-                const { data } = await graphStore.getImportStatus(
-                    workspaceName,
-                    jobId,
-                );
-                importedGraphUris =
-                    data?.importedGraphUris ?? importedGraphUris;
-            }
-        }
-        if (importedGraphUris.length > 0) {
-            applyImportResult(importedGraphUris, workspaceName);
+        const result = await job.dismiss();
+        if (result && result.importedSchemaNames.length > 0) {
+            openImportedWorkspace(
+                result.workspaceName,
+                result.importedSchemaNames,
+            );
         }
     }
 
@@ -403,27 +292,6 @@
         void dismissImport();
         clearInputs();
         showDialog = false;
-    }
-
-    async function cancelImportJob(workspaceName, jobId) {
-        if (!workspaceName || !jobId) {
-            return;
-        }
-        await graphStore.cancelImport(workspaceName, jobId);
-    }
-
-    function applyImportResult(importedGraphUris, workspaceName) {
-        editorState.selectedWorkspace.updateValue(workspaceName);
-        editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassWorkspace.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClass.updateValue({ type: null, id: null });
-
-        graphStore.invalidateWorkspace(workspaceName);
-        workspaceStore.invalidate();
-        crossProfileStore.invalidateWorkspace(workspaceName);
-        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -435,7 +303,7 @@
     onPrimary={primaryAction}
     disablePrimary={primaryDisabled}
     secondaryLabel={importing ? "Cancel" : undefined}
-    onSecondary={requestCancel}
+    onSecondary={() => job.cancel()}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
     title="Import Schema (RDFS)"
@@ -574,18 +442,22 @@
                             >
                                 <div class="flex-1">
                                     <input
-                                        id={`graph-uri-${index}`}
+                                        id={`graph-name-${index}`}
                                         class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                         type="text"
                                         value={fileEntry.isZip
                                             ? fileEntry.file.name
-                                            : fileEntry.graphUri}
+                                            : fileEntry.schemaName}
                                         disabled={fileEntry.isZip}
                                         oninput={event =>
-                                            updateGraphUri(
+                                            updateSchemaName(
                                                 index,
                                                 event.target.value,
                                             )}
+                                    />
+                                    <ViolationMessages
+                                        violations={fileNameViolations[index] ??
+                                            []}
                                     />
                                 </div>
                                 <div

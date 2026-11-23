@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/packages")
 @RequiredArgsConstructor
 public class AllPackagesRESTController {
 
@@ -85,32 +85,26 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
     }
@@ -129,35 +123,29 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             description = "DTO for the package to be created")
                     @RequestBody
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedPackageURIPrefix =
-                expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        packageDTO.setPrefix(extendedPackageURIPrefix);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        // the package prefix is a namespace IRI and may be given prefixed; the schema name is not
+        packageDTO.setPrefix(expandURIUseCase.expandUri(workspaceName, packageDTO.getPrefix()));
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return newPackageUUID;
     }

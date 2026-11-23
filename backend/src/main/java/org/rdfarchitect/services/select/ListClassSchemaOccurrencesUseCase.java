@@ -26,9 +26,9 @@ public interface ListClassSchemaOccurrencesUseCase {
     /**
      * Reports for every graph of the dataset whether the class is defined there.
      *
-     * @param datasetName the dataset the class belongs to
+     * @param workspaceName the dataset the class belongs to
      * @param classUUID the uuid of the class in one of the graphs, or of its merged class
      * @return one entry per graph of the dataset, in the order the graphs are stored in
      */
-    List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(String datasetName, String classUUID);
+    List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(String workspaceName, String classUUID);
 }

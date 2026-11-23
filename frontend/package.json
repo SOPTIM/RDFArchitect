@@ -64,6 +64,7 @@
         "svelte-fa": "^4.0.4",
         "svelte-splitpanes": "^8.0.9",
         "uuid": "^14.0.0",
+        "valid-filename": "^5.0.0",
         "validate-iri": "^1.0.1"
     }
 }

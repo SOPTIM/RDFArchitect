@@ -21,8 +21,8 @@ public interface IsReadOnlyUseCase {
     /**
      * Checks if a dataset is currently set to read-only
      *
-     * @param datasetName The name of the dataset to check
+     * @param workspaceName The name of the dataset to check
      * @return true if the dataset is read-only, false if it is modifiable
      */
-    boolean isReadOnly(String datasetName);
+    boolean isReadOnly(String workspaceName);
 }

@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +39,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/namespaces")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/namespaces")
 @RequiredArgsConstructor
 public class SHACLCustomNamespacesRestController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLCustomNamespacesRestController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
@@ -72,32 +69,25 @@ public class SHACLCustomNamespacesRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/namespaces/ttl\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/namespaces/ttl\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportCustomSHACLNamespaces(
-                                new GraphIdentifier(datasetName, extendedGraphURI),
-                                RDFFormat.TURTLE)
+                                new GraphIdentifier(workspaceName, schemaName), RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/namespaces/ttl\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/namespaces/ttl\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return shaclString;
     }

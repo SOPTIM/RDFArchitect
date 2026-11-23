@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationReportUseCase;
@@ -32,7 +33,6 @@ import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScri
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,7 +43,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -91,12 +90,9 @@ public class MigrationArtifactsRESTController {
             shacl.writeTo(zipOut);
             zipOut.closeEntry();
         }
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-disposition"));
         var response =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "migration-package.zip")
+                        .headers(DownloadHeaders.attachment("migration-package.zip"))
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .body(body.toByteArray());
 
@@ -146,12 +142,9 @@ public class MigrationArtifactsRESTController {
                 };
 
         var body = report.getBytes(StandardCharsets.UTF_8);
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-disposition"));
         var response =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "migration_report.md")
+                        .headers(DownloadHeaders.attachment("migration_report.md"))
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .body(body);
 

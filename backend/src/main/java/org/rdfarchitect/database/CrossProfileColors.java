@@ -33,16 +33,16 @@ public interface CrossProfileColors {
     /**
      * Returns the colour a graph is drawn in.
      *
-     * @param graphUri the graph URI
+     * @param schemaName the schema name
      * @return the colour, or {@code null} if the graph has none
      */
-    String getColor(String graphUri);
+    String getColor(String schemaName);
 
     /**
      * Sets the colour a graph is drawn in. Takes part in the running transaction.
      *
-     * @param graphUri the graph URI
+     * @param schemaName the schema name
      * @param color the colour to use
      */
-    void setColor(String graphUri, String color);
+    void setColor(String schemaName, String color);
 }

@@ -83,7 +83,7 @@ public class PropertyRenamingsRESTController {
         var result = getPropertyRenamingsUseCase.getPropertyRenamings();
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/migrations/property-renames\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/migrations/property-renames\" from \"{}\".",
                 originURL);
 
         return result;

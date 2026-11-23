@@ -76,8 +76,8 @@
     async function parseModelSelectionUrlParameters() {
         const url = new URL(window.location.href);
         const queryParams = new URLSearchParams(url.search);
-        const workspace = queryParams.get("dataset") || null;
-        const graph = queryParams.get("graph") || null;
+        const workspace = queryParams.get("workspace") || null;
+        const graph = queryParams.get("schema") || null;
         let pack = queryParams.get("package") || null;
         const classRef = queryParams.get("class") || null;
 
@@ -122,8 +122,8 @@
     async function resolveIRI(workspace, graph, iri) {
         return await fetchResolveIRI({
             path: {
-                datasetName: workspace,
-                graphURI: graph,
+                workspaceName: workspace,
+                schemaName: graph,
                 iriIdentifier: iri,
             },
         }).then(res => res.data);

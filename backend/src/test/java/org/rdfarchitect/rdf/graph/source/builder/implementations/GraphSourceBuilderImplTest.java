@@ -60,16 +60,16 @@ class GraphSourceBuilderImplTest {
                 "https://",
                 "default"
             })
-    void setGraphName_validName_nameIsSetInBuiltObject(String graphUri) {
+    void setGraphName_validName_nameIsSetInBuiltObject(String graphName) {
         // Arrange
         GraphSourceBuilderImpl builder = new GraphSourceBuilderImpl();
 
         // Act
         builder.setGraph(GraphFactory.createDefaultGraph());
-        builder.setGraphName(graphUri);
+        builder.setGraphName(graphName);
 
         // Assert
-        assertThat(builder.build().graphName()).isEqualTo(graphUri);
+        assertThat(builder.build().graphName()).isEqualTo(graphName);
     }
 
     @Test

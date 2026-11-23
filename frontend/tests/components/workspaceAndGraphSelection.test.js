@@ -20,18 +20,18 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
 
-/** Graph list as the backend returns it: the URI next to what the profile says about itself. */
+/** Graph list as the backend returns it: the name next to what the profile says about itself. */
 const GRAPHS = vi.hoisted(() => [
     {
-        uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "EQ" },
+        name: "EQ",
         keyword: null,
     },
     {
-        uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "TP" },
+        name: "TP",
         keyword: "Topology",
     },
     {
-        uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "SSH" },
+        name: "SSH",
         keyword: "SSH",
         label: "Steady State Hypothesis Vocabulary",
     },
@@ -82,17 +82,17 @@ afterEach(() => {
 });
 
 describe("WorkspaceAndGraphSelection", () => {
-    test("uses the full graph URI as the value of an option", async () => {
+    test("uses the graph name as the value of an option", async () => {
         const container = await render({ workspace: "cgmes", graph: null });
 
         expect(graphOptions(container).map(option => option.value)).toEqual([
-            "http://iec.ch/TC57/CIM100#EQ",
-            "http://iec.ch/TC57/CIM100#TP",
-            "http://iec.ch/TC57/CIM100#SSH",
+            "EQ",
+            "TP",
+            "SSH",
         ]);
     });
 
-    test("labels a graph by its name, then its keyword, then the URI suffix", async () => {
+    test("labels a graph by its name, then its keyword, then the graph name", async () => {
         const container = await render({ workspace: "cgmes", graph: null });
 
         expect(
@@ -103,20 +103,16 @@ describe("WorkspaceAndGraphSelection", () => {
     test("keeps a preselected graph that is part of the workspace", async () => {
         const container = await render({
             workspace: "cgmes",
-            graph: "http://iec.ch/TC57/CIM100#EQ",
+            graph: "EQ",
         });
 
-        await vi.waitFor(() =>
-            expect(graphSelect(container).value).toBe(
-                "http://iec.ch/TC57/CIM100#EQ",
-            ),
-        );
+        await vi.waitFor(() => expect(graphSelect(container).value).toBe("EQ"));
     });
 
     test("clears a graph that is not part of the workspace", async () => {
         const container = await render({
             workspace: "cgmes",
-            graph: "http://example.org/gone#XY",
+            graph: "Gone",
         });
 
         await vi.waitFor(() =>

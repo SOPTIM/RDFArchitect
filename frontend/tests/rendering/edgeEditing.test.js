@@ -40,14 +40,14 @@ function association(data) {
 describe("associationEditTarget", () => {
     test("opens the association end of the source class", () => {
         const edge = association({
-            graphUri: "http://graph#EQ",
+            schemaName: "http://graph#EQ",
             sourceMultiplicityLabel: label("end-of-target-class"),
             targetMultiplicityLabel: label("end-of-source-class"),
         });
 
         expect(associationEditTarget(edge)).toEqual({
             classUuid: "source-class",
-            graphUri: "http://graph#EQ",
+            schemaName: "http://graph#EQ",
             kind: PropertyKind.ASSOCIATION,
             propertyUuid: "end-of-source-class",
             focus: FocusField.LABEL,
@@ -61,7 +61,7 @@ describe("associationEditTarget", () => {
 
         expect(associationEditTarget(edge)).toMatchObject({
             classUuid: "target-class",
-            graphUri: null,
+            schemaName: null,
             propertyUuid: "end-of-target-class",
         });
     });

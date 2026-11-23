@@ -25,5 +25,5 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 public class CrossProfileDiagramColorDataDTO {
-    Map<String, String> graphColors;
+    Map<String, String> schemaColors;
 }

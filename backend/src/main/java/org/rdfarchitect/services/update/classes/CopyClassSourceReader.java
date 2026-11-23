@@ -32,7 +32,6 @@ import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -47,7 +46,6 @@ import java.util.UUID;
 public class CopyClassSourceReader {
 
     private final DatabasePort databasePort;
-    private final ExpandURIUseCase expandURIUseCase;
 
     public List<CopyClassSource> toSources(List<PasteSourceClassDTO> sourceDTOs) {
         if (sourceDTOs == null) {
@@ -55,16 +53,12 @@ public class CopyClassSourceReader {
         }
         return sourceDTOs.stream()
                 .map(
-                        dto -> {
-                            var expandedGraphURI =
-                                    expandURIUseCase.expandUri(
-                                            dto.getSourceDatasetName(), dto.getSourceGraphURI());
-                            var sourceGraphIdentifier =
-                                    new GraphIdentifier(
-                                            dto.getSourceDatasetName(), expandedGraphURI);
-                            return new CopyClassSource(
-                                    sourceGraphIdentifier, UUID.fromString(dto.getClassUUID()));
-                        })
+                        dto ->
+                                new CopyClassSource(
+                                        new GraphIdentifier(
+                                                dto.getSourceWorkspaceName(),
+                                                dto.getSourceSchemaName()),
+                                        UUID.fromString(dto.getClassUUID())))
                 .toList();
     }
 
@@ -98,8 +92,8 @@ public class CopyClassSourceReader {
 
     private Model snapshotOf(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
@@ -111,12 +105,12 @@ public class CopyClassSourceReader {
             log.warn(
                     "Skipping source class '{}' because graph '{}' does not contain it any more.",
                     classUUID,
-                    source.graphIdentifier().graphUri());
+                    source.graphIdentifier().schemaName());
             return null;
         }
         return new ResolvedSource(
                 source.graphIdentifier(),
-                new CIMClass(source.graphIdentifier().graphUri(), model, source.classUUID()));
+                new CIMClass(source.graphIdentifier().schemaName(), model, source.classUUID()));
     }
 
     public record ResolvedSource(GraphIdentifier graphIdentifier, ICIMClass cimClass) {}

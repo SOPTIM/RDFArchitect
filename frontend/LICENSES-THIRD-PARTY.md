@@ -267,6 +267,11 @@
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
+### valid-filename
+- **Package:** valid-filename
+- **Version:** 5.0.0
+- **License:** MIT
+
 ### validate-iri
 - **Package:** validate-iri
 - **Version:** 1.0.1

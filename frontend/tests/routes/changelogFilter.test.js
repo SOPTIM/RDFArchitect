@@ -29,14 +29,20 @@ const GRAPH_B = "http://example.org/b";
 
 describe("showsChange", () => {
     test("shows everything when nothing is filtered", () => {
-        const change = { affectedKinds: ["rdf"], affectedGraphUris: [GRAPH_A] };
+        const change = {
+            affectedKinds: ["rdf"],
+            affectedSchemaNames: [GRAPH_A],
+        };
 
         expect(showsChange(change, {})).toBe(true);
         expect(showsChange(change)).toBe(true);
     });
 
     test("hides a change whose only kind is hidden", () => {
-        const change = { affectedKinds: ["dl"], affectedGraphUris: [GRAPH_A] };
+        const change = {
+            affectedKinds: ["dl"],
+            affectedSchemaNames: [GRAPH_A],
+        };
 
         expect(showsChange(change, { hiddenKinds: new Set(["dl"]) })).toBe(
             false,
@@ -53,28 +59,28 @@ describe("showsChange", () => {
     });
 
     test("holds the log to one graph", () => {
-        const inA = { affectedKinds: ["rdf"], affectedGraphUris: [GRAPH_A] };
-        const inB = { affectedKinds: ["rdf"], affectedGraphUris: [GRAPH_B] };
+        const inA = { affectedKinds: ["rdf"], affectedSchemaNames: [GRAPH_A] };
+        const inB = { affectedKinds: ["rdf"], affectedSchemaNames: [GRAPH_B] };
 
-        expect(showsChange(inA, { graphUri: GRAPH_A })).toBe(true);
-        expect(showsChange(inB, { graphUri: GRAPH_A })).toBe(false);
+        expect(showsChange(inA, { schemaName: GRAPH_A })).toBe(true);
+        expect(showsChange(inB, { schemaName: GRAPH_A })).toBe(false);
     });
 
     test("shows a change that spanned several graphs under each of them", () => {
         const change = {
             affectedKinds: ["rdf"],
-            affectedGraphUris: [GRAPH_A, GRAPH_B],
+            affectedSchemaNames: [GRAPH_A, GRAPH_B],
         };
 
-        expect(showsChange(change, { graphUri: GRAPH_A })).toBe(true);
-        expect(showsChange(change, { graphUri: GRAPH_B })).toBe(true);
+        expect(showsChange(change, { schemaName: GRAPH_A })).toBe(true);
+        expect(showsChange(change, { schemaName: GRAPH_B })).toBe(true);
     });
 
     test("hides a change that belongs to no graph when one is in view", () => {
         // Prefixes and the workspace's own diagrams belong to the workspace, not to a graph.
-        const change = { affectedKinds: ["prefixes"], affectedGraphUris: [] };
+        const change = { affectedKinds: ["prefixes"], affectedSchemaNames: [] };
 
-        expect(showsChange(change, { graphUri: GRAPH_A })).toBe(false);
+        expect(showsChange(change, { schemaName: GRAPH_A })).toBe(false);
         expect(showsChange(change, {})).toBe(true);
     });
 
@@ -82,30 +88,30 @@ describe("showsChange", () => {
         // Deleting a graph is recorded against the set of graphs, but it names the graph.
         const change = {
             affectedKinds: ["graphs"],
-            affectedGraphUris: [GRAPH_A],
+            affectedSchemaNames: [GRAPH_A],
         };
 
-        expect(showsChange(change, { graphUri: GRAPH_A })).toBe(true);
+        expect(showsChange(change, { schemaName: GRAPH_A })).toBe(true);
     });
 
     test("keeps the state the workspace was loaded in, whatever is filtered", () => {
         // It names no kind and no graph, but it is where every graph began as much as the
         // workspace did, and it is where a restore can take either back to.
-        const loaded = { affectedKinds: [], affectedGraphUris: [] };
+        const loaded = { affectedKinds: [], affectedSchemaNames: [] };
 
         expect(showsChange(loaded, {})).toBe(true);
         expect(
             showsChange(loaded, { hiddenKinds: new Set(["rdf", "dl"]) }),
         ).toBe(true);
-        expect(showsChange(loaded, { graphUri: GRAPH_A })).toBe(true);
+        expect(showsChange(loaded, { schemaName: GRAPH_A })).toBe(true);
     });
 });
 
 describe("restoresChange", () => {
     test("takes back what was done inside the schema", () => {
         const change = {
-            affectedGraphUris: [GRAPH_A],
-            restorableGraphUris: [GRAPH_A],
+            affectedSchemaNames: [GRAPH_A],
+            restorableSchemaNames: [GRAPH_A],
         };
 
         expect(restoresChange(change, GRAPH_A)).toBe(true);
@@ -117,11 +123,11 @@ describe("restoresChange", () => {
         // to the workspace; a restore held to one schema does not touch it.
         const change = {
             affectedKinds: ["graphs"],
-            affectedGraphUris: [GRAPH_A],
-            restorableGraphUris: [],
+            affectedSchemaNames: [GRAPH_A],
+            restorableSchemaNames: [],
         };
 
-        expect(showsChange(change, { graphUri: GRAPH_A })).toBe(true);
+        expect(showsChange(change, { schemaName: GRAPH_A })).toBe(true);
         expect(restoresChange(change, GRAPH_A)).toBe(false);
     });
 
@@ -134,18 +140,22 @@ describe("visibleDeltas", () => {
     const triple = { subject: "s", predicate: "p", object: "o" };
     const rdfInA = {
         contextName: "rdf",
-        graphUri: GRAPH_A,
+        schemaName: GRAPH_A,
         additions: [triple],
     };
-    const dlInA = { contextName: "dl", graphUri: GRAPH_A, deletions: [triple] };
+    const dlInA = {
+        contextName: "dl",
+        schemaName: GRAPH_A,
+        deletions: [triple],
+    };
     const rdfInB = {
         contextName: "rdf",
-        graphUri: GRAPH_B,
+        schemaName: GRAPH_B,
         additions: [triple],
     };
     const prefixes = {
         contextName: "prefixes",
-        graphUri: null,
+        schemaName: null,
         values: [{ key: "ex", before: null, after: "http://example.org/" }],
     };
     const change = { contextDeltas: [rdfInA, dlInA, rdfInB, prefixes] };
@@ -165,7 +175,7 @@ describe("visibleDeltas", () => {
     });
 
     test("drops the deltas of other graphs, and those of none", () => {
-        const shown = visibleDeltas(change, { graphUri: GRAPH_A });
+        const shown = visibleDeltas(change, { schemaName: GRAPH_A });
 
         expect(shown).toEqual([rdfInA, dlInA]);
     });
@@ -173,7 +183,7 @@ describe("visibleDeltas", () => {
     test("applies both filters at once", () => {
         const shown = visibleDeltas(change, {
             hiddenKinds: new Set(["dl"]),
-            graphUri: GRAPH_A,
+            schemaName: GRAPH_A,
         });
 
         expect(shown).toEqual([rdfInA]);
@@ -189,13 +199,13 @@ describe("visibleDeltas", () => {
 
     test("drops a delta that has nothing behind it", () => {
         // The triples of a delta are held weakly, so they can be gone while the entry remains.
-        const collected = { contextName: "rdf", graphUri: GRAPH_A };
+        const collected = { contextName: "rdf", schemaName: GRAPH_A };
 
         expect(visibleDeltas({ contextDeltas: [collected] }, {})).toEqual([]);
     });
 
     test("copes with a change that carries no deltas", () => {
-        expect(visibleDeltas({}, { graphUri: GRAPH_A })).toEqual([]);
+        expect(visibleDeltas({}, { schemaName: GRAPH_A })).toEqual([]);
     });
 });
 

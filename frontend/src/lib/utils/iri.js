@@ -17,6 +17,17 @@
 
 import { URI } from "$lib/models/dto/index.ts";
 
+/**
+ * The full URI of a resource as the backend sends it: a URI split into prefix and suffix, or a
+ * string that already is the URI.
+ */
+export function uriString(uri) {
+    if (typeof uri === "string") {
+        return uri;
+    }
+    return `${uri?.prefix ?? ""}${uri?.suffix ?? ""}`;
+}
+
 /** The local name of an iri, or the iri itself when it cannot be parsed. */
 export function uriSuffix(iri) {
     if (!iri) {
@@ -27,21 +38,6 @@ export function uriSuffix(iri) {
     } catch {
         return iri;
     }
-}
-
-/**
- * A name spelled so it can stand as the local part of an IRI.
- *
- * A graph URI is generated rather than chosen, so the name a reader types for a schema has to
- * lose the characters an IRI cannot carry before it becomes one. That includes `#`, which an IRI
- * does carry but only once: a second one makes the whole URI unparseable rather than the name odd.
- */
-export function toLocalName(name) {
-    return (name ?? "")
-        .trim()
-        .split(/\s+/)
-        .join("")
-        .replace(/[<>"{}|\\^`#]/g, "");
 }
 
 export function shortenIri(prefixes, iri) {

@@ -28,5 +28,5 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClassSourceDTO {
     private UUID classUUID;
-    private GraphDTO graph;
+    private GraphDTO schema;
 }

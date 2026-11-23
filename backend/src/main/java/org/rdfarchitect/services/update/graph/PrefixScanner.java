@@ -18,9 +18,9 @@
 package org.rdfarchitect.services.update.graph;
 
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.system.StreamRDFBase;
+import org.rdfarchitect.rdf.RDFFileLanguages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
@@ -67,7 +67,7 @@ final class PrefixScanner {
 
     /** Mirrors how the import itself picks the language, which defaults to RDF/XML. */
     private static Lang languageOf(String fileName) {
-        return Objects.requireNonNullElse(RDFLanguages.filenameToLang(fileName), Lang.RDFXML);
+        return Objects.requireNonNullElse(RDFFileLanguages.of(fileName), Lang.RDFXML);
     }
 
     private static final class PrefixCollector extends StreamRDFBase {

@@ -25,15 +25,15 @@ import java.util.List;
 public interface ImportGraphsUseCase {
 
     /**
-     * Result of a graph import operation, separating successfully imported graph URIs from the
+     * Result of a graph import operation, separating successfully imported schema names from the
      * filenames of files that failed to import and any non-fatal warnings raised while importing.
      *
-     * @param importedGraphUris the URIs of successfully imported graphs
+     * @param importedSchemaNames the URIs of successfully imported graphs
      * @param failedFileNames the original filenames of files that could not be imported
      * @param warnings non-fatal warnings about content that was imported but cannot be displayed
      */
     record ImportResult(
-            List<String> importedGraphUris,
+            List<String> importedSchemaNames,
             List<String> failedFileNames,
             List<ImportWarning> warnings) {
         public ImportResult() {
@@ -54,18 +54,18 @@ public interface ImportGraphsUseCase {
     /**
      * Imports multiple graphs into the specified dataset.
      *
-     * @param datasetName The name of the dataset where the graphs will be imported.
+     * @param workspaceName The name of the dataset where the graphs will be imported.
      * @param files The list of files containing the graph data to be imported. A zip archive is
      *     unpacked and each graph file in it imported on its own.
-     * @param graphUris The list of graph URIs corresponding to each file.
+     * @param schemaNames The list of schema names corresponding to each file.
      * @param listener Receives the progress of the import and can cancel it; pass {@link
      *     ImportProgressListener#NOOP} when neither is needed.
-     * @return A record storing both the successfully imported graph URIs and the filenames of files
-     *     that failed to import.
+     * @return A record storing both the successfully imported schema names and the filenames of
+     *     files that failed to import.
      */
     ImportResult importGraphs(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
-            List<String> graphUris,
+            List<String> schemaNames,
             ImportProgressListener listener);
 }

@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/crossprofilediagram")
+@RequestMapping("/api/workspaces/{workspaceName}/crossprofilediagram")
 @RequiredArgsConstructor
 public class CrossProfileDiagramRestController {
 
@@ -51,17 +51,17 @@ public class CrossProfileDiagramRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/crossprofilediagram\" from \"{}\"",
+                workspaceName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false);
+        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(workspaceName, false);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/crossprofilediagram\" from \"{}\"",
+                workspaceName,
                 originURL);
         return result;
     }

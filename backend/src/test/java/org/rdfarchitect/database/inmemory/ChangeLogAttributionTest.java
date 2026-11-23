@@ -72,14 +72,14 @@ class ChangeLogAttributionTest {
 
             commitClass(GRAPH_A);
 
-            assertThat(newestChange().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(newestChange().affectedSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
         void creatingAGraph_isAttributedToThatGraph() {
             createGraph(GRAPH_A);
 
-            assertThat(newestChange().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(newestChange().affectedSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -91,7 +91,7 @@ class ChangeLogAttributionTest {
                 transaction.commit("deleted graph a");
             }
 
-            assertThat(newestChange().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(newestChange().affectedSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -103,7 +103,7 @@ class ChangeLogAttributionTest {
                 transaction.commit("renamed graph a");
             }
 
-            assertThat(newestChange().affectedGraphUris())
+            assertThat(newestChange().affectedSchemaNames())
                     .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
         }
 
@@ -118,7 +118,7 @@ class ChangeLogAttributionTest {
                 transaction.commit("created a workspace diagram");
             }
 
-            assertThat(newestChange().affectedGraphUris()).isEmpty();
+            assertThat(newestChange().affectedSchemaNames()).isEmpty();
         }
     }
 
@@ -135,7 +135,7 @@ class ChangeLogAttributionTest {
             commitClass(GRAPH_A);
             renameGraph(GRAPH_A, GRAPH_B);
 
-            assertThat(schemaChange().affectedGraphUris()).containsExactly(GRAPH_B);
+            assertThat(schemaChange().affectedSchemaNames()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -145,7 +145,7 @@ class ChangeLogAttributionTest {
             renameGraph(GRAPH_A, GRAPH_B);
 
             assertThat(schemaChange().deltas())
-                    .extracting(ContextDelta::graphUri)
+                    .extracting(ContextDelta::schemaName)
                     .containsExactly(GRAPH_B);
         }
 
@@ -155,7 +155,7 @@ class ChangeLogAttributionTest {
             renameGraph(GRAPH_A, GRAPH_B);
             commitClass(GRAPH_B);
 
-            assertThat(workspace.undoPreview().affectedGraphUris()).containsExactly(GRAPH_B);
+            assertThat(workspace.undoPreview().affectedSchemaNames()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -168,9 +168,9 @@ class ChangeLogAttributionTest {
             // has to look for the change the next undo would take back.
             var step = workspace.undo();
 
-            assertThat(step.change().affectedGraphUris())
+            assertThat(step.change().affectedSchemaNames())
                     .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
-            assertThat(schemaChange().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(schemaChange().affectedSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -196,10 +196,10 @@ class ChangeLogAttributionTest {
                             .filter(delta -> delta.contextName().equals("rdf"))
                             .toList();
             assertThat(rdfDeltas)
-                    .extracting(ContextDelta::graphUri)
+                    .extracting(ContextDelta::schemaName)
                     .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
             assertThat(rdfDeltas)
-                    .filteredOn(delta -> GRAPH_A.equals(delta.graphUri()))
+                    .filteredOn(delta -> GRAPH_A.equals(delta.schemaName()))
                     .singleElement()
                     .satisfies(
                             delta ->
@@ -217,7 +217,7 @@ class ChangeLogAttributionTest {
                 transaction.commit("deleted graph a");
             }
 
-            assertThat(schemaChange().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(schemaChange().affectedSchemaNames()).containsExactly(GRAPH_A);
         }
     }
 
@@ -342,9 +342,9 @@ class ChangeLogAttributionTest {
                 .values();
     }
 
-    private String colorOf(String graphUri) {
+    private String colorOf(String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return transaction.crossProfileColors().getColor(graphUri);
+            return transaction.crossProfileColors().getColor(schemaName);
         }
     }
 
@@ -360,18 +360,18 @@ class ChangeLogAttributionTest {
                 .orElseThrow();
     }
 
-    private void createGraph(String graphUri) {
-        WorkspaceFixtures.createGraph(workspace, graphUri);
+    private void createGraph(String schemaName) {
+        WorkspaceFixtures.createGraph(workspace, schemaName);
     }
 
-    private void renameGraph(String oldGraphUri, String newGraphUri) {
-        WorkspaceFixtures.renameGraph(workspace, oldGraphUri, newGraphUri);
+    private void renameGraph(String oldSchemaName, String newSchemaName) {
+        WorkspaceFixtures.renameGraph(workspace, oldSchemaName, newSchemaName);
     }
 
-    private void commitClass(String graphUri) {
+    private void commitClass(String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction
-                    .graph(graphUri)
+                    .graph(schemaName)
                     .getRdfGraph()
                     .add(
                             Triple.create(

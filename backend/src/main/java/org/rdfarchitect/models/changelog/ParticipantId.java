@@ -24,7 +24,7 @@ import java.util.Locale;
  * part of the workspace a commit touched without holding on to the participant itself.
  *
  * @param kind the kind of data the participant holds
- * @param scope the graph URI for graph-scoped participants, or {@code null} for workspace-scoped
+ * @param scope the schema name for graph-scoped participants, or {@code null} for workspace-scoped
  *     ones
  */
 public record ParticipantId(Kind kind, String scope) {
@@ -51,11 +51,11 @@ public record ParticipantId(Kind kind, String scope) {
      * Creates an identifier for a participant that belongs to a single graph.
      *
      * @param kind the kind of data the participant holds
-     * @param graphUri the URI of the graph the participant belongs to
+     * @param schemaName the URI of the graph the participant belongs to
      * @return the identifier
      */
-    public static ParticipantId ofGraph(Kind kind, String graphUri) {
-        return new ParticipantId(kind, graphUri);
+    public static ParticipantId ofGraph(Kind kind, String schemaName) {
+        return new ParticipantId(kind, schemaName);
     }
 
     /**
