@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.UUID;
 
 /** Writes workspaces to workspace files for the desktop app's Save. */
 @Service
@@ -54,6 +56,7 @@ public class DesktopWorkspaceFiles {
 
     /**
      * Writes the workspace into a file on disk, replacing it only once the new content is complete.
+     * The content goes to a file of its own next to it first, so two saves never mix.
      *
      * @param workspaceName the workspace, in the current session
      * @param path the file to write
@@ -61,16 +64,21 @@ public class DesktopWorkspaceFiles {
      */
     public WorkspaceRevision writeTo(String workspaceName, Path path) throws IOException {
         var file = write(workspaceName);
-        var temporary = path.resolveSibling(path.getFileName() + ".saving");
-        Files.write(temporary, file.content());
+        var temporary =
+                path.resolveSibling(path.getFileName() + "." + UUID.randomUUID() + ".saving");
         try {
-            Files.move(
-                    temporary,
-                    path,
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException _) {
-            Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(temporary, file.content(), StandardOpenOption.CREATE_NEW);
+            try {
+                Files.move(
+                        temporary,
+                        path,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException _) {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
         }
         return file.revision();
     }

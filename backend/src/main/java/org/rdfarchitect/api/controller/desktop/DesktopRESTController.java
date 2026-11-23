@@ -80,6 +80,12 @@ public class DesktopRESTController {
     private final WorkspaceFileLocations fileLocations;
     private final String version;
 
+    /**
+     * Held while a save to a file and what it records happen, so that two saves, from two windows,
+     * record the version that the file ends up holding.
+     */
+    private final Object saveLock = new Object();
+
     public DesktopRESTController(
             ClientPresence clientPresence,
             SavedWorkspaces savedWorkspaces,
@@ -224,11 +230,13 @@ public class DesktopRESTController {
                 openRequests
                         .remove(requestId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!savedWorkspaces.markSavedNow(workspaceName)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "The workspace is being changed right now.");
+        synchronized (saveLock) {
+            if (!savedWorkspaces.markSavedNow(workspaceName)) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT, "The workspace is being changed right now.");
+            }
+            fileLocations.remember(workspaceName, request.path());
         }
-        fileLocations.remember(workspaceName, request.path());
     }
 
     @Operation(
@@ -248,14 +256,16 @@ public class DesktopRESTController {
                                         new ResponseStatusException(
                                                 HttpStatus.CONFLICT,
                                                 "The workspace has no file to save to."));
-        try {
-            var saved = workspaceFiles.writeTo(workspaceName, path);
-            if (saved != null) {
-                savedWorkspaces.markSaved(workspaceName, saved);
+        synchronized (saveLock) {
+            try {
+                var saved = workspaceFiles.writeTo(workspaceName, path);
+                if (saved != null) {
+                    savedWorkspaces.markSaved(workspaceName, saved);
+                }
+                logger.info("Saved workspace \"{}\" to {}.", workspaceName, path);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Could not write " + path, e);
             }
-            logger.info("Saved workspace \"{}\" to {}.", workspaceName, path);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Could not write " + path, e);
         }
     }
 
@@ -308,15 +318,18 @@ public class DesktopRESTController {
     public void saved(
             @PathVariable String workspaceName,
             @RequestBody(required = false) SavedVersionDTO savedVersion) {
-        // The browser wrote or read a file of its own choosing, which is the workspace's file now.
-        fileLocations.forget(workspaceName);
-        if (savedVersion != null && savedVersion.getVersion() != null) {
-            savedWorkspaces.markSaved(workspaceName, savedVersion.getVersion());
-            return;
-        }
-        if (!savedWorkspaces.markSavedNow(workspaceName)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "The workspace is being changed right now.");
+        synchronized (saveLock) {
+            // The browser wrote or read a file of its own choosing, which is the workspace's file
+            // now.
+            fileLocations.forget(workspaceName);
+            if (savedVersion != null && savedVersion.getVersion() != null) {
+                savedWorkspaces.markSaved(workspaceName, savedVersion.getVersion());
+                return;
+            }
+            if (!savedWorkspaces.markSavedNow(workspaceName)) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT, "The workspace is being changed right now.");
+            }
         }
     }
 }
