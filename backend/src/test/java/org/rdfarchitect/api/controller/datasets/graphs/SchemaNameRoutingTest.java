@@ -24,6 +24,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -70,6 +72,20 @@ class SchemaNameRoutingTest {
 
         var exported = send("GET", graphPath(name) + "/content", "text/turtle");
         assertThat(exported.statusCode()).isEqualTo(200);
+    }
+
+    /** Tomcat drops a header that holds a character outside Latin-1 instead of sending it. */
+    @ParameterizedTest
+    @ValueSource(strings = {"中文", "Équipement", "my profile"})
+    void export_schemaNameOutsideAscii_keepsItsFileName(String name)
+            throws IOException, InterruptedException {
+        send("PUT", graphPath(name) + "/content", "*/*");
+
+        var exported = send("GET", graphPath(name) + "/content", "text/turtle");
+
+        var header = exported.headers().firstValue(HttpHeaders.CONTENT_DISPOSITION);
+        assertThat(header).isPresent();
+        assertThat(ContentDisposition.parse(header.get()).getFilename()).isEqualTo(name + ".ttl");
     }
 
     @ParameterizedTest

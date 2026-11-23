@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
@@ -45,7 +46,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -103,12 +103,9 @@ public class GraphContentRESTController {
         var fileName = schemaName;
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         var body =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                        .headers(DownloadHeaders.attachment(fileName))
                         .body(outStream.toByteArray());
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",

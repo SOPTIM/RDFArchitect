@@ -27,7 +27,11 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
-    import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
+    import {
+        filenameFromContentDisposition,
+        saveFile,
+        supportedRDFMediaTypes,
+    } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
     import { workspaceStore } from "./stores/workspaceStore.ts";
@@ -173,8 +177,8 @@
                 return;
             }
             const blob = await response.blob();
-            const suggestedFilename = response.headers.get(
-                "content-disposition",
+            const suggestedFilename = filenameFromContentDisposition(
+                response.headers.get("content-disposition"),
             );
             saveFile(blob, suggestedFilename, selectedMediaType);
             toastStore.success(

@@ -24,11 +24,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.select.ExportGraphHTMLUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +38,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/htmlexport/{fileEnding}")
@@ -92,13 +90,8 @@ public class HTMLExportRESTController {
         var fileName = schemaName;
         fileName += ".html";
 
-        var headers = new HttpHeaders();
-        var contentDisposition = ContentDisposition.attachment().filename(fileName).build();
-        headers.setContentDisposition(contentDisposition);
+        var headers = DownloadHeaders.attachment(fileName);
         headers.setContentType(MediaType.TEXT_HTML);
-        // without this the browser hides the header from the frontend, which would then have to
-        // fall back to a generic file name
-        headers.setAccessControlExposeHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(

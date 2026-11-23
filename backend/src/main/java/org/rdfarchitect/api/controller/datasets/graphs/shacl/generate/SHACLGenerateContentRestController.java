@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.PrefixEntry;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
@@ -42,7 +43,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -147,11 +147,8 @@ public class SHACLGenerateContentRestController {
         var fileName = schemaName + "-shacl";
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         return ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                .headers(DownloadHeaders.attachment(fileName))
                 .body(outStream.toByteArray());
     }
 

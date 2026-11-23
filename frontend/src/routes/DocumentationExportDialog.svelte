@@ -26,7 +26,10 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import { ExportProgress } from "$lib/utils/exportProgress.svelte.js";
-    import { saveFile } from "$lib/utils/fileUtils.ts";
+    import {
+        filenameFromContentDisposition,
+        saveFile,
+    } from "$lib/utils/fileUtils.ts";
     import { generatePackageImages } from "$lib/utils/packageImageExport.svelte.js";
 
     let {
@@ -241,8 +244,10 @@
     }
 
     function getDocumentFilename(contentDisposition, documentFormat) {
-        const match = contentDisposition?.match(/filename="?([^"]+)"?/);
-        return match?.[1] ?? `export.${documentFormat.ending}`;
+        return (
+            filenameFromContentDisposition(contentDisposition) ??
+            `export.${documentFormat.ending}`
+        );
     }
 </script>
 

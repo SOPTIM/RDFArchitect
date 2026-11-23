@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.services.select.GetDatasetSchemaUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -88,12 +88,9 @@ public class DatasetContentRESTController {
                         + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
 
         var outStream = getDatasetSchemaUseCase.getDatasetSchema(workspaceName, format);
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         var body =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                        .headers(DownloadHeaders.attachment(fileName))
                         .body(outStream.toByteArray());
 
         logger.info(
