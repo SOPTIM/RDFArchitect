@@ -35,6 +35,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.implementations.DatabaseAdminProtocol;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.DataAccessException;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * What replacing graphs sends to the store.
@@ -55,9 +57,9 @@ import java.util.Map;
 class HttpUpdateCommandReplaceGraphsTest {
 
     private static final String WORKSPACE = "cgmes";
-    private static final String OLD = "urn:rdfa:shacl:http%3A%2F%2Fex.org%2FEQ:old";
-    private static final String KEPT = "urn:rdfa:shacl:http%3A%2F%2Fex.org%2FEQ:kept";
-    private static final String METADATA = "urn:rdfa:shacl-meta:http%3A%2F%2Fex.org%2FEQ";
+    private static final String OLD = ShapesGraphNaming.encode(UUID.randomUUID());
+    private static final String KEPT = ShapesGraphNaming.encode(UUID.randomUUID());
+    private static final String METADATA = ShapesGraphNaming.metadataGraph();
 
     private record Received(String method, String contentType, String body) {}
 
