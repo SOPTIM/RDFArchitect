@@ -84,6 +84,9 @@ public interface WorkspaceTransaction extends AutoCloseable {
      */
     UUID crossProfileDiagramId();
 
+    /** Sets the cross-profile diagram id as a workspace file states it, outside the history. */
+    void setCrossProfileDiagramId(UUID crossProfileDiagramId);
+
     /**
      * Returns the namespace prefixes shared by all graphs of the workspace.
      *

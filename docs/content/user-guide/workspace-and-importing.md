@@ -38,7 +38,7 @@ Edges hidden by a filter keep their course and are shown with it again once the 
 
 ## Getting data into RDFArchitect
 
-There are three ways content lands in the editor.
+There are four ways content lands in the editor.
 
 ### Import a schema (File → Import → Schema (RDFS))
 
@@ -53,6 +53,12 @@ The dialog stays open while the import runs and shows a progress bar together wi
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
+
+### Import a workspace file (File → Import → Workspace (.rdfa))
+
+**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
+
+The workspace file is a zip; rename it to `.zip` to look inside. Its top level holds the workspace, each schema sits in `schemas/<schema name>/schema.ttl` and can be used on its own, and `manifest.json` lists the schemas. The manifest's `formatVersion` (`MAJOR.MINOR`) says which RDFArchitect versions read it: any file of the same major version imports, and one with a newer minor version imports with a notice that the parts this version does not know were left out.
 
 ### Create an empty schema (Edit → New → Schema)
 

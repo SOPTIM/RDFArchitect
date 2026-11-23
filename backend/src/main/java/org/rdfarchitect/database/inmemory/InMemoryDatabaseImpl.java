@@ -53,11 +53,12 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
 
     @Override
     public void createDataset(String workspaceName) {
+        // Created and checked in one step, so that a concurrent call can't make this a no-op that
+        // the caller takes for having created the workspace.
         var store = getOrCreateSessionDataStore();
-        if (store.listDatasets().contains(workspaceName)) {
+        if (!store.createDatasetIfAbsent(workspaceName)) {
             throw new ResourceConflictException("Dataset " + workspaceName + " already exists");
         }
-        store.createDataset(workspaceName);
         initializeNewDataset(store, workspaceName);
     }
 

@@ -14,9 +14,14 @@
  *    limitations under the License.
  *
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-import { filenameFromContentDisposition } from "../../src/lib/utils/fileUtils.ts";
+import {
+    filenameFromContentDisposition,
+    isImportableFile,
+    isWorkspaceArchiveFile,
+    workspaceNameOfArchiveFile,
+} from "$lib/utils/fileUtils.ts";
 
 describe("filenameFromContentDisposition", () => {
     it("reads the UTF-8 encoded name first", () => {
@@ -69,4 +74,25 @@ describe("filenameFromContentDisposition", () => {
             expect(filenameFromContentDisposition(header)).toBeNull();
         },
     );
+});
+
+describe("workspace archives", () => {
+    test("are taken by the workspace import, also when renamed to .zip", () => {
+        expect(isWorkspaceArchiveFile("CGMES 3.0.rdfa")).toBe(true);
+        expect(isWorkspaceArchiveFile("CGMES 3.0.RDFA")).toBe(true);
+        expect(isWorkspaceArchiveFile("CGMES 3.0.rdfa.zip")).toBe(true);
+        expect(isWorkspaceArchiveFile("core.ttl")).toBe(false);
+    });
+
+    test("are not taken by the schema import, which would unpack them", () => {
+        expect(isImportableFile("CGMES 3.0.rdfa")).toBe(false);
+    });
+
+    test("suggest their name without the extension as the workspace name", () => {
+        expect(workspaceNameOfArchiveFile("CGMES 3.0.rdfa")).toBe("CGMES 3.0");
+        expect(workspaceNameOfArchiveFile("CGMES 3.0.rdfa.zip")).toBe(
+            "CGMES 3.0",
+        );
+        expect(workspaceNameOfArchiveFile("CGMES 3.0.zip")).toBe("CGMES 3.0");
+    });
 });
