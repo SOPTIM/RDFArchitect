@@ -19,6 +19,7 @@
     import {
         faChevronDown,
         faChevronUp,
+        faCircleExclamation,
         faRotate,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
@@ -182,11 +183,28 @@
         <div
             class="text-default-text flex flex-wrap items-center gap-4 text-sm"
         >
-            {#if totals.errorCount === 0 && totals.warningCount === 0 && totals.infoCount === 0}
-                <span class="text-green-text flex items-center gap-1.5">
-                    <Fa icon={VALID_ICON} />
-                    No problems found
+            {#if workbench.validationError}
+                <span
+                    class="text-red-text flex items-center gap-1.5"
+                    role="status"
+                >
+                    <Fa icon={faCircleExclamation} />
+                    {workbench.validationError}
                 </span>
+            {/if}
+            {#if !workbench.validated}
+                {#if !workbench.validationError}
+                    <span class="text-text-subtle italic">
+                        Not validated yet
+                    </span>
+                {/if}
+            {:else if totals.errorCount === 0 && totals.warningCount === 0 && totals.infoCount === 0}
+                {#if !workbench.validationError}
+                    <span class="text-green-text flex items-center gap-1.5">
+                        <Fa icon={VALID_ICON} />
+                        No problems found
+                    </span>
+                {/if}
             {:else}
                 {#each ["ERROR", "WARNING", "INFO"] as key (key)}
                     {@const count =
@@ -233,7 +251,7 @@
         >
             {#if problems.length === 0}
                 <p class="text-text-subtle text-sm italic">
-                    Nothing to report for this schema's constraints.
+                    Nothing to report for this workspace's constraints.
                 </p>
             {:else}
                 <ul class="flex flex-col gap-2">

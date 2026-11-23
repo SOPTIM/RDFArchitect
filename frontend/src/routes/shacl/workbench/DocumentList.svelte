@@ -331,7 +331,7 @@
                                 icon={severityMeta(worst).icon}
                                 class={severityMeta(worst).text}
                             />
-                        {:else if result}
+                        {:else if result?.validated}
                             <Fa icon={VALID_ICON} class="text-green-text" />
                         {/if}
                     </span>

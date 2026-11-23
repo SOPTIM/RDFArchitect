@@ -169,6 +169,37 @@ describe("DocumentList", () => {
         expect(rows[1].textContent.replace(/\s+/g, " ")).toContain("0 triples");
     });
 
+    test("marks a document validation found nothing in, and not one it has not checked", () => {
+        const results = validated => [
+            {
+                documentId: "eq",
+                documentName: "eq.ttl",
+                errorCount: 0,
+                warningCount: 0,
+                infoCount: 0,
+                validated: true,
+            },
+            { documentId: "custom", documentName: "custom.ttl", validated },
+        ];
+        const checked = row => row.querySelector(".text-green-text") !== null;
+
+        let rows = documentRows(
+            render({ workbench: fakeWorkbench({ results: results(false) }) }),
+        );
+        expect(rows.map(checked)).toEqual([true, false]);
+
+        unmount(mounted);
+        target.remove();
+        rows = documentRows(
+            render({
+                workbench: fakeWorkbench({
+                    results: [{ ...results(false)[0], validated: false }],
+                }),
+            }),
+        );
+        expect(rows.map(checked)).toEqual([false, false]);
+    });
+
     test("asks before switching away from a document with unsaved changes", async () => {
         const workbench = fakeWorkbench();
         const onbeforeswitch = vi.fn().mockResolvedValue(false);

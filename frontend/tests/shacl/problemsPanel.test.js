@@ -38,6 +38,8 @@ function fakeWorkbench(overrides = {}) {
         results: [],
         totals: { errorCount: 0, warningCount: 0, infoCount: 0 },
         validating: false,
+        validated: true,
+        validationError: null,
         validateAll: vi.fn(),
         ...overrides,
     };
@@ -187,10 +189,37 @@ describe("ProblemsPanel", () => {
     });
 
     test("says so when there is nothing to report", () => {
-        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        const panel = render(ProblemsPanel, {
+            workbench: fakeWorkbench({ validated: true }),
+        });
 
         expect(panel.textContent).toContain("No problems found");
+        expect(panel.textContent).toContain(
+            "Nothing to report for this workspace's constraints.",
+        );
         expect(panel.querySelectorAll("li")).toHaveLength(0);
+    });
+
+    test("says nothing has been validated yet rather than that nothing was found", () => {
+        const panel = render(ProblemsPanel, {
+            workbench: fakeWorkbench({ validated: false }),
+        });
+
+        expect(panel.textContent).toContain("Not validated yet");
+        expect(panel.textContent).not.toContain("No problems found");
+    });
+
+    test("says why validation failed rather than that nothing was found", () => {
+        const panel = render(ProblemsPanel, {
+            workbench: fakeWorkbench({
+                validated: true,
+                validationError:
+                    "The text is too large for the server to accept, so it was not validated.",
+            }),
+        });
+
+        expect(panel.textContent).toContain("too large for the server");
+        expect(panel.textContent).not.toContain("No problems found");
     });
 
     /** The strip above the header that sizes the panel. */
