@@ -56,10 +56,10 @@ import java.util.stream.Stream;
 public class GraphUtils {
 
     /**
-     * Upper bound on the fingerprints {@link #separateLookalikes} may compute, so that a crafted
-     * file cannot keep it busy for long.
+     * Upper bound on the edges {@link #separateLookalikes} may fingerprint, so that a crafted file
+     * cannot keep it busy for long.
      */
-    private static final long REFINEMENT_BUDGET = 2_000_000L;
+    private static final long REFINEMENT_BUDGET = 5_000_000L;
 
     private static final Set<String> RELEVANT_TYPES =
             Set.of(RDF.Property.toString(), RDFS.Class.toString());
@@ -129,6 +129,11 @@ public class GraphUtils {
      * only real semantic changes rather than spurious blank-node renames.
      */
     public static Graph normalizeBlankNodes(Graph graph) {
+        return normalizeBlankNodes(graph, REFINEMENT_BUDGET);
+    }
+
+    /** {@link #normalizeBlankNodes(Graph)} with another {@link #REFINEMENT_BUDGET}. */
+    static Graph normalizeBlankNodes(Graph graph, long refinementBudget) {
         var triples = graph.find().toList();
         var blankNodes =
                 triples.stream()
@@ -140,7 +145,7 @@ public class GraphUtils {
         if (blankNodes.isEmpty()) {
             triples.forEach(result::add);
         } else {
-            var hashes = computeBlankNodeHashes(triples, blankNodes);
+            var hashes = computeBlankNodeHashes(triples, blankNodes, refinementBudget);
             for (var t : triples) {
                 result.add(
                         Triple.create(
@@ -167,7 +172,7 @@ public class GraphUtils {
      * triples.
      */
     private static Map<Node, String> computeBlankNodeHashes(
-            List<Triple> triples, Set<Node> blankNodes) {
+            List<Triple> triples, Set<Node> blankNodes, long refinementBudget) {
         var edges = new HashMap<Node, List<Edge>>();
         for (var t : triples) {
             if (t.getSubject().isBlank()) {
@@ -198,7 +203,7 @@ public class GraphUtils {
                 break;
             }
         }
-        separateLookalikes(edges, hashes);
+        separateLookalikes(edges, hashes, refinementBudget);
         return hashes;
     }
 
@@ -212,75 +217,147 @@ public class GraphUtils {
      * <p>Nodes sharing a label are refined until no group splits any further. When a group splits,
      * its largest part keeps the group's label and the other parts take new ones. A label therefore
      * changes only where a group splits: true duplicates, and every node outside a look-alike
-     * group, keep theirs however long refining takes elsewhere in the graph. If {@link
-     * #REFINEMENT_BUDGET} runs out, the remaining groups are kept apart by {@link #keepApart}.
+     * group, keep theirs however long refining takes elsewhere in the graph.
+     *
+     * <p>A node is fingerprinted again only after its own label or a neighbour's has changed. The
+     * other members of its group still share the signature the group had when they were last
+     * fingerprinted, so a long list of identical values, which splits two cells a pass, costs a few
+     * fingerprints a pass rather than one for every cell. If {@code budget} edges have been
+     * fingerprinted and groups are still splitting, the remaining groups are kept apart by {@link
+     * #keepApart}.
      */
-    private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> labels) {
-        var groups = groupsSharingALabel(labels.keySet(), labels);
-        var budget = REFINEMENT_BUDGET;
-        while (!groups.isEmpty()) {
-            var signatures = new HashMap<Node, String>();
-            for (var group : groups) {
-                for (var node : group) {
-                    var fingerprint =
-                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), labels);
+    private static void separateLookalikes(
+            Map<Node, List<Edge>> edges, Map<Node, String> labels, long budget) {
+        new Lookalikes(edges, labels).separate(budget);
+    }
+
+    /** The groups of blank nodes still sharing a label while {@link #separateLookalikes} runs. */
+    private static final class Lookalikes {
+
+        private final Map<Node, List<Edge>> edges;
+        private final Map<Node, String> labels;
+
+        /** Every label carried by more than one node, with those nodes. */
+        private final Map<String, Set<Node>> groups = new HashMap<>();
+
+        /** Per group, the signature shared by those of its members that were not due in a pass. */
+        private final Map<String, String> settled = new HashMap<>();
+
+        Lookalikes(Map<Node, List<Edge>> edges, Map<Node, String> labels) {
+            this.edges = edges;
+            this.labels = labels;
+            labels.forEach(
+                    (node, label) ->
+                            groups.computeIfAbsent(label, ignored -> new HashSet<>()).add(node));
+            groups.values().removeIf(group -> group.size() < 2);
+        }
+
+        void separate(long budget) {
+            Set<Node> due = new HashSet<>();
+            groups.values().forEach(due::addAll);
+            var left = budget;
+            while (!due.isEmpty()) {
+                var signatures = new HashMap<Node, String>();
+                for (var node : due) {
+                    var nodeEdges = edges.getOrDefault(node, List.of());
                     // The label goes in as well, so that a group can only ever split further.
-                    signatures.put(node, sha256prefix(labels.get(node) + "|" + fingerprint));
+                    signatures.put(
+                            node,
+                            sha256prefix(
+                                    labels.get(node)
+                                            + "|"
+                                            + blankNodeFingerprint(nodeEdges, labels)));
+                    left -= nodeEdges.size() + 1L;
                 }
-            }
-            var remaining = new ArrayList<List<Node>>();
-            var split = false;
-            for (var group : groups) {
-                var parts =
-                        List.copyOf(
-                                group.stream()
-                                        .collect(Collectors.groupingBy(signatures::get))
-                                        .values());
-                if (parts.size() > 1) {
-                    split = true;
-                    relabelAllButTheLargest(parts, signatures, labels);
+                var relabelled = new ArrayList<Node>();
+                due.stream()
+                        .collect(Collectors.groupingBy(labels::get))
+                        .forEach((label, members) -> split(label, members, signatures, relabelled));
+                if (left <= 0) {
+                    keepApart(groups.values(), labels);
+                    return;
                 }
-                parts.stream().filter(part -> part.size() > 1).forEach(remaining::add);
-            }
-            if (!split) {
-                break;
-            }
-            groups = remaining;
-            budget -= signatures.size();
-            if (budget <= 0) {
-                keepApart(groups, labels);
-                break;
+                due = nextDue(relabelled);
             }
         }
-    }
 
-    /**
-     * The parts a group splits into take their signature as label, except the largest, which keeps
-     * the group's label. Of equally large parts, the one with the smallest signature keeps it.
-     */
-    private static void relabelAllButTheLargest(
-            List<List<Node>> parts, Map<Node, String> signatures, Map<Node, String> labels) {
-        Comparator<List<Node>> bySize = Comparator.comparingInt(List::size);
-        var keeper =
-                parts.stream()
-                        .max(
-                                bySize.thenComparing(
-                                        part -> signatures.get(part.getFirst()),
-                                        Comparator.reverseOrder()))
-                        .orElseThrow();
-        for (var part : parts) {
-            if (part != keeper) {
-                part.forEach(node -> labels.put(node, signatures.get(node)));
+        /**
+         * Splits the group labelled {@code label} by the signatures of {@code dueMembers}; its
+         * other members share the signature in {@link #settled}.
+         *
+         * <p>Every part but the largest takes its signature as label, and a part of more than one
+         * node becomes a group of its own. Of equally large parts, the one with the smallest
+         * signature keeps the label.
+         */
+        private void split(
+                String label,
+                List<Node> dueMembers,
+                Map<Node, String> signatures,
+                List<Node> relabelled) {
+            var group = groups.get(label);
+            var parts = new HashMap<String, List<Node>>();
+            dueMembers.forEach(
+                    node ->
+                            parts.computeIfAbsent(
+                                            signatures.get(node), ignored -> new ArrayList<>())
+                                    .add(node));
+            var sizes = new HashMap<String, Integer>();
+            parts.forEach((signature, members) -> sizes.put(signature, members.size()));
+            var notDue = group.size() - dueMembers.size();
+            if (notDue > 0) {
+                sizes.merge(settled.get(label), notDue, Integer::sum);
+            }
+            var keeper =
+                    Collections.max(
+                                    sizes.entrySet(),
+                                    Map.Entry.<String, Integer>comparingByValue()
+                                            .thenComparing(
+                                                    Map.Entry.comparingByKey(
+                                                            Comparator.reverseOrder())))
+                            .getKey();
+            if (sizes.size() > 1) {
+                var due = new HashSet<>(dueMembers);
+                for (var signature : sizes.keySet()) {
+                    if (signature.equals(keeper)) {
+                        continue;
+                    }
+                    var members = parts.getOrDefault(signature, new ArrayList<>());
+                    if (notDue > 0 && signature.equals(settled.get(label))) {
+                        group.stream().filter(node -> !due.contains(node)).forEach(members::add);
+                    }
+                    for (var node : members) {
+                        labels.put(node, signature);
+                        group.remove(node);
+                        relabelled.add(node);
+                    }
+                    if (members.size() > 1) {
+                        groups.put(signature, new HashSet<>(members));
+                    }
+                }
+            }
+            if (group.size() > 1) {
+                settled.put(label, keeper);
+            } else {
+                groups.remove(label);
+                settled.remove(label);
             }
         }
-    }
 
-    /** The groups of more than one node carrying the same label. */
-    private static List<List<Node>> groupsSharingALabel(
-            Collection<Node> nodes, Map<Node, String> labels) {
-        return nodes.stream().collect(Collectors.groupingBy(labels::get)).values().stream()
-                .filter(group -> group.size() > 1)
-                .toList();
+        /** The nodes still sharing a label whose own label or a neighbour's has just changed. */
+        private Set<Node> nextDue(List<Node> relabelled) {
+            var due = new HashSet<Node>();
+            for (var node : relabelled) {
+                if (groups.containsKey(labels.get(node))) {
+                    due.add(node);
+                }
+                for (var edge : edges.getOrDefault(node, List.of())) {
+                    if (edge.other().isBlank() && groups.containsKey(labels.get(edge.other()))) {
+                        due.add(edge.other());
+                    }
+                }
+            }
+            return due;
+        }
     }
 
     /**
@@ -289,11 +366,14 @@ public class GraphUtils {
      * <p>Only something built to be pathological gets here, and a label that differs between two
      * parses of it costs a noisier diff, where a wrong merge would change what it says.
      */
-    private static void keepApart(List<List<Node>> groups, Map<Node, String> hashes) {
+    private static void keepApart(Collection<Set<Node>> groups, Map<Node, String> labels) {
         for (var group : groups) {
-            for (int index = 1; index < group.size(); index++) {
-                var node = group.get(index);
-                hashes.put(node, sha256prefix(hashes.get(node) + "|" + index));
+            var index = 0;
+            for (var node : group) {
+                if (index > 0) {
+                    labels.put(node, sha256prefix(labels.get(node) + "|" + index));
+                }
+                index++;
             }
         }
     }

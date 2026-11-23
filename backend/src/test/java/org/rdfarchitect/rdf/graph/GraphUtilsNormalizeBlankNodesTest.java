@@ -196,8 +196,9 @@ class GraphUtilsNormalizeBlankNodesTest {
     }
 
     /**
-     * Refining splits a list of identical values two cells a pass, so a long enough one could take
-     * longer than anybody waits. It has to end anyway, and still as a list.
+     * Refining splits a list of identical values two cells a pass, from both ends inwards, so a
+     * long one takes as many passes as it has cells. It has to end quickly anyway, still as a list,
+     * and with the same labels on every read.
      */
     @Test
     void aHugeListOfTheSameValueEndsAndStaysAList() {
@@ -207,6 +208,65 @@ class GraphUtilsNormalizeBlankNodesTest {
         var result =
                 assertTimeoutPreemptively(
                         Duration.ofSeconds(30), () -> GraphUtils.normalizeBlankNodes(graph));
+
+        assertEquals(0, forkingCells(result));
+        assertEquals(graph.size(), result.size());
+        assertEquals(result.find().toSet(), normalized(text).find().toSet());
+    }
+
+    /** Lists that share thousands of members split one cell a pass, and must read the same too. */
+    @Test
+    void longListsSharingThousandsOfMembersGetTheSameLabelsOnEveryRead() {
+        var text = PREFIXES + listsSharing(2_500);
+
+        var result = normalized(text);
+
+        assertEquals(0, forkingCells(result));
+        assertEquals(parse(text).size(), result.size());
+        assertEquals(result.find().toSet(), normalized(text).find().toSet());
+    }
+
+    /**
+     * Two blank nodes with many edges each, which nothing around them changes, are fingerprinted
+     * once, however many passes a list elsewhere needs. They are duplicates and become one.
+     */
+    @Test
+    void wideDuplicatesMergeWhileALongListElsewhereStillSplits() {
+        var values =
+                IntStream.range(0, 20_000)
+                        .mapToObj(Integer::toString)
+                        .collect(Collectors.joining(", "));
+        var text =
+                PREFIXES
+                        + "ex:S ex:has [ ex:p "
+                        + values
+                        + " ] , [ ex:p "
+                        + values
+                        + " ] .\n"
+                        + "ex:A sh:path ex:p ; sh:in ( "
+                        + "ex:same ".repeat(4_000)
+                        + ") .\n";
+        var graph = parse(text);
+
+        var result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(10), () -> GraphUtils.normalizeBlankNodes(graph));
+
+        assertEquals(graph.size() - 20_001, result.size());
+        assertEquals(0, forkingCells(result));
+    }
+
+    /** Past its budget, refining stops and keeps the remaining look-alikes apart. */
+    @Test
+    void refiningPastItsBudgetMergesNothing() {
+        var graph =
+                parse(
+                        PREFIXES
+                                + "ex:A sh:path ex:p ; sh:in ( "
+                                + "ex:same ".repeat(4_000)
+                                + ") .\n");
+
+        var result = GraphUtils.normalizeBlankNodes(graph, 1_000);
 
         assertEquals(0, forkingCells(result));
         assertEquals(graph.size(), result.size());
