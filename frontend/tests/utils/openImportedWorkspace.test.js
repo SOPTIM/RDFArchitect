@@ -17,6 +17,7 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
 import {
     DiagramType,
     editorState,
@@ -54,18 +55,18 @@ describe("openImportedWorkspace", () => {
         editorState.reset();
     });
 
-    test("drops everything cached under the workspace's name", () => {
-        openImportedWorkspace("imported", [IMPORTED_GRAPH]);
+    test("drops everything cached under the workspace's name", async () => {
+        await openImportedWorkspace("imported", [IMPORTED_GRAPH]);
 
         expect(versionControlStore.invalidateWorkspace).toHaveBeenCalledWith(
             "imported",
         );
     });
 
-    test("opens the first imported graph", () => {
+    test("opens the first imported graph", async () => {
         workspaceState.activate("current");
 
-        openImportedWorkspace("imported", [IMPORTED_GRAPH]);
+        await openImportedWorkspace("imported", [IMPORTED_GRAPH]);
 
         expect(editorState.selectedWorkspace.getValue()).toBe("imported");
         expect(editorState.selectedGraph.getValue()).toBe(IMPORTED_GRAPH);
@@ -75,25 +76,25 @@ describe("openImportedWorkspace", () => {
         });
     });
 
-    test("keeps the selection of the workspace it leaves for a return", () => {
+    test("keeps the selection of the workspace it leaves for a return", async () => {
         workspaceState.activate("current");
         editorState.selectedGraph.updateValue(GRAPH);
         editorState.selectedDiagram.updateValue(PACKAGE);
 
-        openImportedWorkspace("imported", [IMPORTED_GRAPH]);
+        await openImportedWorkspace("imported", [IMPORTED_GRAPH]);
         workspaceState.activate("current");
 
         expect(editorState.selectedGraph.getValue()).toBe(GRAPH);
         expect(editorState.selectedDiagram.getValue()).toEqual(PACKAGE);
     });
 
-    test("selects nothing of the workspace it leaves", () => {
+    test("selects nothing of the workspace it leaves", async () => {
         workspaceState.activate("current");
         selectClasses("current", "first", "second");
         editorState.focusedClassUUID.updateValue("first");
         editorState.activeSelectionKind.updateValue(SelectionLevel.CLASS);
 
-        openImportedWorkspace("imported", [IMPORTED_GRAPH]);
+        await openImportedWorkspace("imported", [IMPORTED_GRAPH]);
 
         expect(multiSelectState.getSelected()).toEqual([]);
         expect(editorState.focusedClassUUID.getValue()).toBeNull();
@@ -102,12 +103,12 @@ describe("openImportedWorkspace", () => {
         );
     });
 
-    test("an import into the open workspace opens the imported graph there", () => {
+    test("an import into the open workspace opens the imported graph there", async () => {
         workspaceState.activate("current");
         editorState.selectedGraph.updateValue(GRAPH);
         editorState.selectedDiagram.updateValue(PACKAGE);
 
-        openImportedWorkspace("current", [IMPORTED_GRAPH]);
+        await openImportedWorkspace("current", [IMPORTED_GRAPH]);
 
         expect(editorState.selectedWorkspace.getValue()).toBe("current");
         expect(editorState.selectedGraph.getValue()).toBe(IMPORTED_GRAPH);
@@ -115,5 +116,52 @@ describe("openImportedWorkspace", () => {
             type: null,
             id: null,
         });
+    });
+
+    test("asks about unsaved work before leaving the open workspace", async () => {
+        workspaceState.activate("current");
+        const ask = vi.fn().mockResolvedValue(false);
+        const release = guardUnsavedChanges(ask);
+        try {
+            expect(
+                await openImportedWorkspace("imported", [IMPORTED_GRAPH]),
+            ).toBe(false);
+
+            expect(ask).toHaveBeenCalled();
+            expect(editorState.selectedWorkspace.getValue()).toBe("current");
+            expect(
+                versionControlStore.invalidateWorkspace,
+            ).toHaveBeenCalledWith("imported");
+        } finally {
+            release();
+        }
+    });
+
+    test("leaves once the unsaved work is settled", async () => {
+        workspaceState.activate("current");
+        const release = guardUnsavedChanges(vi.fn().mockResolvedValue(true));
+        try {
+            expect(
+                await openImportedWorkspace("imported", [IMPORTED_GRAPH]),
+            ).toBe(true);
+
+            expect(editorState.selectedWorkspace.getValue()).toBe("imported");
+        } finally {
+            release();
+        }
+    });
+
+    test("asks nothing for an import into the open workspace", async () => {
+        workspaceState.activate("current");
+        const ask = vi.fn().mockResolvedValue(false);
+        const release = guardUnsavedChanges(ask);
+        try {
+            await openImportedWorkspace("current", [IMPORTED_GRAPH]);
+
+            expect(ask).not.toHaveBeenCalled();
+            expect(editorState.selectedGraph.getValue()).toBe(IMPORTED_GRAPH);
+        } finally {
+            release();
+        }
     });
 });

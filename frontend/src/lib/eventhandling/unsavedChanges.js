@@ -19,10 +19,11 @@
  * Asking a page with unsaved work before something outside it throws that work away.
  *
  * A navigation guard only sees navigations. Much of the app changes what a page shows by changing
- * the shared selection instead — the logo resets it, following a term selects another schema, a
- * rename or an undo changes the schema under the page — and by the time a guard runs, a page that
- * derives its state from the selection has already rebuilt itself without the edits. So whoever is
- * about to do that asks here first, and the page with the work answers.
+ * the shared selection instead — the logo and Help › About reset it, an import opens another
+ * workspace, renaming the workspace renames the selection, an undo changes the schema under the
+ * page — and by the time a guard runs, a page that derives its state from the selection has
+ * already rebuilt itself without the edits. So whoever is about to do that asks here first, and
+ * the page with the work answers.
  */
 
 let guard = null;

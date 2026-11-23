@@ -36,6 +36,7 @@
 
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import { confirmUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import { PASTE_VARIANTS } from "$lib/pasteOptions.js";
     import {
         copyState,
@@ -405,6 +406,9 @@
     }
 
     async function undo() {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
+            return;
+        }
         const { error, skipped } = await versionControlStore.undo();
         if (!error && !skipped) {
             reload();
@@ -412,9 +416,19 @@
     }
 
     async function redo() {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
+            return;
+        }
         const { error, skipped } = await versionControlStore.redo();
         if (!error && !skipped) {
             reload();
+        }
+    }
+
+    /** Opens a dialog that can change the selected workspace, once unsaved work is settled. */
+    async function openSelectionChange(open) {
+        if (await confirmUnsavedChanges()) {
+            open();
         }
     }
 
@@ -473,7 +487,7 @@
                 showGraphRenameDialog = true;
                 break;
             case SelectionLevel.WORKSPACE:
-                showWorkspaceRenameDialog = true;
+                openSelectionChange(() => (showWorkspaceRenameDialog = true));
                 break;
         }
     }
@@ -516,7 +530,8 @@
                     Package
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
-                    onSelect={() => (showNewGraphDialog = true)}
+                    onSelect={() =>
+                        openSelectionChange(() => (showNewGraphDialog = true))}
                     faIcon={faDiagramProject}
                 >
                     Schema
@@ -629,7 +644,10 @@
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
-                    onSelect={() => (showWorkspaceRenameDialog = true)}
+                    onSelect={() =>
+                        openSelectionChange(
+                            () => (showWorkspaceRenameDialog = true),
+                        )}
                     disabled={!hasWorkspaceSelected || isWorkspaceReadOnly}
                     faIcon={faPen}
                 >

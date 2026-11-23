@@ -281,7 +281,7 @@
     async function dismissImport() {
         const result = await job.dismiss();
         if (result && result.importedSchemaNames.length > 0) {
-            openImportedWorkspace(
+            await openImportedWorkspace(
                 result.workspaceName,
                 result.importedSchemaNames,
             );

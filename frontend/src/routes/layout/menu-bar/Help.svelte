@@ -27,6 +27,7 @@
 
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import { confirmUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import KeyboardShortcutsDialog from "../../KeyboardShortcutsDialog.svelte";
@@ -67,7 +68,10 @@
         }
     }
 
-    function navigateHomepage() {
+    async function navigateHomepage() {
+        if (!(await confirmUnsavedChanges())) {
+            return;
+        }
         editorState.reset();
         goto("/");
     }

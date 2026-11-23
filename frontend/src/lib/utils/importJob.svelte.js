@@ -15,6 +15,7 @@
  *
  */
 
+import { confirmUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
 import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { versionControlStore } from "$lib/stores/versionControlStore.ts";
@@ -31,10 +32,24 @@ const INVALID_WORKSPACE_NAME_CHARACTERS = /[/\\?#]/;
  * Opens the workspace an import wrote into, on its first imported graph.
  *
  * Everything cached under the workspace's name is dropped, since a new workspace can take the name
- * of one that was renamed or deleted, and the caches are kept by name.
+ * of one that was renamed or deleted, and the caches are kept by name. Leaving another workspace
+ * asks about unsaved work on the page first; when the user stays, the import is kept and only
+ * not opened.
+ *
+ * @returns whether the workspace was opened
  */
-export function openImportedWorkspace(workspaceName, importedSchemaNames) {
+export async function openImportedWorkspace(
+    workspaceName,
+    importedSchemaNames,
+) {
     versionControlStore.invalidateWorkspace(workspaceName);
+    if (
+        workspaceState.getActive() !== workspaceName &&
+        !(await confirmUnsavedChanges())
+    ) {
+        forceReloadTrigger.trigger();
+        return false;
+    }
     workspaceState.activate(workspaceName);
 
     editorState.selectedGraph.updateValue(importedSchemaNames[0] || null);
@@ -43,6 +58,7 @@ export function openImportedWorkspace(workspaceName, importedSchemaNames) {
     editorState.selectedClassGraph.updateValue(null);
     editorState.selectedClass.updateValue({ type: null, id: null });
     forceReloadTrigger.trigger();
+    return true;
 }
 
 /** Why the name cannot be that of a new workspace, empty while it can. */
