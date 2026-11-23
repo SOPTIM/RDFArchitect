@@ -348,7 +348,16 @@ export class ShapesWorkbench {
         this.#unwatchReadOnly = null;
     }
 
+    /**
+     * Opens a document, or the generated shapes of a schema.
+     *
+     * One that is not there — a link to a document deleted since, a schema gone — opens what
+     * would open on loading instead.
+     */
     async select(documentId) {
+        if (documentId !== null && !this.#isListed(documentId)) {
+            documentId = this.#firstToOpen();
+        }
         const selection = ++this.#selection;
         this.selectedId = documentId;
         this.detached = null;
@@ -375,6 +384,15 @@ export class ShapesWorkbench {
         }
         this.#replaceBuffer(text);
         this.#textReady = true;
+        this.error = null;
+    }
+
+    #isListed(documentId) {
+        return isGenerated(documentId)
+            ? this.schemas.some(
+                  schema => generatedId(schema.name) === documentId,
+              )
+            : this.documents.some(document => document.id === documentId);
     }
 
     /** Throws the unsaved edits away, as an undoable edit back to what was last saved. */
@@ -820,6 +838,7 @@ export class ShapesWorkbench {
         this.#textReady = true;
         if (this.#generated.has(schemaName)) {
             this.#replaceBuffer(this.#generated.get(schemaName));
+            this.error = null;
             return;
         }
         this.generating = true;

@@ -917,6 +917,39 @@ describe("switching documents", () => {
         );
     });
 
+    test("a failed read's message goes once another document opens", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "GET" && entry.path.endsWith(CUSTOM)
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+        await workbench.select(CUSTOM);
+        expect(workbench.error).not.toBeNull();
+
+        await workbench.select(EQ);
+
+        expect(workbench.error).toBeNull();
+        expect(workbench.text).toBe(SHAPES);
+    });
+
+    test("a document that is not listed opens what is there instead", async () => {
+        await workbench.load();
+        await workbench.select(CUSTOM);
+        server.requests.length = 0;
+
+        await workbench.select("no-such-document");
+
+        expect(workbench.selectedId).toBe(EQ);
+        expect(workbench.text).toBe(SHAPES);
+        expect(workbench.error).toBeNull();
+        expect(
+            server.requests.some(entry =>
+                entry.path.endsWith("no-such-document"),
+            ),
+        ).toBe(false);
+    });
+
     test("is locked while the text is on its way", async () => {
         await workbench.load();
         const gate = holdRequests(
