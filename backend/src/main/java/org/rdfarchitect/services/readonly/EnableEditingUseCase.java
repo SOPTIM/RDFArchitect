@@ -21,7 +21,7 @@ public interface EnableEditingUseCase {
     /**
      * Enables editing for a read-only dataset
      *
-     * @param datasetName The name of the dataset to enable editing for
+     * @param workspaceName The name of the dataset to enable editing for
      */
-    void enableEditing(String datasetName);
+    void enableEditing(String workspaceName);
 }

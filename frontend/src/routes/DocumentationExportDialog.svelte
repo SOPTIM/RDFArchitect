@@ -24,16 +24,18 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { URI } from "$lib/models/dto/index.ts";
     import { editorState } from "$lib/sharedState.svelte.js";
     import { ExportProgress } from "$lib/utils/exportProgress.svelte.js";
-    import { saveFile } from "$lib/utils/fileUtils.ts";
+    import {
+        filenameFromContentDisposition,
+        saveFile,
+    } from "$lib/utils/fileUtils.ts";
     import { generatePackageImages } from "$lib/utils/packageImageExport.svelte.js";
 
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedSchemaName,
     } = $props();
 
     const zipMediaType = {
@@ -52,7 +54,7 @@
             name: "HTML",
             ending: "html",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/schemas/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -68,7 +70,7 @@
             name: "AsciiDoc",
             ending: "adoc",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/schemas/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -88,7 +90,7 @@
     ];
 
     let selectedWorkspaceName = $state(null);
-    let graphURI = $state(null);
+    let schemaName = $state(null);
     let selectedDocumentEnding = $state(supportedDocumentFormats[0].ending);
     let selectedImageEnding = $state(supportedMediaTypes[0].ending);
     let selectedPlacementKey = $state(supportedDiagramPlacements[0].key);
@@ -111,13 +113,13 @@
     );
     let isExporting = $derived(progress !== null);
     let disablePrimary = $derived(
-        !selectedWorkspaceName || !graphURI || isExporting,
+        !selectedWorkspaceName || !schemaName || isExporting,
     );
 
     function onOpen() {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        schemaName = lockedSchemaName ?? editorState.selectedGraph.getValue();
     }
 
     function onClose() {
@@ -125,7 +127,7 @@
     }
 
     async function onPrimary() {
-        if (!selectedWorkspaceName || !graphURI || isExporting) return;
+        if (!selectedWorkspaceName || !schemaName || isExporting) return;
         const documentFormat = selectedDocumentFormat;
         const mediaType = selectedMediaType;
         const currentProgress = new ExportProgress();
@@ -133,7 +135,7 @@
         try {
             const response = await documentFormat.fetch(
                 selectedWorkspaceName,
-                graphURI,
+                schemaName,
                 mediaType.ending,
                 embedDiagrams,
                 currentProgress.signal,
@@ -141,7 +143,7 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphURI}" as ${documentFormat.name}.`,
+                    `Could not export "${schemaName}" as ${documentFormat.name}.`,
                 );
                 return;
             }
@@ -155,7 +157,7 @@
 
             const images = await generatePackageImages(
                 selectedWorkspaceName,
-                graphURI,
+                schemaName,
                 mediaType,
                 currentProgress,
             );
@@ -196,13 +198,13 @@
 
             saveFile(
                 zipBlob,
-                `${getGraphLabel(graphURI)}-${documentFormat.ending}-export.zip`,
+                `${schemaName}-${documentFormat.ending}-export.zip`,
                 zipMediaType,
             );
 
             toastStore.success(
                 "Export ready",
-                `"${graphURI}" downloaded as ${documentFormat.name} export (zip).`,
+                `"${schemaName}" downloaded as ${documentFormat.name} export (zip).`,
             );
             notifyFailedPackages(currentProgress);
             showDialog = false;
@@ -242,16 +244,10 @@
     }
 
     function getDocumentFilename(contentDisposition, documentFormat) {
-        const match = contentDisposition?.match(/filename="?([^"]+)"?/);
-        return match?.[1] ?? `export.${documentFormat.ending}`;
-    }
-
-    function getGraphLabel(graphURI) {
-        try {
-            return new URI(graphURI).suffix;
-        } catch {
-            return graphURI;
-        }
+        return (
+            filenameFromContentDisposition(contentDisposition) ??
+            `export.${documentFormat.ending}`
+        );
     }
 </script>
 
@@ -274,9 +270,9 @@
         <div class="mx-2 mt-2 flex h-full flex-col space-y-3">
             <WorkspaceAndGraphSelection
                 bind:workspace={selectedWorkspaceName}
-                bind:graph={graphURI}
+                bind:graph={schemaName}
                 {lockedWorkspaceName}
-                {lockedGraphUri}
+                {lockedSchemaName}
                 displayAsCard={false}
             />
 

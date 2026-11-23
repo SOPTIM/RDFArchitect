@@ -72,11 +72,11 @@ function sideOf(point, sourceDockingPoint, targetDockingPoint) {
 }
 
 function requestEdgeLayouts(target, edgeLayouts, keepalive) {
-    if (target.graphURI) {
+    if (target.schemaName) {
         return updateEdgeLayouts({
             path: {
-                datasetName: target.datasetName,
-                graphURI: target.graphURI,
+                workspaceName: target.workspaceName,
+                schemaName: target.schemaName,
                 diagramUUID: target.diagramUUID,
             },
             body: edgeLayouts,
@@ -85,7 +85,7 @@ function requestEdgeLayouts(target, edgeLayouts, keepalive) {
     }
     return updateDatasetEdgeLayouts({
         path: {
-            datasetName: target.datasetName,
+            workspaceName: target.workspaceName,
             diagramUUID: target.diagramUUID,
         },
         body: edgeLayouts,
@@ -94,11 +94,11 @@ function requestEdgeLayouts(target, edgeLayouts, keepalive) {
 }
 
 function requestClassPositions(target, classes) {
-    if (target.graphURI) {
+    if (target.schemaName) {
         return updateClassPositions({
             path: {
-                datasetName: target.datasetName,
-                graphURI: target.graphURI,
+                workspaceName: target.workspaceName,
+                schemaName: target.schemaName,
                 diagramUUID: target.diagramUUID,
             },
             body: classes,
@@ -106,7 +106,7 @@ function requestClassPositions(target, classes) {
     }
     return updateDatasetClassPositions({
         path: {
-            datasetName: target.datasetName,
+            workspaceName: target.workspaceName,
             diagramUUID: target.diagramUUID,
         },
         body: classes,
@@ -114,11 +114,11 @@ function requestClassPositions(target, classes) {
 }
 
 function requestDiagramLayout(target, diagramLayout, keepalive) {
-    if (target.graphURI) {
+    if (target.schemaName) {
         return updateDiagramLayout({
             path: {
-                datasetName: target.datasetName,
-                graphURI: target.graphURI,
+                workspaceName: target.workspaceName,
+                schemaName: target.schemaName,
                 diagramUUID: target.diagramUUID,
             },
             body: diagramLayout,
@@ -127,7 +127,7 @@ function requestDiagramLayout(target, diagramLayout, keepalive) {
     }
     return updateDatasetDiagramLayout({
         path: {
-            datasetName: target.datasetName,
+            workspaceName: target.workspaceName,
             diagramUUID: target.diagramUUID,
         },
         body: diagramLayout,
@@ -187,8 +187,8 @@ export class EdgeLayoutPersistence {
      * @param {object} options
      * @param {() => Array} options.getEdges the edges currently shown
      * @param {(edges: Array) => void} options.setEdges replaces the edges shown
-     * @param {() => {datasetName: string, graphURI: string, diagramUUID: string}} options.getTarget
-     *     the diagram currently shown, without graphURI for a diagram across the whole dataset
+     * @param {() => {workspaceName: string, schemaName: string, diagramUUID: string}} options.getTarget
+     *     the diagram currently shown, without schemaName for a diagram across the whole dataset
      * @param {() => boolean} options.isReadOnly whether the workspace may not be changed
      * @param {(edges: Array) => Array} [options.getLabelsOf] the positions of the manually placed
      *     labels of the given shown edges, saved together with them

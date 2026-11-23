@@ -33,7 +33,6 @@ import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.ParticipantId;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
@@ -72,7 +71,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).isEmpty();
+            assertThat(workspace.listSchemaNames()).isEmpty();
         }
 
         @Test
@@ -82,7 +81,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.redo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -96,7 +95,7 @@ class WorkspaceUndoScopeTest {
             }
 
             assertThat(workspace.canRedo()).isFalse();
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_B);
+            assertThat(workspace.listSchemaNames()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -107,7 +106,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listSchemaNames()).containsExactly(GRAPH_A);
             assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
         }
 
@@ -133,7 +132,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listSchemaNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -148,7 +147,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.listSchemaNames()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
         }
     }
 
@@ -175,7 +174,7 @@ class WorkspaceUndoScopeTest {
         @Test
         void undo_ofADeletedWorkspaceDiagram_bringsItBackWithItsClasses() {
             var diagramId = UUID.randomUUID();
-            var classes = List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A)));
+            var classes = List.of(new ClassInDiagram(UUID.randomUUID(), GRAPH_A));
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction.diagrams().put(diagramId, new CustomDiagram(diagramId, "d", classes));
                 transaction.commit("created a diagram");
@@ -365,8 +364,7 @@ class WorkspaceUndoScopeTest {
                 transaction
                         .diagrams()
                         .get(diagramId)
-                        .setClasses(
-                                List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A))));
+                        .setClasses(List.of(new ClassInDiagram(UUID.randomUUID(), GRAPH_A)));
                 transaction.commit("added a class to the diagram");
             }
 
@@ -441,7 +439,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undoIfLatest(previewed);
 
-            assertThat(workspace.listGraphUris()).isEmpty();
+            assertThat(workspace.listSchemaNames()).isEmpty();
         }
 
         @Test
@@ -452,7 +450,7 @@ class WorkspaceUndoScopeTest {
 
             assertThatThrownBy(() -> workspace.undoIfLatest(previewed))
                     .isInstanceOf(UndoTargetChangedException.class);
-            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.listSchemaNames()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
             assertThat(workspace.canRedo()).isFalse();
         }
     }
@@ -512,10 +510,10 @@ class WorkspaceUndoScopeTest {
             assertThat(layoutOf(GRAPH_A)).containsExactly(laidOutLater);
         }
 
-        private void commitLayout(String graphUri, Triple value) {
+        private void commitLayout(String schemaName, Triple value) {
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction
-                        .graph(graphUri)
+                        .graph(schemaName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -524,10 +522,10 @@ class WorkspaceUndoScopeTest {
             }
         }
 
-        private void commitFirstLayout(String graphUri, Triple value) {
+        private void commitFirstLayout(String schemaName, Triple value) {
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction
-                        .graph(graphUri)
+                        .graph(schemaName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -536,10 +534,10 @@ class WorkspaceUndoScopeTest {
             }
         }
 
-        private List<Triple> layoutOf(String graphUri) {
+        private List<Triple> layoutOf(String schemaName) {
             try (var transaction = workspace.begin(ReadWrite.READ)) {
                 return transaction
-                        .graph(graphUri)
+                        .graph(schemaName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -592,42 +590,42 @@ class WorkspaceUndoScopeTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private void createGraph(String graphUri) {
-        createGraph(workspace, graphUri);
+    private void createGraph(String schemaName) {
+        createGraph(workspace, schemaName);
     }
 
-    private static void createGraph(Workspace target, String graphUri) {
+    private static void createGraph(Workspace target, String schemaName) {
         try (var transaction = target.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, GraphFactory.createDefaultGraph());
-            transaction.commit("created graph %s".formatted(graphUri));
+            transaction.createGraph(schemaName, GraphFactory.createDefaultGraph());
+            transaction.commit("created graph %s".formatted(schemaName));
         }
     }
 
-    private void deleteGraph(String graphUri) {
+    private void deleteGraph(String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphUri);
-            transaction.commit("deleted graph %s".formatted(graphUri));
+            transaction.deleteGraph(schemaName);
+            transaction.commit("deleted graph %s".formatted(schemaName));
         }
     }
 
-    private void commitTriple(String graphUri, Triple value) {
-        commitTriple(workspace, graphUri, value);
+    private void commitTriple(String schemaName, Triple value) {
+        commitTriple(workspace, schemaName, value);
     }
 
-    private static void commitTriple(Workspace target, String graphUri, Triple value) {
+    private static void commitTriple(Workspace target, String schemaName, Triple value) {
         try (var transaction = target.begin(ReadWrite.WRITE)) {
-            transaction.graph(graphUri).getRdfGraph().add(value);
+            transaction.graph(schemaName).getRdfGraph().add(value);
             transaction.commit("added a triple");
         }
     }
 
-    private List<Triple> triplesIn(String graphUri) {
-        return triplesIn(workspace, graphUri);
+    private List<Triple> triplesIn(String schemaName) {
+        return triplesIn(workspace, schemaName);
     }
 
-    private static List<Triple> triplesIn(Workspace target, String graphUri) {
+    private static List<Triple> triplesIn(Workspace target, String schemaName) {
         try (var transaction = target.begin(ReadWrite.READ)) {
-            return transaction.graph(graphUri).getRdfGraph().find().toList();
+            return transaction.graph(schemaName).getRdfGraph().find().toList();
         }
     }
 

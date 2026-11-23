@@ -17,10 +17,10 @@
 
 /**
  * Order the schemas of a workspace are listed in: by the short name they are
- * shown with, and by their uri where two of them share that name.
+ * shown with, and by the graph they are kept in where two of them share that name.
  *
- * @param {{label: string, uri: string}} a
- * @param {{label: string, uri: string}} b
+ * @param {{label: string, name: string}} a the label and graph name of a schema
+ * @param {{label: string, name: string}} b the label and graph name of another schema
  */
 export function compareGraphs(a, b) {
     const byLabel = (a?.label ?? "").localeCompare(b?.label ?? "", undefined, {
@@ -29,5 +29,5 @@ export function compareGraphs(a, b) {
     if (byLabel !== 0) {
         return byLabel;
     }
-    return (a?.uri ?? "").localeCompare(b?.uri ?? "");
+    return (a?.name ?? "").localeCompare(b?.name ?? "");
 }

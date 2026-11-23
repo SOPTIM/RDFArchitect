@@ -36,10 +36,10 @@ public interface DatabaseUpdateCommand {
     /**
      * Sets the name of the dataset in the database the {@link Update} is against.
      *
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      * @return This {@link DatabaseUpdateCommand}
      */
-    DatabaseUpdateCommand setDatasetName(String datasetName) throws DataAccessException;
+    DatabaseUpdateCommand setWorkspaceName(String workspaceName) throws DataAccessException;
 
     /**
      * Sets the {@link Update} to be executed.
@@ -62,9 +62,9 @@ public interface DatabaseUpdateCommand {
     /**
      * Deletes a graph from the specified dataset of the database.
      *
-     * @param graphName name of the graph to be deleted
+     * @param schemaName name of the graph to be deleted
      */
-    void deleteGraph(String graphName);
+    void deleteGraph(String schemaName);
 
     /** Deletes the specified dataset from the database. */
     void deleteDataset();

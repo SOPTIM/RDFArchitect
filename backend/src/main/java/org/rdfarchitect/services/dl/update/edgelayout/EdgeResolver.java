@@ -77,12 +77,12 @@ public interface EdgeResolver {
     /**
      * Resolves edges of a diagram of a single graph, see {@link #forGraph(ICIMModelFacade)}.
      *
-     * @param graphUri the URI of the graph
+     * @param schemaName the URI of the graph
      * @param graph the graph the diagram belongs to
      * @return the resolver
      */
-    static EdgeResolver forGraph(String graphUri, Graph graph) {
-        return forGraph(new CIMModelFacade(graphUri, ModelFactory.createModelForGraph(graph)));
+    static EdgeResolver forGraph(String schemaName, Graph graph) {
+        return forGraph(new CIMModelFacade(schemaName, ModelFactory.createModelForGraph(graph)));
     }
 
     /**
@@ -90,12 +90,12 @@ public interface EdgeResolver {
      * {@link #forMergedProfiles(List)}.
      *
      * @param databasePort the database holding the dataset
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      * @return the resolver
      */
-    static EdgeResolver forDataset(DatabasePort databasePort, String datasetName) {
+    static EdgeResolver forDataset(DatabasePort databasePort, String workspaceName) {
         return forMergedProfiles(
-                CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null));
+                CIMProfileModels.loadAll(databasePort, Map.of(), workspaceName, null));
     }
 
     /**

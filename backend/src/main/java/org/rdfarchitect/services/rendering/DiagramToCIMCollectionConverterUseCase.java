@@ -39,9 +39,9 @@ public interface DiagramToCIMCollectionConverterUseCase {
     /**
      * Converts a Diagram to a {@link CIMCollection}.
      *
-     * @param datasetName The dataset containing the diagram
+     * @param workspaceName The dataset containing the diagram
      * @param diagramId The ID of the diagram to be converted.
      * @return The {@link CIMCollection}.
      */
-    CIMCollection convert(String datasetName, UUID diagramId);
+    CIMCollection convert(String workspaceName, UUID diagramId);
 }

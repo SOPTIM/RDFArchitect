@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ChangeDescriptions;
+import org.rdfarchitect.database.SchemaNames;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,13 +32,12 @@ public class RenameGraphService implements RenameGraphUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+    public void renameGraph(GraphIdentifier graphIdentifier, String newSchemaName) {
+        var validName = SchemaNames.validate(newSchemaName);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.renameGraph(graphIdentifier.graphUri(), newGraphUri);
-            transaction.commit(
-                    "Renamed the schema to \"%s\""
-                            .formatted(ChangeDescriptions.localName(newGraphUri)));
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.renameGraph(graphIdentifier.schemaName(), validName);
+            transaction.commit("Renamed the schema to \"%s\"".formatted(validName));
         }
     }
 }

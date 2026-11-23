@@ -33,8 +33,8 @@ import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -69,41 +69,41 @@ public class DiagramToCIMCollectionConverterService
     }
 
     @Override
-    public CIMCollection convert(String datasetName, UUID diagramId) {
+    public CIMCollection convert(String workspaceName, UUID diagramId) {
         List<CopiedGraph> copiedGraphs;
         // The lock only covers taking the copies; converting them would hold up edits and undo
         // for every query over every graph in the diagram.
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            var diagram = getDiagram(transaction, datasetName, diagramId);
-            var graphEntries = buildSortedGraphEntries(datasetName, diagram);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            var diagram = getDiagram(transaction, workspaceName, diagramId);
+            var graphEntries = buildSortedGraphEntries(workspaceName, diagram);
             copiedGraphs = copyGraphs(transaction, graphEntries);
         }
         return convertAndMerge(copiedGraphs);
     }
 
     private CustomDiagram getDiagram(
-            WorkspaceTransaction transaction, String datasetName, UUID diagramId) {
+            WorkspaceTransaction transaction, String workspaceName, UUID diagramId) {
         var diagrams = transaction.diagrams();
         if (!diagrams.containsKey(diagramId)) {
             throw new IllegalArgumentException(
                     "Diagram with ID "
                             + diagramId.toString()
                             + " not found in dataset "
-                            + datasetName);
+                            + workspaceName);
         }
         return diagrams.get(diagramId);
     }
 
-    private List<GraphEntry> buildSortedGraphEntries(String datasetName, CustomDiagram diagram) {
+    private List<GraphEntry> buildSortedGraphEntries(String workspaceName, CustomDiagram diagram) {
         return diagram.getClasses().stream()
-                .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri))
+                .collect(Collectors.groupingBy(ClassInDiagram::getSchemaName))
                 .entrySet()
                 .stream()
-                .sorted(Comparator.comparing(e -> e.getKey().toString()))
+                .sorted(Map.Entry.comparingByKey())
                 .map(
                         e ->
                                 new GraphEntry(
-                                        new GraphIdentifier(datasetName, e.getKey().toString()),
+                                        new GraphIdentifier(workspaceName, e.getKey()),
                                         e.getValue().stream()
                                                 .map(c -> c.getUuid().toString())
                                                 .toList()))
@@ -114,7 +114,7 @@ public class DiagramToCIMCollectionConverterService
             WorkspaceTransaction transaction, List<GraphEntry> graphEntries) {
         var copiedGraphs = new ArrayList<CopiedGraph>(graphEntries.size());
         for (var entry : graphEntries) {
-            var graph = transaction.graph(entry.graphIdentifier().graphUri()).getRdfGraph();
+            var graph = transaction.graph(entry.graphIdentifier().schemaName()).getRdfGraph();
             copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(graph)));
         }
         return copiedGraphs;

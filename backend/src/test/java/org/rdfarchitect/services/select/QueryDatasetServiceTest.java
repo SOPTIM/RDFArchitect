@@ -176,7 +176,7 @@ class QueryDatasetServiceTest {
 
         var graph = onlyGraph();
 
-        assertThat(graph.getUri().toString()).isEqualTo("http://example.org/graphs/current");
+        assertThat(graph.getName()).isEqualTo("http://example.org/graphs/current");
         assertThat(graph.getKeyword()).isEqualTo("TST");
         assertThat(graph.getLabel()).isEqualTo("Test Vocabulary");
         assertThat(graph.getDescription()).isEqualTo("A vocabulary that names itself.");
@@ -230,7 +230,7 @@ class QueryDatasetServiceTest {
 
         var graph = onlyGraph();
 
-        assertThat(graph.getUri().toString()).isEqualTo("http://example.org/graphs/plain");
+        assertThat(graph.getName()).isEqualTo("http://example.org/graphs/plain");
         assertThat(graph.getKeyword()).isNull();
         assertThat(graph.getLabel()).isNull();
         assertThat(graph.getDescription()).isNull();
@@ -331,13 +331,13 @@ class QueryDatasetServiceTest {
         return graphs.getFirst();
     }
 
-    private static String labelOf(List<GraphDTO> graphs, String graphUri) {
-        return graphOf(graphs, graphUri).getLabel();
+    private static String labelOf(List<GraphDTO> graphs, String schemaName) {
+        return graphOf(graphs, schemaName).getLabel();
     }
 
-    private static GraphDTO graphOf(List<GraphDTO> graphs, String graphUri) {
+    private static GraphDTO graphOf(List<GraphDTO> graphs, String schemaName) {
         return graphs.stream()
-                .filter(graph -> graph.getUri().toString().equals(graphUri))
+                .filter(graph -> graph.getName().equals(schemaName))
                 .findFirst()
                 .orElseThrow();
     }
@@ -347,12 +347,12 @@ class QueryDatasetServiceTest {
      * assigns the {@code rdfa:uuid} the class editor navigates by. Creating the graph without one
      * leaves every resource without an id.
      */
-    private void createGraph(String graphUri, String turtle) {
+    private void createGraph(String schemaName, String turtle) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(turtle)).lang(Lang.TURTLE).parse(graph);
         databasePort.createWorkspaceIfAbsent(DATASET);
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
+            transaction.createGraph(schemaName, graph);
             transaction.commit("import");
         }
     }

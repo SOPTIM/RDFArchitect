@@ -35,12 +35,12 @@ public class SnapshotUtils {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(seed);
     }
 
-    public static String constructSnapshotName(String datasetName, String base64Token) {
-        return SNAPSHOT_PREFIX + datasetName + "_" + base64Token;
+    public static String constructSnapshotName(String workspaceName, String base64Token) {
+        return SNAPSHOT_PREFIX + workspaceName + "_" + base64Token;
     }
 
-    public static String findSnapshotName(List<String> datasetNames, String base64Token) {
-        return datasetNames.stream()
+    public static String findSnapshotName(List<String> workspaceNames, String base64Token) {
+        return workspaceNames.stream()
                 .filter(name -> name.endsWith(base64Token))
                 .findFirst()
                 .orElse(null);

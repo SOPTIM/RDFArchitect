@@ -49,12 +49,8 @@ function click(element) {
     );
 }
 
-function graph(uri, fields = {}) {
-    const cut = uri.lastIndexOf("/") + 1;
-    return {
-        uri: { prefix: uri.slice(0, cut), suffix: uri.slice(cut) },
-        ...fields,
-    };
+function graph(name, fields = {}) {
+    return { name, ...fields };
 }
 
 vi.mock("$lib/stores/workspaceStore.ts", () => ({
@@ -79,9 +75,9 @@ beforeEach(() => {
     getGraphs.mockImplementation(async workspace =>
         workspace === "cgmes"
             ? [
-                  graph("http://example.org/eq1", { keyword: "EQ" }),
-                  graph("http://example.org/eq2", { keyword: "EQ" }),
-                  graph("http://example.org/ssh", {
+                  graph("eq1", { keyword: "EQ" }),
+                  graph("eq2", { keyword: "EQ" }),
+                  graph("ssh", {
                       keyword: "SSH",
                       label: "Steady State Hypothesis",
                   }),
@@ -102,19 +98,11 @@ describe("changelog Navigation", () => {
     test("names schemas like the editor: title first, and tells apart those that read alike", async () => {
         render();
 
-        await vi.waitFor(() =>
-            expect(entry("http://example.org/ssh")).toBeDefined(),
-        );
+        await vi.waitFor(() => expect(entry("ssh")).toBeDefined());
 
-        expect(entry("http://example.org/ssh").textContent).toContain(
-            "Steady State Hypothesis",
-        );
-        expect(entry("http://example.org/eq1").textContent).toContain(
-            "EQ (eq1)",
-        );
-        expect(entry("http://example.org/eq2").textContent).toContain(
-            "EQ (eq2)",
-        );
+        expect(entry("ssh").textContent).toContain("Steady State Hypothesis");
+        expect(entry("eq1").textContent).toContain("EQ (eq1)");
+        expect(entry("eq2").textContent).toContain("EQ (eq2)");
     });
 
     test("switches workspace through the workspace state, which keeps the editor's selection", async () => {
@@ -131,15 +119,11 @@ describe("changelog Navigation", () => {
 
     test("holds the log to a schema without moving the editor's own selection", async () => {
         const props = render();
-        await vi.waitFor(() =>
-            expect(entry("http://example.org/ssh")).toBeDefined(),
-        );
+        await vi.waitFor(() => expect(entry("ssh")).toBeDefined());
 
-        click(entry("http://example.org/ssh"));
+        click(entry("ssh"));
 
         expect(activate).toHaveBeenCalledWith("cgmes");
-        expect(props.onSelectGraph).toHaveBeenCalledWith(
-            "http://example.org/ssh",
-        );
+        expect(props.onSelectGraph).toHaveBeenCalledWith("ssh");
     });
 });

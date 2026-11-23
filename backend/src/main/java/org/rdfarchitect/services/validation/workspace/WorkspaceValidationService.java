@@ -45,18 +45,19 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
     private final List<WorkspaceValidationRule> rules;
 
     @Override
-    public ValidationReportDTO validateWorkspace(String datasetName) {
-        return validate(loadProfiles(datasetName), null);
+    public ValidationReportDTO validateWorkspace(String workspaceName) {
+        return validate(loadProfiles(workspaceName), null);
     }
 
     @Override
     public ValidationReportDTO validateSchemaInWorkspace(GraphIdentifier graphIdentifier) {
-        return validate(loadProfiles(graphIdentifier.datasetName()), graphIdentifier.graphUri());
+        return validate(
+                loadProfiles(graphIdentifier.workspaceName()), graphIdentifier.schemaName());
     }
 
-    ValidationReportDTO validate(List<CIMProfileModel> profiles, String scopeGraphUri) {
-        var context = new WorkspaceValidationContext(profiles, scopeGraphUri);
-        var issues = new IssueCollector(context.getOccurrences(), scopeGraphUri);
+    ValidationReportDTO validate(List<CIMProfileModel> profiles, String scopeSchemaName) {
+        var context = new WorkspaceValidationContext(profiles, scopeSchemaName);
+        var issues = new IssueCollector(context.getOccurrences(), scopeSchemaName);
         rules.forEach(rule -> runRule(rule, context, issues));
         context.getBuiltIndex()
                 .ifPresent(index -> index.readFailures().forEach(issues::reportReadFailure));
@@ -75,8 +76,8 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
         }
     }
 
-    private List<CIMProfileModel> loadProfiles(String datasetName) {
-        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
-        return CIMProfileModels.loadAll(databasePort, keywords, datasetName, null);
+    private List<CIMProfileModel> loadProfiles(String workspaceName) {
+        var keywords = CIMProfileModels.keywordsBySchemaName(listGraphsUseCase, workspaceName);
+        return CIMProfileModels.loadAll(databasePort, keywords, workspaceName, null);
     }
 }

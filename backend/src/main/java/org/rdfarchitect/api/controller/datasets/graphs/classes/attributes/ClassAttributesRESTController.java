@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.attributes.UpdateAttributesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,14 +42,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/attributes/{attributeUUID}")
 @RequiredArgsConstructor
 public class ClassAttributesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAttributesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateAttributesUseCase updateAttributesUseCase;
 
     @Operation(
@@ -71,12 +69,8 @@ public class ClassAttributesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the old, to be replaced attribute.") @PathVariable
                     String attributeUUID,
@@ -88,22 +82,21 @@ public class ClassAttributesRESTController {
                     @RequestBody
                     AttributeDTO attribute) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 attributeUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAttributeUUID = updateAttributesUseCase.replaceAttribute(graphIdentifier, attribute);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 attributeUUID,
                 originURL);

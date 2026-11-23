@@ -72,10 +72,10 @@ function createCustomDiagramStore() {
     function getGraphListState(
         state: StoreState,
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
     ): AsyncListSlot<CustomDiagramDto> {
         return (
-            state.graphLists.get(makeGraphKey(workspaceName, graphURI)) ??
+            state.graphLists.get(makeGraphKey(workspaceName, schemaName)) ??
             createEmptyListSlot<CustomDiagramDto>()
         );
     }
@@ -101,7 +101,7 @@ function createCustomDiagramStore() {
             },
             () =>
                 getCustomDatasetDiagramList({
-                    path: { datasetName: workspaceName },
+                    path: { workspaceName: workspaceName },
                 }),
             LOG_PREFIX,
             `workspace diagrams for "${workspaceName}"`,
@@ -111,11 +111,11 @@ function createCustomDiagramStore() {
 
     async function getGraphDiagrams(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         force = false,
     ): Promise<CustomDiagramDto[] | null> {
-        if (!workspaceName || !graphURI) return null;
-        const key = makeGraphKey(workspaceName, graphURI);
+        if (!workspaceName || !schemaName) return null;
+        const key = makeGraphKey(workspaceName, schemaName);
         return loadSlot<StoreState, CustomDiagramDto[]>(
             store,
             s =>
@@ -124,17 +124,17 @@ function createCustomDiagramStore() {
             (s, patch) => {
                 const map = new Map(s.graphLists);
                 map.set(key, {
-                    ...getGraphListState(s, workspaceName, graphURI),
+                    ...getGraphListState(s, workspaceName, schemaName),
                     ...patch,
                 });
                 return { ...s, graphLists: map };
             },
             () =>
                 getCustomGraphDiagramList({
-                    path: { datasetName: workspaceName, graphURI },
+                    path: { workspaceName: workspaceName, schemaName },
                 }),
             LOG_PREFIX,
-            `graph diagrams for workspace="${workspaceName}" graph="${graphURI}"`,
+            `graph diagrams for workspace="${workspaceName}" graph="${schemaName}"`,
             force,
         );
     }
@@ -146,7 +146,7 @@ function createCustomDiagramStore() {
         diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: diagram,
         });
 
@@ -185,12 +185,12 @@ function createCustomDiagramStore() {
 
     async function saveGraphDiagram(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         diagramId: string,
         diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphURI, diagramId },
+            path: { workspaceName: workspaceName, schemaName, diagramId },
             body: diagram,
         });
 
@@ -203,7 +203,7 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        const key = makeGraphKey(workspaceName, graphURI);
+        const key = makeGraphKey(workspaceName, schemaName);
         update(s => {
             const existing = s.graphLists.get(key);
             if (!existing?.data) return s;
@@ -230,7 +230,7 @@ function createCustomDiagramStore() {
         diagramId: string,
     ): Promise<Result> {
         const { error } = await deleteCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
         });
 
         if (error) {
@@ -262,11 +262,11 @@ function createCustomDiagramStore() {
 
     async function deleteGraphDiagram(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         diagramId: string,
     ): Promise<Result> {
         const { error } = await deleteCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphURI, diagramId },
+            path: { workspaceName: workspaceName, schemaName, diagramId },
         });
 
         if (error) {
@@ -281,7 +281,7 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        const key = makeGraphKey(workspaceName, graphURI);
+        const key = makeGraphKey(workspaceName, schemaName);
         update(s => {
             const existing = s.graphLists.get(key);
             if (!existing?.data) return s;
@@ -303,7 +303,7 @@ function createCustomDiagramStore() {
         classes: string[],
     ): Promise<Result> {
         const { error } = await addToCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: classes as never,
         });
 
@@ -325,12 +325,12 @@ function createCustomDiagramStore() {
 
     async function addClassesToGraphDiagram(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         diagramId: string,
         classes: string[],
     ): Promise<Result> {
         const { error } = await addToCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphURI, diagramId },
+            path: { workspaceName: workspaceName, schemaName, diagramId },
             body: classes as never,
         });
 
@@ -346,7 +346,7 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateGraph(workspaceName, graphURI);
+        invalidateGraph(workspaceName, schemaName);
         return { error: null };
     }
 
@@ -356,7 +356,7 @@ function createCustomDiagramStore() {
         classIDs: string[],
     ): Promise<Result> {
         const { error } = await removeFromCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: classIDs,
         });
 
@@ -379,12 +379,12 @@ function createCustomDiagramStore() {
 
     async function removeClassesFromGraphDiagram(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         diagramId: string,
         classIds: string[],
     ): Promise<Result> {
         const { error } = await removeFromDiagram({
-            path: { datasetName: workspaceName, graphURI, diagramId },
+            path: { workspaceName: workspaceName, schemaName, diagramId },
             body: classIds,
         });
 
@@ -401,7 +401,7 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateGraph(workspaceName, graphURI);
+        invalidateGraph(workspaceName, schemaName);
         return { error: null };
     }
 
@@ -425,11 +425,11 @@ function createCustomDiagramStore() {
         });
     }
 
-    function invalidateGraph(workspaceName: string, graphURI: string) {
+    function invalidateGraph(workspaceName: string, schemaName: string) {
         update(s => {
             const graphLists = new Map(s.graphLists);
 
-            graphLists.delete(makeGraphKey(workspaceName, graphURI));
+            graphLists.delete(makeGraphKey(workspaceName, schemaName));
 
             return { ...s, graphLists };
         });

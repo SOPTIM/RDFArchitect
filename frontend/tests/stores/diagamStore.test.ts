@@ -157,13 +157,13 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("returns null if graphURI is empty", async () => {
+        test("returns null if schemaName is empty", async () => {
             const result = await store.getGraphDiagrams(WORKSPACE_A, "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("returns null if both workspaceName and graphURI are empty", async () => {
+        test("returns null if both workspaceName and schemaName are empty", async () => {
             const result = await store.getGraphDiagrams("", "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(1);
         });
 
-        test("treats different graphURIs under the same workspace as separate cache entries", async () => {
+        test("treats different schemaNames under the same workspace as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
@@ -210,7 +210,7 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
         });
 
-        test("treats same graphURI under different workspaces as separate cache entries", async () => {
+        test("treats same schemaName under different workspaces as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
@@ -275,7 +275,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.replaceCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: MOCK_DIAGRAM_BODY,
             });
 
@@ -343,8 +343,8 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
-                    graphURI: GRAPH_URI_1,
+                    workspaceName: WORKSPACE_A,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: MOCK_DIAGRAM_BODY,
@@ -413,7 +413,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.deleteCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
             });
 
             const state = get(store);
@@ -470,8 +470,8 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
-                    graphURI: GRAPH_URI_1,
+                    workspaceName: WORKSPACE_A,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
             });
@@ -541,7 +541,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.addToCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASSES,
             });
 
@@ -618,8 +618,8 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
-                    graphURI: GRAPH_URI_1,
+                    workspaceName: WORKSPACE_A,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: CLASSES,
@@ -702,7 +702,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.removeFromCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASS_IDS,
             });
 
@@ -760,8 +760,8 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.removeFromDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
-                    graphURI: GRAPH_URI_1,
+                    workspaceName: WORKSPACE_A,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: CLASSES,

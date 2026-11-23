@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/layout/{diagramUUID}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/layout/{diagramUUID}/classes")
 @RequiredArgsConstructor
 public class GlobalClassLayoutDataRESTController {
 
@@ -60,7 +60,7 @@ public class GlobalClassLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -80,17 +80,17 @@ public class GlobalClassLayoutDataRESTController {
                     List<ClassPositionDTO> classPositionDTOList) {
 
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/layout/{{}}/classes\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/layout/{{}}/classes\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
 
         updateClassPositionsUseCase.updateClassPositions(
-                datasetName, UUID.fromString(diagramUUID), classPositionDTOList);
+                workspaceName, UUID.fromString(diagramUUID), classPositionDTOList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}/classes\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/layout/{{}}/classes\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
         return "success";

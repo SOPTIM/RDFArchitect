@@ -37,7 +37,7 @@ public interface SyncDiagramLayoutUseCase {
      * and the custom diagrams of the dataset, in line with the graphs of the dataset, see {@link
      * #syncDiagramLayout}.
      *
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      */
-    void syncDatasetDiagramLayout(String datasetName);
+    void syncDatasetDiagramLayout(String workspaceName);
 }

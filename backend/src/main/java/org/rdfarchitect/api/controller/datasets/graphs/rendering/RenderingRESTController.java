@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,15 +42,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/rendering")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/rendering")
 @RequiredArgsConstructor
 public class RenderingRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(RenderingRESTController.class);
 
     private final GetRenderingDataUseCase getRenderingDataUseCase;
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     @Operation(
             summary = "Get rendering data",
@@ -76,21 +73,16 @@ public class RenderingRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @RequestBody GraphFilter filter) {
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/rendering\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/rendering\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var packageUUID =
                 !filter.getPackageUUID().equals("default")
@@ -101,9 +93,9 @@ public class RenderingRESTController {
                 getRenderingDataUseCase.getRenderingData(graphIdentifier, filter, packageUUID);
 
         logger.info(
-                "Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request \"/api/workspaces/{{}}/schemas/{{}}/rendering\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return renderingData;
     }

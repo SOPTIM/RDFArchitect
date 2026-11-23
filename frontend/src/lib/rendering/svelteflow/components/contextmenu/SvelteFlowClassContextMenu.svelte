@@ -60,7 +60,7 @@
         readOnly = false,
         contextMenuClass = null,
         workspaceName = "",
-        graphUri = "",
+        schemaName = "",
         nodeOrder = [],
         nodeCount = 0,
         onClose = () => {},
@@ -79,7 +79,7 @@
 
     let dialogClassIds = $state([]);
     let dialogClassLabels = $state([]);
-    let dialogGraphUri = $state(null);
+    let dialogSchemaName = $state(null);
     let dialogClasses = $state([]);
 
     let layerChangedClassUuid = null;
@@ -88,10 +88,10 @@
     const extendClassUuids = $derived(selectionUuids);
 
     /** The schema of the diagram the class was right-clicked in, if any. */
-    const currentGraphUri = $derived(
+    const currentSchemaName = $derived(
         isMergedDiagram
             ? null
-            : (contextMenuClass?.graphUri ?? graphUri) || null,
+            : (contextMenuClass?.schemaName ?? schemaName) || null,
     );
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
@@ -116,13 +116,13 @@
         multiActive
             ? multiSelectState.getSelected().map(entry => ({
                   id: entry.classUuid,
-                  graphUri: entry.graphUri ?? graphUri,
+                  schemaName: entry.schemaName ?? schemaName,
               }))
             : contextMenuClass
               ? [
                     {
                         id: contextMenuClass.uuid,
-                        graphUri: contextMenuClass.graphUri ?? graphUri,
+                        schemaName: contextMenuClass.schemaName ?? schemaName,
                     },
                 ]
               : [],
@@ -174,9 +174,9 @@
             return;
         }
         dialogClassIds = selectionUuids;
-        dialogGraphUri = multiActive
-            ? (multiSelectState.getSelected()[0]?.graphUri ?? graphUri)
-            : (contextMenuClass.graphUri ?? graphUri);
+        dialogSchemaName = multiActive
+            ? (multiSelectState.getSelected()[0]?.schemaName ?? schemaName)
+            : (contextMenuClass.schemaName ?? schemaName);
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -273,8 +273,8 @@
         copyState.set(
             multiSelectState.copyEntriesOr({
                 classUUID: contextMenuClass.uuid,
-                graphURI:
-                    contextMenuClass.graphUri ??
+                schemaName:
+                    contextMenuClass.schemaName ??
                     editorState.selectedGraph.getValue(),
                 workspaceName: editorState.selectedWorkspace.getValue(),
             }),
@@ -315,7 +315,7 @@
             withInheritance
             {workspaceName}
             classUuids={extendClassUuids}
-            {currentGraphUri}
+            {currentSchemaName}
             selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
             {readOnly}
             onDone={onClose}
@@ -324,7 +324,7 @@
             label="Extend in Schema"
             {workspaceName}
             classUuids={extendClassUuids}
-            {currentGraphUri}
+            {currentSchemaName}
             selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
             {readOnly}
             onDone={onClose}
@@ -341,7 +341,7 @@
                 View Constraints (SHACL)
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
-            {#if graphUri}
+            {#if schemaName}
                 <ContextMenu.Item.Button
                     onSelect={openAddToGraphDiagramDialog}
                     disabled={crossGraphDisabled}
@@ -455,12 +455,12 @@
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
     {workspaceName}
-    graphUri={dialogGraphUri ?? graphUri}
+    schemaName={dialogSchemaName ?? schemaName}
     resourceUuids={dialogClassIds}
 />
 <SHACLClassSpecificPopUp
     workspaceName={editorState.selectedWorkspace.getValue()}
-    graphUri={editorState.selectedGraph.getValue()}
+    schemaName={editorState.selectedGraph.getValue()}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
 />
@@ -468,7 +468,7 @@
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedWorkspaceName={workspaceName}
-    {graphUri}
+    {schemaName}
     diagramId={editorState.selectedDiagram.getProperty("id")}
     classIds={dialogClassIds}
     classLabels={dialogClassLabels}
@@ -478,7 +478,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
         lockedWorkspaceName={workspaceName}
-        lockedGraphUri={graphUri}
+        lockedSchemaName={schemaName}
         classes={dialogClasses}
     />
 {/if}
@@ -487,7 +487,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddToWorkspaceDiagramDialog}
         lockedWorkspaceName={workspaceName}
-        lockedGraphUri={graphUri}
+        lockedSchemaName={schemaName}
         classes={dialogClasses}
     />
 {/if}

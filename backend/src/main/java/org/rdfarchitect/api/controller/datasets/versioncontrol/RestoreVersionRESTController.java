@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/restore")
+@RequestMapping("api/workspaces/{workspaceName}/restore")
 @RequiredArgsConstructor
 public class RestoreVersionRESTController {
 
@@ -89,7 +89,7 @@ public class RestoreVersionRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The ID of the version to restore.")
@@ -97,27 +97,27 @@ public class RestoreVersionRESTController {
                     RestoreVersionDTO dto) {
 
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/restore\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/restore\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var step =
                 restoreVersionUseCase.restoreVersion(
-                        datasetName,
+                        workspaceName,
                         UUID.fromString(dto.versionId),
                         dto.scope(),
                         dto.expectedPosition());
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/restore\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/restore\" to \"{}\".",
+                workspaceName,
                 originURL);
         return step;
     }
 
     /**
      * @param versionId the change to restore to
-     * @param graphUris the graphs to put back, or empty for the whole workspace
+     * @param schemaNames the graphs to put back, or empty for the whole workspace
      * @param expectedCurrentChangeId the change the workspace stood on when the restore was
      *     confirmed, or {@code null} to restore without checking
      * @param expectedNewestChangeId the newest change recorded when the restore was confirmed,
@@ -125,7 +125,7 @@ public class RestoreVersionRESTController {
      */
     public record RestoreVersionDTO(
             String versionId,
-            List<String> graphUris,
+            List<String> schemaNames,
             String expectedCurrentChangeId,
             String expectedNewestChangeId) {
 
@@ -143,7 +143,7 @@ public class RestoreVersionRESTController {
         }
 
         RevertScope scope() {
-            return new RevertScope(graphUris == null ? Set.of() : Set.copyOf(graphUris));
+            return new RevertScope(schemaNames == null ? Set.of() : Set.copyOf(schemaNames));
         }
     }
 }

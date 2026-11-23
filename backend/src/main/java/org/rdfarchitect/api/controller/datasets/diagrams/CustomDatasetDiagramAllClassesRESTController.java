@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}/classes")
+@RequestMapping("/api/workspaces/{workspaceName}/diagrams/{diagramId}/classes")
 @RequiredArgsConstructor
 public class CustomDatasetDiagramAllClassesRESTController {
 
@@ -57,23 +57,23 @@ public class CustomDatasetDiagramAllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of the classes to be added to the diagram")
                     @RequestBody
                     List<ClassInDiagram> classes) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
 
         customDiagramLayoutUseCase.addClassesToCustomDatasetDiagram(
-                datasetName, UUID.fromString(diagramId), classes);
+                workspaceName, UUID.fromString(diagramId), classes);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -88,24 +88,24 @@ public class CustomDatasetDiagramAllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of class uuids to be removed from the diagram")
                     @RequestBody
                     List<UUID> classIds) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
+                workspaceName,
                 diagramId,
                 classIds.size(),
                 originURL);
 
         customDiagramLayoutUseCase.removeClassesFromCustomDatasetDiagram(
-                datasetName, UUID.fromString(diagramId), classIds);
+                workspaceName, UUID.fromString(diagramId), classIds);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

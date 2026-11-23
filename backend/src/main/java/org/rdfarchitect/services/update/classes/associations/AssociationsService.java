@@ -64,13 +64,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         }
         var update =
                 CIMUpdates.insertAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                        graphIdentifier.graphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
+                        graphIdentifier.schemaName(),
                         cimAssociationPair);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -85,13 +85,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPair = associationPairMapper.toCIMObject(associationPair);
         var update =
                 CIMUpdates.replaceAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                        graphIdentifier.graphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
+                        graphIdentifier.schemaName(),
                         cimAssociationPair);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -109,14 +109,14 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
         var update =
                 CIMUpdates.replaceAssociations(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                        graphIdentifier.graphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
+                        graphIdentifier.schemaName(),
                         classUUID,
                         cimAssociationPairs);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
 
@@ -133,14 +133,15 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     /**
      * Executes an update built for {@code graphIdentifier} on that graph. The builders in {@link
-     * CIMUpdates} scope their operations with {@code WITH <graphUri>}, so the update has to run
+     * CIMUpdates} scope their operations with {@code WITH <schemaName>}, so the update has to run
      * against a dataset that knows the graph under that name — targeting the graph directly would
      * write into a named graph nobody holds and silently drop the change.
      */
     private void executeOnGraph(
             GraphContext ctx, GraphIdentifier graphIdentifier, UpdateBuilder update) {
         var dataset =
-                SessionDataStore.wrapGraphInDataset(ctx.getRdfGraph(), graphIdentifier.graphUri());
+                SessionDataStore.wrapGraphInDataset(
+                        ctx.getRdfGraph(), graphIdentifier.schemaName());
         UpdateExecutionFactory.create(update.buildRequest(), dataset).execute();
     }
 

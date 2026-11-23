@@ -16,6 +16,7 @@
  */
 import { untrack } from "svelte";
 import { validate as uuidValidate } from "uuid";
+import isValidFilename from "valid-filename";
 import { IriValidationStrategy, validateIri } from "validate-iri";
 
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -25,6 +26,14 @@ import {
     RDFS_NAMESPACE_URI,
 } from "$lib/models/stereotype-constants.js";
 import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/index.js";
+
+/** Matches `SchemaNames.MAX_LENGTH` in the backend. */
+export const SCHEMA_NAME_MAX_LENGTH = 200;
+
+// eslint-disable-next-line no-control-regex -- control characters are what it has to find
+const CHARACTERS_NO_SCHEMA_NAME_HOLDS = /[\u0000-\u001F"*/:<>?\\|;]/gu;
+const NAME_RESERVED_BY_WINDOWS =
+    /^(?:con|prn|aux|nul|conin\$|conout\$|com[\d²³¹]|lpt[\d²³¹])(?= *(?:\..*)?$)/iu;
 
 export function isInvalidUuid(uuid) {
     const violations = [];
@@ -89,6 +98,64 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
     }
 
     return violations;
+}
+
+/**
+ * What is wrong with a schema name, after leading and trailing whitespace is cut off. A schema is
+ * exported to a file named after it and travels in every API path, so its name has to be a file
+ * name on every system and must not hold a `;`. Its length is capped well below what a file name
+ * may have, so an export can append a suffix such as `-shacl.jsonld`. The backend checks the same.
+ *
+ * @param {string} name the name as typed
+ * @param {string[]} otherNames the names of the other schemas of the workspace
+ * @returns {string[]} the violations, empty for a valid name
+ */
+export function isInvalidSchemaName(name, otherNames) {
+    const trimmed = (name ?? "").trim();
+    if (!trimmed) {
+        return ["must not be empty"];
+    }
+    if (trimmed.length > SCHEMA_NAME_MAX_LENGTH) {
+        return [
+            `A schema name must not be longer than ${SCHEMA_NAME_MAX_LENGTH} characters`,
+        ];
+    }
+    if (trimmed.includes(";") || !isValidFilename(trimmed)) {
+        return [
+            'A schema name must not contain any of \\ / : * ? " < > | ; and must not be a name reserved by the file system',
+        ];
+    }
+    if (otherNames?.includes(trimmed)) {
+        return ["A schema with this name already exists"];
+    }
+    return [];
+}
+
+/**
+ * Turns the name of a file into a valid schema name, the way the backend names the entries of a
+ * zip: each character a schema name must not hold becomes `_`, a name Windows reserves gets a `_`
+ * appended (`CON` becomes `CON_`), and a name that is too long is cut to the maximum.
+ *
+ * @param {string} fileName the file name without its extension
+ * @param {string} fallback the name to take when nothing usable is left of `fileName`
+ * @returns {string} a valid schema name
+ */
+export function schemaNameFromFileName(fileName, fallback) {
+    let name = (fileName ?? "")
+        .trim()
+        .replace(CHARACTERS_NO_SCHEMA_NAME_HOLDS, "_")
+        .replace(NAME_RESERVED_BY_WINDOWS, reserved => `${reserved}_`);
+    if (name.length > SCHEMA_NAME_MAX_LENGTH) {
+        // not inside a surrogate pair, which would leave half a character behind
+        const lastCodeUnit = name.charCodeAt(SCHEMA_NAME_MAX_LENGTH - 1);
+        const splitsAPair = lastCodeUnit >= 0xd800 && lastCodeUnit <= 0xdbff;
+        name = name.slice(
+            0,
+            splitsAPair ? SCHEMA_NAME_MAX_LENGTH - 1 : SCHEMA_NAME_MAX_LENGTH,
+        );
+    }
+    name = name.trim();
+    return isInvalidSchemaName(name, []).length === 0 ? name : fallback;
 }
 
 export function isInvalidAssociationLabel(association, associations) {

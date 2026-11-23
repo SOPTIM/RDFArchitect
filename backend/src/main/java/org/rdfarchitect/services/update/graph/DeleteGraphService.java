@@ -23,6 +23,7 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
@@ -39,38 +40,36 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphUri());
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.schemaName());
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Deleted",
-                            "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphUri())));
+                    ChangeDescriptions.actionOn("Deleted", "schema", graphIdentifier.schemaName()));
         }
     }
 
     @Override
     public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.createWorkspaceIfAbsent(graphIdentifier.datasetName());
+        databasePort.createWorkspaceIfAbsent(graphIdentifier.workspaceName());
         var graph =
                 file == null || file.isEmpty()
                         ? GraphFactory.createDefaultGraph()
                         : new GraphFileSourceBuilderImpl()
                                 .setFile(file)
-                                .setGraphName(graphIdentifier.graphUri())
+                                .setGraphName(graphIdentifier.schemaName())
                                 .build()
                                 .graph();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphUri());
-            transaction.createGraph(graphIdentifier.graphUri(), graph);
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Replaced",
-                            "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphUri())));
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            // A new schema gets a name it can keep; an existing one keeps the name it has.
+            var schemaName =
+                    transaction.schemaNames().contains(graphIdentifier.schemaName())
+                            ? graphIdentifier.schemaName()
+                            : SchemaNames.validate(graphIdentifier.schemaName());
+            transaction.deleteGraph(schemaName);
+            transaction.createGraph(schemaName, graph);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
+            transaction.commit(ChangeDescriptions.actionOn("Replaced", "schema", schemaName));
         }
     }
 }

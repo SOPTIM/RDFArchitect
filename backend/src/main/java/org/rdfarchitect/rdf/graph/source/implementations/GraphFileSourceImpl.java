@@ -21,9 +21,9 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.shared.JenaException;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.rdf.RDFFileLanguages;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -52,7 +52,7 @@ public class GraphFileSourceImpl implements GraphSource {
 
         try {
             Model model = ModelFactory.createDefaultModel();
-            Lang lang = RDFLanguages.filenameToLang(fileName);
+            Lang lang = RDFFileLanguages.of(fileName);
             if (lang == null) {
                 model.read(file.getInputStream(), null);
             } else {

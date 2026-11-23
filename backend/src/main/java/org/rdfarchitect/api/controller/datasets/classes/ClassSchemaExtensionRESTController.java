@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.ClassExtensionResultDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ClassExtensionUseCase;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -39,19 +38,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/classes/extendToSchema")
+@RequestMapping("api/workspaces/{workspaceName}/classes/extendToSchema")
 @RequiredArgsConstructor
 public class ClassSchemaExtensionRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassSchemaExtensionRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
-
     private final ClassExtensionUseCase classExtensionUseCase;
 
     public record ExtendToSchemaRequest(
-            String graphUri, List<String> classUUIDs, boolean withInheritance) {}
+            String schemaName, List<String> classUUIDs, boolean withInheritance) {}
 
     @Operation(
             summary = "Extend classes into another schema",
@@ -67,27 +64,25 @@ public class ClassSchemaExtensionRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @RequestBody ExtendToSchemaRequest request) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/classes/extendToSchema\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/classes/extendToSchema\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var targetGraphIdentifier =
-                new GraphIdentifier(
-                        datasetName, expandURIUseCase.expandUri(datasetName, request.graphUri()));
+        var targetGraphIdentifier = new GraphIdentifier(workspaceName, request.schemaName());
 
         var results =
                 classExtensionUseCase.extendClasses(
-                        datasetName,
+                        workspaceName,
                         request.classUUIDs(),
                         targetGraphIdentifier,
                         request.withInheritance());
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/classes/extendToSchema\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/classes/extendToSchema\" to \"{}\".",
+                workspaceName,
                 originURL);
         return results;
     }

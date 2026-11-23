@@ -41,19 +41,19 @@ const DEFAULT_COLORS = [
     "#65a30d",
 ];
 
-export const graphColors = createGraphColors();
+export const schemaColors = createSchemaColors();
 
 function defaultColorFor(index) {
     return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
 }
 
-function createGraphColors() {
+function createSchemaColors() {
     let byWorkspace = $state({});
     const pendingLoads = new Map();
 
     async function load(workspaceName) {
         const { data, error } = await getCrossProfileColors({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
         });
         if (error) {
             console.error(
@@ -63,17 +63,17 @@ function createGraphColors() {
             return {};
         }
 
-        const stored = data.graphColors ?? {};
+        const stored = data.schemaColors ?? {};
 
         const resolved = {};
         const seeded = {};
         Object.keys(stored)
             .sort((a, b) => a.localeCompare(b))
-            .forEach((graphUri, index) => {
-                const existing = normalizeHex(stored[graphUri]);
-                resolved[graphUri] = existing ?? defaultColorFor(index);
+            .forEach((schemaName, index) => {
+                const existing = normalizeHex(stored[schemaName]);
+                resolved[schemaName] = existing ?? defaultColorFor(index);
                 if (!existing) {
-                    seeded[graphUri] = resolved[graphUri];
+                    seeded[schemaName] = resolved[schemaName];
                 }
             });
 
@@ -97,8 +97,8 @@ function createGraphColors() {
     }
 
     return {
-        get(workspaceName, graphUri) {
-            return byWorkspace[workspaceName]?.[graphUri] ?? null;
+        get(workspaceName, schemaName) {
+            return byWorkspace[workspaceName]?.[schemaName] ?? null;
         },
 
         reload(workspaceName) {
@@ -108,20 +108,20 @@ function createGraphColors() {
             return pendingLoads.get(workspaceName) ?? startLoad(workspaceName);
         },
 
-        async set(workspaceName, graphUri, color) {
+        async set(workspaceName, schemaName, color) {
             const hex = normalizeHex(color);
             if (!hex) {
                 return false;
             }
             const previous = byWorkspace[workspaceName] ?? {};
-            byWorkspace[workspaceName] = { ...previous, [graphUri]: hex };
+            byWorkspace[workspaceName] = { ...previous, [schemaName]: hex };
 
-            const saved = await put(workspaceName, { [graphUri]: hex });
+            const saved = await put(workspaceName, { [schemaName]: hex });
             if (!saved) {
                 byWorkspace[workspaceName] = previous;
                 toastStore.error(
                     "Save failed",
-                    `Could not save the color for "${graphUri}".`,
+                    `Could not save the color for "${schemaName}".`,
                 );
                 return false;
             }
@@ -150,7 +150,7 @@ function createGraphColors() {
 function normalizeColors(colorsByGraph) {
     return Object.fromEntries(
         Object.entries(colorsByGraph)
-            .map(([graphUri, color]) => [graphUri, normalizeHex(color)])
+            .map(([schemaName, color]) => [schemaName, normalizeHex(color)])
             .filter(([, color]) => color !== null),
     );
 }
@@ -179,8 +179,8 @@ async function put(workspaceName, colorsByGraph) {
     }
     try {
         const { error } = await updateCrossProfileColors({
-            path: { datasetName: workspaceName },
-            body: { graphColors: payload },
+            path: { workspaceName: workspaceName },
+            body: { schemaColors: payload },
         });
         if (error) {
             console.error(

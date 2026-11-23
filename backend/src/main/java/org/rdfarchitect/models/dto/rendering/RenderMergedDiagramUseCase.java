@@ -32,18 +32,18 @@ public interface RenderMergedDiagramUseCase {
      * Renders the cross-profile (merged) diagram for a dataset from the CIM facades of all its
      * graphs.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return The rendering data for the merged diagram.
      */
-    RenderingDataDTO renderCrossProfileDiagram(String datasetName);
+    RenderingDataDTO renderCrossProfileDiagram(String workspaceName);
 
     /**
      * Renders a workspace-level custom diagram: the merged diagram narrowed down to the classes the
      * diagram holds.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @param diagramId The id of the custom diagram.
      * @return The rendering data for the merged diagram.
      */
-    RenderingDataDTO renderCustomDatasetDiagram(String datasetName, UUID diagramId);
+    RenderingDataDTO renderCustomDatasetDiagram(String workspaceName, UUID diagramId);
 }

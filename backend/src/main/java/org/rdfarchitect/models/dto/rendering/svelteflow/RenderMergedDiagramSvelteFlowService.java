@@ -59,29 +59,30 @@ public class RenderMergedDiagramSvelteFlowService implements RenderMergedDiagram
     private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
-    public RenderingDataDTO renderCrossProfileDiagram(String datasetName) {
-        var profiles = buildProfiles(datasetName);
-        var diagram = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true, profiles);
+    public RenderingDataDTO renderCrossProfileDiagram(String workspaceName) {
+        var profiles = buildProfiles(workspaceName);
+        var diagram =
+                getCustomDiagramsUseCase.getCrossProfileDiagram(workspaceName, true, profiles);
         var layoutData =
                 fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
-                        datasetName, diagram.getDiagramId());
+                        workspaceName, diagram.getDiagramId());
         return renderer.renderMergedUML(profiles, layoutData);
     }
 
     @Override
-    public RenderingDataDTO renderCustomDatasetDiagram(String datasetName, UUID diagramId) {
+    public RenderingDataDTO renderCustomDatasetDiagram(String workspaceName, UUID diagramId) {
         CustomDiagram diagram;
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             diagram = transaction.diagrams().get(diagramId);
         }
         if (diagram == null) {
             throw new IllegalArgumentException(
-                    "Diagram with ID " + diagramId + " not found in dataset " + datasetName);
+                    "Diagram with ID " + diagramId + " not found in dataset " + workspaceName);
         }
-        var profiles = buildProfiles(datasetName);
+        var profiles = buildProfiles(workspaceName);
         var layoutData =
                 fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
-                        datasetName, diagramId);
+                        workspaceName, diagramId);
         return renderMerged(profiles, diagram, layoutData);
     }
 
@@ -91,11 +92,11 @@ public class RenderMergedDiagramSvelteFlowService implements RenderMergedDiagram
         return renderer.renderMergedUML(profiles, layoutData, renderedClassUris);
     }
 
-    private List<CIMProfileModel> buildProfiles(String datasetName) {
+    private List<CIMProfileModel> buildProfiles(String workspaceName) {
         return CIMProfileModels.loadAll(
                 databasePort,
-                CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName),
-                datasetName,
+                CIMProfileModels.keywordsBySchemaName(listGraphsUseCase, workspaceName),
+                workspaceName,
                 null);
     }
 }

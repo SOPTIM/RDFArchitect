@@ -88,10 +88,10 @@ function fileProgress(file) {
 export class ImportProgress {
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, schemaName: string|null}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
-    importedGraphUris = $state([]);
+    importedSchemaNames = $state([]);
     failedImports = $state([]);
     /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
     warnings = $state([]);
@@ -104,6 +104,8 @@ export class ImportProgress {
     prefixComparison = $state([]);
     /** Set when the import could not be started or ended unexpectedly. */
     errorMessage = $state(null);
+    problems = $state([]);
+    notices = $state([]);
     cancelling = $state(false);
 
     #controller = new AbortController();
@@ -183,12 +185,14 @@ export class ImportProgress {
             fileName: file.fileName ?? "",
             sizeBytes: file.sizeBytes ?? -1,
             state: file.state ?? FileState.PENDING,
-            graphUri: file.graphUri ?? null,
+            schemaName: file.schemaName ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
-        this.importedGraphUris = status.importedGraphUris ?? [];
+        this.importedSchemaNames = status.importedSchemaNames ?? [];
         this.failedImports = status.failedImports ?? [];
         this.warnings = status.warnings ?? [];
+        this.problems = status.problems ?? [];
+        this.notices = status.notices ?? [];
         const reportedComparison = status.prefixComparison ?? [];
         if (
             reportedComparison.length === 0 ||
@@ -259,7 +263,7 @@ export class ImportProgress {
     }
 
     #finishedText() {
-        const imported = this.importedGraphUris.length;
+        const imported = this.importedSchemaNames.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
         if (this.jobState === JobState.FAILED) {
             return imported === 0

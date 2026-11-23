@@ -23,5 +23,5 @@ import java.io.ByteArrayOutputStream;
 
 public interface GetDatasetSchemaUseCase {
 
-    ByteArrayOutputStream getDatasetSchema(String datasetName, RDFFormat format);
+    ByteArrayOutputStream getDatasetSchema(String workspaceName, RDFFormat format);
 }

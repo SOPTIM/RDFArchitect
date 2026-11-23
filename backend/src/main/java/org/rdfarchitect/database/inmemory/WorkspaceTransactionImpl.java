@@ -28,7 +28,6 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
@@ -73,12 +72,12 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public GraphContext graph(String graphUri) {
-        return workspace.getGraphWithContext(graphUri);
+    public GraphContext graph(String schemaName) {
+        return workspace.getGraphWithContext(schemaName);
     }
 
     @Override
-    public List<String> graphUris() {
+    public List<String> schemaNames() {
         return graphs.uris();
     }
 
@@ -103,44 +102,43 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
+    public void setCrossProfileDiagramId(UUID crossProfileDiagramId) {
+        crossProfileDiagramInfo.setCrossProfileDiagramUUID(crossProfileDiagramId);
+    }
+
+    @Override
     public PrefixMapping prefixes() {
         return prefixes.readOnlyView();
     }
 
     @Override
-    public void createGraph(String graphUri, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        Workspace.assertValidGraphName(expanded);
-        graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
+    public void createGraph(String schemaName, Graph newGraph) {
+        graphs.put(schemaName, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
-        crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
+        crossProfileDiagramInfo.setColor(schemaName, CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override
-    public void deleteGraph(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        graphs.remove(expanded);
-        crossProfileDiagramInfo.removeColor(expanded);
+    public void deleteGraph(String schemaName) {
+        graphs.remove(schemaName);
+        crossProfileDiagramInfo.removeColor(schemaName);
     }
 
     @Override
-    public void renameGraph(String oldGraphUri, String newGraphUri) {
-        var oldUri = prefixes.expandPrefix(oldGraphUri);
-        var newUri = prefixes.expandPrefix(newGraphUri);
-        Workspace.assertValidGraphName(oldUri);
-        Workspace.assertValidGraphName(newUri);
-        if (oldUri.equals(newUri)) {
+    public void renameGraph(String oldSchemaName, String newSchemaName) {
+        if (oldSchemaName.equals(newSchemaName)) {
             return;
         }
-        if (!graphs.contains(oldUri)) {
-            throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
+        if (!graphs.contains(oldSchemaName)) {
+            throw new ResourceNotFoundException("Schema " + oldSchemaName + " does not exist.");
         }
-        if (graphs.contains(newUri)) {
-            throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
+        if (graphs.contains(newSchemaName)) {
+            throw new ResourceConflictException(
+                    "A schema named " + newSchemaName + " already exists.");
         }
-        graphs.rename(oldUri, newUri);
-        renameGraphInDiagrams(oldUri, newUri);
-        crossProfileDiagramInfo.renameGraph(oldUri, newUri);
+        graphs.rename(oldSchemaName, newSchemaName);
+        renameGraphInDiagrams(oldSchemaName, newSchemaName);
+        crossProfileDiagramInfo.renameGraph(oldSchemaName, newSchemaName);
     }
 
     @Override
@@ -177,43 +175,38 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         end();
     }
 
-    private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
-        var oldUri = new URI(oldGraphUri);
-        var newUri = new URI(newGraphUri);
-        rewriteGraphUri(customDiagrams.get().values(), oldUri, newUri);
+    private void renameGraphInDiagrams(String oldSchemaName, String newSchemaName) {
+        var renamed = Map.of(oldSchemaName, newSchemaName);
+        rewriteSchemaNames(customDiagrams.get().values(), renamed);
         for (var graph : graphs.view().values()) {
-            rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
+            rewriteSchemaNames(graph.getCustomDiagrams().values(), renamed);
         }
     }
 
-    private static void rewriteGraphUri(
-            Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        rewriteGraphUris(diagrams, Map.of(oldUri, newUri));
-    }
-
     /**
-     * Points the classes of the diagrams at the URIs their graphs have now.
+     * Points the classes of the diagrams at the names their graphs have now.
      *
-     * <p>Every reference is looked up once, so that two graphs which swapped their URIs are not
+     * <p>Every reference is looked up once, so that two graphs which swapped their names are not
      * rewritten back and forth.
      *
      * @param diagrams the diagrams to rewrite
-     * @param renamed the URI each renamed graph has now, by the URI it had
+     * @param renamed the name each renamed graph has now, by the name it had
      */
-    static void rewriteGraphUris(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
+    static void rewriteSchemaNames(
+            Collection<CustomDiagram> diagrams, Map<String, String> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphUri()))) {
+            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getSchemaName()))) {
                 continue;
             }
             diagram.setClasses(
                     classes.stream()
                             .map(
                                     entry ->
-                                            renamed.containsKey(entry.getGraphUri())
+                                            renamed.containsKey(entry.getSchemaName())
                                                     ? new ClassInDiagram(
                                                             entry.getUuid(),
-                                                            renamed.get(entry.getGraphUri()))
+                                                            renamed.get(entry.getSchemaName()))
                                                     : entry)
                             .toList());
         }

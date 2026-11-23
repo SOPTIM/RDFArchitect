@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/redo")
+@RequestMapping("api/workspaces/{workspaceName}/redo")
 @RequiredArgsConstructor
 public class RedoRESTController {
 
@@ -66,17 +66,17 @@ public class RedoRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/redo\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/redo\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var entry = redoUseCase.redo(datasetName);
+        var entry = redoUseCase.redo(workspaceName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/redo\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/redo\" to \"{}\".",
+                workspaceName,
                 originURL);
         return entry;
     }

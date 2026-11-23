@@ -28,12 +28,12 @@ import { createGraphStore } from "../../src/lib/stores/graphStore";
 
 const WORKSPACE_A = "workspaceA";
 const WORKSPACE_B = "workspaceB";
-const GRAPH_URI = "http://example.org/graph1";
-const GRAPH_URI_2 = "http://example.org/graph2";
+const GRAPH_NAME = "graph1";
+const GRAPH_NAME_2 = "graph2";
 
 const MOCK_GRAPHS: api.GraphDto[] = [
-    makeGraphDto(GRAPH_URI),
-    makeGraphDto(GRAPH_URI_2),
+    makeGraphDto(GRAPH_NAME),
+    makeGraphDto(GRAPH_NAME_2),
 ];
 
 const MOCK_FILE = new File(["content"], "graph.ttl", { type: "text/turtle" });
@@ -42,19 +42,17 @@ const JOB_ID = "11111111-2222-3333-4444-555555555555";
 
 const MOCK_JOB_STATUS: api.ImportJobStatus = {
     jobId: JOB_ID,
-    datasetName: WORKSPACE_A,
+    workspaceName: WORKSPACE_A,
     state: "COMPLETED",
     files: [],
-    importedGraphUris: [GRAPH_URI],
+    importedSchemaNames: [GRAPH_NAME],
     failedImports: [],
     warnings: [],
 };
 
-// Helper to produce a GraphDto whose URI reconstructs to the given string.
-function makeGraphDto(uri: string): api.GraphDto {
-    return {
-        uri: { prefix: uri, suffix: "" },
-    } as api.GraphDto;
+// Helper to produce a GraphDto with the given name.
+function makeGraphDto(name: string): api.GraphDto {
+    return { name } as api.GraphDto;
 }
 
 /** Waits for the store to have sent its upload and returns that request. */
@@ -168,7 +166,7 @@ describe("graphStore", () => {
             expect(result).toEqual(MOCK_GRAPHS);
             expect(api.listGraphs).toHaveBeenCalledTimes(1);
             expect(api.listGraphs).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A },
+                path: { workspaceName: WORKSPACE_A },
             });
         });
 
@@ -198,7 +196,7 @@ describe("graphStore", () => {
             vi.mocked(api.listGraphs)
                 .mockResolvedValueOnce({ data: MOCK_GRAPHS, error: undefined })
                 .mockResolvedValueOnce({
-                    data: [makeGraphDto(GRAPH_URI_2)],
+                    data: [makeGraphDto(GRAPH_NAME_2)],
                     error: undefined,
                 });
 
@@ -206,7 +204,7 @@ describe("graphStore", () => {
             const resultB = await store.getGraphs(WORKSPACE_B);
 
             expect(resultA).toEqual(MOCK_GRAPHS);
-            expect(resultB).toEqual([makeGraphDto(GRAPH_URI_2)]);
+            expect(resultB).toEqual([makeGraphDto(GRAPH_NAME_2)]);
             expect(api.listGraphs).toHaveBeenCalledTimes(2);
         });
     });
@@ -224,11 +222,11 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_URI);
+            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_NAME);
 
             expect(result.error).toBeNull();
             expect(api.replaceGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_NAME },
             });
 
             const state = get(store);
@@ -236,7 +234,7 @@ describe("graphStore", () => {
 
             expect(toastStore.success).toHaveBeenCalledWith(
                 "Schema created",
-                `"${GRAPH_URI}" was added to "${WORKSPACE_A}".`,
+                `"${GRAPH_NAME}" was added to "${WORKSPACE_A}".`,
             );
         });
 
@@ -252,12 +250,12 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_URI);
+            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_NAME);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Create failed",
-                `Could not create schema "${GRAPH_URI}".`,
+                `Could not create schema "${GRAPH_NAME}".`,
             );
 
             const state = get(store);
@@ -271,7 +269,7 @@ describe("graphStore", () => {
             const result = await store.startImport(
                 WORKSPACE_A,
                 [],
-                [GRAPH_URI],
+                [GRAPH_NAME],
             );
 
             expect(result.error).toBeInstanceOf(Error);
@@ -282,14 +280,14 @@ describe("graphStore", () => {
             const pending = store.startImport(
                 WORKSPACE_A,
                 [MOCK_FILE],
-                [GRAPH_URI],
+                [GRAPH_NAME],
             );
             const request = await sentRequest();
 
             expect(request.method).toBe("POST");
             expect(request.url).toBe(
-                `/api/datasets/${WORKSPACE_A}/graphs/content/imports` +
-                    `?graphUris=${encodeURIComponent(GRAPH_URI)}`,
+                `/api/workspaces/${WORKSPACE_A}/schemas/content/imports` +
+                    `?schemaNames=${encodeURIComponent(GRAPH_NAME)}`,
             );
             expect(request.withCredentials).toBe(true);
             expect(request.body.getAll("files")).toEqual([MOCK_FILE]);
@@ -307,7 +305,7 @@ describe("graphStore", () => {
             const pending = store.startImport(
                 WORKSPACE_A,
                 [MOCK_FILE],
-                [GRAPH_URI],
+                [GRAPH_NAME],
                 { onUploadProgress: percent => reported.push(percent) },
             );
             const request = await sentRequest();
@@ -327,7 +325,7 @@ describe("graphStore", () => {
             const pending = store.startImport(
                 WORKSPACE_A,
                 [MOCK_FILE],
-                [GRAPH_URI],
+                [GRAPH_NAME],
             );
             const request = await sentRequest();
 
@@ -351,7 +349,7 @@ describe("graphStore", () => {
             const result = await store.getImportStatus(WORKSPACE_A, JOB_ID);
 
             expect(api.getImportStatus).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
             });
             expect(result.data).toBe(MOCK_JOB_STATUS);
         });
@@ -392,7 +390,7 @@ describe("graphStore", () => {
             );
 
             expect(api.resolvePrefixConflicts).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
                 body: RESOLUTIONS,
             });
             expect(result.error).toBeNull();
@@ -427,7 +425,7 @@ describe("graphStore", () => {
             const result = await store.cancelImport(WORKSPACE_A, JOB_ID);
 
             expect(api.cancelImport).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
             });
             expect(result.error).toBeNull();
         });
@@ -446,11 +444,11 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_NAME);
 
             expect(result.error).toBeNull();
             expect(api.deleteGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_NAME },
             });
         });
 
@@ -465,25 +463,12 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            await store.remove(WORKSPACE_A, GRAPH_URI);
+            await store.remove(WORKSPACE_A, GRAPH_NAME);
 
             const state = get(store);
             const cached = state.graphs.get(WORKSPACE_A)?.data;
             expect(cached).toBeDefined();
-            expect(
-                cached?.some(
-                    g =>
-                        `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` ===
-                        GRAPH_URI,
-                ),
-            ).toBe(false);
-            expect(
-                cached?.some(
-                    g =>
-                        `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` ===
-                        GRAPH_URI_2,
-                ),
-            ).toBe(true);
+            expect(cached?.map(g => g.name)).toEqual([GRAPH_NAME_2]);
         });
 
         test("keeps the cache populated after removal (does not invalidate)", async () => {
@@ -497,7 +482,7 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            await store.remove(WORKSPACE_A, GRAPH_URI);
+            await store.remove(WORKSPACE_A, GRAPH_NAME);
 
             const state = get(store);
             expect(state.graphs.has(WORKSPACE_A)).toBe(true);
@@ -515,12 +500,12 @@ describe("graphStore", () => {
             });
             await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_NAME);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Delete failed",
-                `Could not delete schema "${GRAPH_URI}".`,
+                `Could not delete schema "${GRAPH_NAME}".`,
             );
 
             const state = get(store);
@@ -534,7 +519,7 @@ describe("graphStore", () => {
             });
 
             // No prior getGraphs call — cache is empty
-            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_NAME);
 
             expect(result.error).toBeNull();
             // Cache entry data should be null since there was nothing to filter
