@@ -119,7 +119,7 @@
         const result = await job.dismiss();
         // The workspace is imported as a whole or not at all.
         if (result?.state === JobState.COMPLETED) {
-            openImportedWorkspace(
+            await openImportedWorkspace(
                 result.workspaceName,
                 result.importedSchemaNames,
             );
