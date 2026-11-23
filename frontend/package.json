@@ -50,7 +50,7 @@
         "@fortawesome/free-solid-svg-icons": "^7.0.1",
         "@sveltejs/adapter-static": "^4.0.1",
         "@tailwindcss/vite": "^4.1.8",
-        "@xyflow/svelte": "^1.4.0",
+        "@xyflow/svelte": "^2.0.0",
         "asciidoctor": "^4.0.0",
         "bits-ui": "^2.11.5",
         "codemirror": "^6.0.2",

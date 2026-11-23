@@ -104,7 +104,7 @@
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
-        svelteFlow.fitView({ padding: 0.05, duration: 0 });
+        svelteFlow.fitView({ padding: "2.4%", duration: 0 });
 
         await tick();
         await new Promise(r => requestAnimationFrame(r));
@@ -114,6 +114,7 @@
 
 <div style="width:{size?.width ?? 1600}px;height:{size?.height ?? 1000}px;">
     <SvelteFlow
+        forceColorMode="light"
         bind:nodes
         bind:edges
         {nodeTypes}

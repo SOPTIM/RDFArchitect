@@ -540,7 +540,7 @@
             nodeOrderCtrl.bringToFrontTemporarily(focusNode.id);
             svelteFlowAPI.svelteFlow.fitView({
                 nodes: [focusNode],
-                padding: 0.4,
+                padding: "14%",
                 duration: 400,
                 maxZoom: 1.6,
             });
@@ -794,7 +794,7 @@
         }
 
         return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
-            padding: 0.1,
+            padding: "4.5%",
             duration,
         });
     }
@@ -815,6 +815,7 @@
     class:box-selecting={boxSelecting}
 >
     <SvelteFlow
+        forceColorMode="light"
         bind:nodes
         bind:edges
         {nodeTypes}
