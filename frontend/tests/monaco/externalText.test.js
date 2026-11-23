@@ -18,6 +18,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+    holdsText,
     openText,
     pushExternalText,
 } from "../../src/lib/monaco/externalText.js";
@@ -97,6 +98,15 @@ describe("pushing external text into the editor", () => {
         expect(editor.getModel().getAlternativeVersionId()).toBe(version);
     });
 
+    test("leaves text alone that the editor holds with other line endings", () => {
+        const editor = editorWith("a\r\nb\nc\n");
+        const version = editor.getModel().getAlternativeVersionId();
+
+        expect(pushExternalText(editor, "a\r\nb\nc\n")).toBe(false);
+
+        expect(editor.getModel().getAlternativeVersionId()).toBe(version);
+    });
+
     test("does nothing before the editor exists", () => {
         expect(pushExternalText(null, "anything")).toBe(false);
         expect(pushExternalText({ getModel: () => null }, "anything")).toBe(
@@ -131,5 +141,20 @@ describe("opening another document in the editor", () => {
 
     test("does nothing before the editor exists", () => {
         expect(openText(null, "anything")).toBe(false);
+    });
+});
+
+describe("whether the editor holds a text", () => {
+    test("compares with the text as the editor would hold it", () => {
+        const editor = editorWith("\uFEFFa\r\nb\nc\n");
+
+        expect(editor.getValue()).toBe("a\nb\nc\n");
+        expect(holdsText(editor, "\uFEFFa\r\nb\nc\n")).toBe(true);
+        expect(holdsText(editor, "a\nb\nc\n")).toBe(true);
+        expect(holdsText(editor, "a\nb\nc")).toBe(false);
+    });
+
+    test("is false before the editor exists", () => {
+        expect(holdsText(null, "")).toBe(false);
     });
 });

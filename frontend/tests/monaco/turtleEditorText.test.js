@@ -41,6 +41,21 @@ async function showEditor(initial) {
     return props;
 }
 
+async function type(text) {
+    fake.state.editor.executeEdits("test", [
+        {
+            range: {
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: 1,
+                endColumn: 1,
+            },
+            text,
+        },
+    ]);
+    await settle();
+}
+
 async function undo() {
     fake.state.editor.trigger("test", "undo");
     await settle();
@@ -58,6 +73,67 @@ afterEach(() => {
         mounted = undefined;
     }
     target?.remove();
+});
+
+describe("a text the editor holds differently from how it was given", () => {
+    const MIXED = "a\r\nb\nc\n";
+    const MARKED = "\uFEFFa\nb\n";
+
+    test.each([
+        ["mixed line endings", MIXED],
+        ["a byte order mark", MARKED],
+    ])("with %s stays as given when it is opened", async (_, text) => {
+        const props = await showEditor({ value: "", documentKey: 1 });
+
+        props.value = text;
+        props.documentKey = 2;
+        await settle();
+
+        expect(fake.state.model.getValue()).not.toBe(text);
+        expect(props.value).toBe(text);
+        expect(props.onchange).not.toHaveBeenCalled();
+    });
+
+    test("stays as given when the editor opens with it", async () => {
+        const props = await showEditor({ value: MIXED });
+
+        expect(props.value).toBe(MIXED);
+    });
+
+    test("stays as given when it arrives from outside within a document", async () => {
+        const props = await showEditor({ value: "", documentKey: 1 });
+
+        props.value = MIXED;
+        await settle();
+
+        expect(props.value).toBe(MIXED);
+        expect(props.onchange).not.toHaveBeenCalled();
+    });
+
+    test("is written as the editor holds it once the user edits it", async () => {
+        const props = await showEditor({ value: "", documentKey: 1 });
+        props.value = MIXED;
+        props.documentKey = 2;
+        await settle();
+
+        await type("x");
+
+        expect(props.value).toBe("xa\nb\nc\n");
+        expect(props.onchange).toHaveBeenCalledTimes(1);
+    });
+
+    test("is as given again once the edits are undone", async () => {
+        const props = await showEditor({ value: "", documentKey: 1 });
+        props.value = MARKED;
+        props.documentKey = 2;
+        await settle();
+
+        await type("x");
+        await undo();
+
+        expect(props.value).toBe(MARKED);
+        expect(fake.state.model.getValue()).toBe("a\nb\n");
+    });
 });
 
 describe("text from outside", () => {

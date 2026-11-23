@@ -71,6 +71,16 @@
     let shownKey = undefined;
 
     /**
+     * The text last put in from outside, and the model version that holds it.
+     *
+     * Monaco holds a text with one line ending throughout and without a byte order mark, so what
+     * it holds can differ from what it was given. `value` keeps the given text until the user
+     * edits, and gets it back when undo returns to this version, so a document does not read as
+     * changed just because it was opened.
+     */
+    let givenText = { version: undefined, text: undefined };
+
+    /**
      * Where to put the cursor once the editor exists and holds the text being revealed in — a link
      * can ask for a line before Monaco has finished loading.
      */
@@ -111,15 +121,26 @@
                     insertSpaces: true,
                     fixedOverflowWidgets: true,
                 });
+                givenText = {
+                    version: created.getModel().getAlternativeVersionId(),
+                    text: value ?? "",
+                };
                 editor = created;
 
-                created.onDidChangeModelContent(() => {
-                    value = created.getValue();
-                    // Monaco reports a programmatic setValue the same way it reports typing, so
-                    // only an edit the user made is worth revalidating for.
-                    if (!applyingExternalChange) {
-                        onchange?.();
+                // The model's own event rather than the editor's: on undo, the editor reports the
+                // change before the model has its alternative version id back.
+                created.getModel().onDidChangeContent(() => {
+                    // Monaco reports text put in from outside the same way it reports typing. The
+                    // parent already holds that text, and Monaco's spelling of it is no edit.
+                    if (applyingExternalChange) {
+                        return;
                     }
+                    value =
+                        created.getModel().getAlternativeVersionId() ===
+                        givenText.version
+                            ? givenText.text
+                            : created.getValue();
+                    onchange?.();
                 });
                 if (autoGrow) {
                     const grow = () => {
@@ -174,11 +195,18 @@
         }
         applyingExternalChange = true;
         try {
+            let applied;
             if (key !== shownKey) {
-                openText(editor, next);
+                applied = openText(editor, next);
                 shownKey = key;
             } else {
-                pushExternalText(editor, next);
+                applied = pushExternalText(editor, next);
+            }
+            if (applied) {
+                givenText = {
+                    version: editor.getModel().getAlternativeVersionId(),
+                    text: next,
+                };
             }
         } finally {
             applyingExternalChange = false;
