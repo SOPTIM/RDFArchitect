@@ -51,7 +51,7 @@ public final class GraphDiagramsPart extends DiagramsPart<GraphScope, ArchivedGr
 
     @Override
     CustomDiagram readDiagram(ArchivedGraphDiagram diagram, String where, PartReader in) {
-        return diagram.toCustomDiagram(in.graphUri());
+        return diagram.toCustomDiagram(in.schemaName());
     }
 
     @Override

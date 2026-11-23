@@ -81,14 +81,14 @@
         const { error, data } = isNewEnumEntry
             ? await classStore.addEnumEntry(
                   classEditorContext.workspaceName,
-                  classEditorContext.graphUri,
+                  classEditorContext.schemaName,
                   classUuid,
                   apiEnumEntry,
                   isNewEnumEntry,
               )
             : await classStore.replaceEnumEntry(
                   classEditorContext.workspaceName,
-                  classEditorContext.graphUri,
+                  classEditorContext.schemaName,
                   classUuid,
                   apiEnumEntry,
                   isNewEnumEntry,

@@ -35,15 +35,15 @@ class GraphFolderNamesTest {
         "default, default",
         "http://example.org/a b/, example.org-a-b",
     })
-    void folderNameOf_keepsWhatIsReadableAndReplacesTheRest(String graphUri, String folder) {
-        assertThat(GraphFolderNames.folderNameOf(graphUri)).isEqualTo(folder);
+    void folderNameOf_keepsWhatIsReadableAndReplacesTheRest(String schemaName, String folder) {
+        assertThat(GraphFolderNames.folderNameOf(schemaName)).isEqualTo(folder);
     }
 
     @Test
     void folderNameOf_keepsTheEndOfALongUri_whereUrisOfOnePublisherDiffer() {
-        var graphUri = "http://example.org/" + "x".repeat(100) + "/Equipment";
+        var schemaName = "http://example.org/" + "x".repeat(100) + "/Equipment";
 
-        var folder = GraphFolderNames.folderNameOf(graphUri);
+        var folder = GraphFolderNames.folderNameOf(schemaName);
 
         assertThat(folder).hasSize(GraphFolderNames.MAX_LENGTH).endsWith("-Equipment");
     }
@@ -56,8 +56,8 @@ class GraphFolderNamesTest {
 
     @ParameterizedTest
     @CsvSource({"http://, graph", "http://con, graph-con", "http://NUL.txt, graph-NUL.txt"})
-    void folderNameOf_avoidsNamesAFileSystemRejects(String graphUri, String folder) {
-        assertThat(GraphFolderNames.folderNameOf(graphUri)).isEqualTo(folder);
+    void folderNameOf_avoidsNamesAFileSystemRejects(String schemaName, String folder) {
+        assertThat(GraphFolderNames.folderNameOf(schemaName)).isEqualTo(folder);
     }
 
     @Test
@@ -75,10 +75,12 @@ class GraphFolderNamesTest {
 
     @Test
     void assign_keepsANumberedFolderWithinTheMaximumLength() {
-        var graphUri = "http://example.org/" + "x".repeat(100);
+        var schemaName = "http://example.org/" + "x".repeat(100);
 
-        var folders = GraphFolderNames.assign(List.of(graphUri, graphUri + "#"));
+        var folders = GraphFolderNames.assign(List.of(schemaName, schemaName + "#"));
 
-        assertThat(folders.get(graphUri + "#")).hasSize(GraphFolderNames.MAX_LENGTH).endsWith("-2");
+        assertThat(folders.get(schemaName + "#"))
+                .hasSize(GraphFolderNames.MAX_LENGTH)
+                .endsWith("-2");
     }
 }

@@ -32,10 +32,10 @@ public final class ColorsPart
     @Override
     public void write(WorkspaceTransaction source, PartWriter out) {
         var colors = new LinkedHashMap<String, String>();
-        out.folderByGraphUri()
+        out.folderBySchemaName()
                 .forEach(
-                        (graphUri, folder) -> {
-                            var color = source.crossProfileColors().getColor(graphUri);
+                        (schemaName, folder) -> {
+                            var color = source.crossProfileColors().getColor(schemaName);
                             if (color != null) {
                                 colors.put(folder, color);
                             }
@@ -57,8 +57,8 @@ public final class ColorsPart
         var colors = new LinkedHashMap<String, String>();
         archived.forEach(
                 (folder, color) -> {
-                    var graphUri = in.graphUriByFolder().get(folder);
-                    if (graphUri == null) {
+                    var schemaName = in.schemaNameByFolder().get(folder);
+                    if (schemaName == null) {
                         in.problem(
                                 WorkspaceArchiveFormat.COLORS,
                                 "\"" + folder + "\" is not a graph of the workspace file.");
@@ -67,7 +67,7 @@ public final class ColorsPart
                                 WorkspaceArchiveFormat.COLORS,
                                 "the graph \"" + folder + "\" has no colour.");
                     } else {
-                        colors.put(graphUri, color);
+                        colors.put(schemaName, color);
                     }
                 });
         return colors.size() == archived.size() ? colors : null;

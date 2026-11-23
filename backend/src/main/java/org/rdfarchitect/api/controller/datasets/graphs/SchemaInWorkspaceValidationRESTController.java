@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.validation.workspace.WorkspaceValidationUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +38,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}")
 @RequiredArgsConstructor
 public class SchemaInWorkspaceValidationRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SchemaInWorkspaceValidationRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final WorkspaceValidationUseCase workspaceValidationUseCase;
 
@@ -80,27 +77,22 @@ public class SchemaInWorkspaceValidationRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validate-workspace\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/validate-workspace\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var report =
                 workspaceValidationUseCase.validateSchemaInWorkspace(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validate-workspace\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/validate-workspace\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return report;
     }

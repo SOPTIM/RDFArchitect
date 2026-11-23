@@ -70,7 +70,7 @@ class WorkspaceArchiveFormat10CompatibilityTest {
         var result = importArchive();
 
         assertThat(result.notices()).isEmpty();
-        assertThat(result.importedGraphUris())
+        assertThat(result.importedSchemaNames())
                 .containsExactly(
                         "http://graph#61970_600_2_Topology_AP_Voc_RDFS2020",
                         "http://graph#61970_600_2_Header_AP_Voc_RDFS2020");

@@ -24,9 +24,10 @@ import lombok.Setter;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.SchemaIri;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
@@ -46,8 +47,6 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog.HistorySince;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
@@ -85,7 +84,6 @@ public class Workspace {
 
     private static final Logger logger = LoggerFactory.getLogger(Workspace.class);
 
-    private static final String DEFAULT_GRAPH_NAME = "default";
     private static final String INITIAL_CHANGE_MESSAGE = "Loaded the workspace";
 
     @Setter @Getter private volatile boolean isReadOnly = true;
@@ -134,7 +132,9 @@ public class Workspace {
     }
 
     /**
-     * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its graphs.
+     * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its named
+     * graphs, each under the name {@link SchemaIri#toName(String)} gives for its IRI. The default
+     * graph of the dataset is not taken over: every graph of a workspace is a named graph.
      *
      * @param workspaceName the name the workspace is known by
      * @param dataset the dataset to read
@@ -143,17 +143,12 @@ public class Workspace {
         this(workspaceName);
         try (var transaction = begin(ReadWrite.WRITE)) {
             this.prefixes.addAll(dataset.getPrefixMapping());
-            if (!dataset.getDefaultModel().isEmpty()) {
-                graphs.put(
-                        DEFAULT_GRAPH_NAME,
-                        new GraphWithContext(dataset.getDefaultModel().getGraph(), txnContext));
-            }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
-                var graphURI = it.next().getURI();
+                var graphIri = it.next().getURI();
                 graphs.put(
-                        graphURI,
+                        SchemaNames.unique(SchemaIri.toName(graphIri), graphs.uris()),
                         new GraphWithContext(
-                                dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                                dataset.getNamedModel(graphIri).getGraph(), txnContext));
             }
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
@@ -565,13 +560,13 @@ public class Workspace {
                 .map(CustomDiagramCollection.class::cast)
                 .forEach(
                         diagrams ->
-                                WorkspaceTransactionImpl.rewriteGraphUris(
+                                WorkspaceTransactionImpl.rewriteSchemaNames(
                                         diagrams.get().values(), renamed));
     }
 
-    /** Returns the URI each graph renamed since a version of the set of graphs has now. */
-    private Map<URI, URI> renamedSince(int graphSetVersionsBack) {
-        var renamed = new HashMap<URI, URI>();
+    /** Returns the name each graph renamed since a version of the set of graphs has now. */
+    private Map<String, String> renamedSince(int graphSetVersionsBack) {
+        var renamed = new HashMap<String, String>();
         graphs.graphsByUriAt(graphSetVersionsBack)
                 .forEach(
                         (uriThen, graph) ->
@@ -580,11 +575,7 @@ public class Workspace {
                                         .map(Map.Entry::getKey)
                                         .filter(uriNow -> !uriNow.equals(uriThen))
                                         .findFirst()
-                                        .ifPresent(
-                                                uriNow ->
-                                                        renamed.put(
-                                                                new URI(uriThen),
-                                                                new URI(uriNow))));
+                                        .ifPresent(uriNow -> renamed.put(uriThen, uriNow)));
         return renamed;
     }
 
@@ -669,7 +660,7 @@ public class Workspace {
         versionsGained.keySet().forEach(participant -> requireHeldThen(participant, graphsThen));
         // A graph created since may have no changes of its own to take back, yet the URI held
         // something else at the version, or nothing at all.
-        scope.graphUris().stream()
+        scope.schemaNames().stream()
                 .map(graphs.view()::get)
                 .filter(Objects::nonNull)
                 .forEach(graph -> requireHeldThen(graph.getRdfGraph(), graphsThen));
@@ -692,15 +683,15 @@ public class Workspace {
      * otherwise be reported as already standing at that version.
      */
     private void requireStillHeld(RevertScope scope) {
-        scope.graphUris().stream()
-                .filter(graphUri -> !graphs.contains(graphUri))
+        scope.schemaNames().stream()
+                .filter(schemaName -> !graphs.contains(schemaName))
                 .findFirst()
                 .ifPresent(
-                        graphUri -> {
+                        schemaName -> {
                             throw new RestoreRefusedException(
                                     ("Cannot restore %s to that version: the workspace holds no "
                                                     + "schema under that URI.")
-                                            .formatted(graphUri));
+                                            .formatted(schemaName));
                         });
     }
 
@@ -775,7 +766,8 @@ public class Workspace {
             for (int i = 0; i < behind.size(); i++) {
                 reached.add(
                         asCurrentlyIdentified(behind.get(i))
-                                .withRestoreTargetGraphUris(graphsHeldAfter(behind.subList(0, i))));
+                                .withRestoreTargetSchemaNames(
+                                        graphsHeldAfter(behind.subList(0, i))));
             }
             return Stream.concat(
                             // Furthest ahead first: the redo stack hands out the next one to
@@ -795,34 +787,22 @@ public class Workspace {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the graph identified by {@code graphUri}, creating the default graph if it is asked
-     * for and does not exist yet.
+     * Returns the graph identified by {@code schemaName}.
      *
-     * <p>A reader gets an empty graph that is not kept: a read transaction enrols nothing, so the
-     * insertion could neither be rolled back nor seen by a concurrent reader doing the same.
-     *
-     * @param graphUri the graph URI
+     * @param schemaName the schema name
      * @return the graph's contents
+     * @throws ResourceNotFoundException if there is no graph of that name
      */
-    GraphWithContext getGraphWithContext(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        var existing = graphs.get(expanded);
+    GraphWithContext getGraphWithContext(String schemaName) {
+        var existing = graphs.get(schemaName);
         if (existing != null) {
             return existing;
         }
-        assertValidGraphName(expanded);
-        if (!expanded.equals(DEFAULT_GRAPH_NAME)) {
-            throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
-        }
-        var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
-        if (txnContext.transactionMode() == ReadWrite.WRITE) {
-            graphs.put(DEFAULT_GRAPH_NAME, defaultGraph);
-        }
-        return defaultGraph;
+        throw new ResourceNotFoundException("Schema " + schemaName + " does not exist.");
     }
 
     /** Returns a snapshot of the current graph URIs. */
-    public List<String> listGraphUris() {
+    public List<String> listSchemaNames() {
         try (var _ = begin(ReadWrite.READ)) {
             return graphs.uris();
         }
@@ -836,17 +816,6 @@ public class Workspace {
     public PrefixMappingReadOnly getPrefixMapping() {
         try (var _ = begin(ReadWrite.READ)) {
             return prefixes.readOnlyView();
-        }
-    }
-
-    /** Whether a graph can be stored under this name: the default graph or a URL. */
-    public static boolean isValidGraphName(String graphUri) {
-        return graphUri.equals(DEFAULT_GRAPH_NAME) || RDFUtils.isURL(graphUri);
-    }
-
-    static void assertValidGraphName(String graphUri) {
-        if (!isValidGraphName(graphUri)) {
-            throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }
     }
 }

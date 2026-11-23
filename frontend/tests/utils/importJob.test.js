@@ -69,7 +69,7 @@ describe("ImportJobRunner", () => {
         const status = {
             state: JobState.COMPLETED,
             files: [],
-            importedGraphUris: ["http://example.org/core"],
+            importedSchemaNames: ["http://example.org/core"],
         };
         vi.mocked(graphStore.getImportStatus).mockResolvedValue({
             data: status,
@@ -86,7 +86,7 @@ describe("ImportJobRunner", () => {
         expect(await runner.dismiss()).toEqual({
             workspaceName: "ws",
             state: JobState.COMPLETED,
-            importedGraphUris: ["http://example.org/core"],
+            importedSchemaNames: ["http://example.org/core"],
         });
         expect(runner.progress).toBeNull();
     });
@@ -97,7 +97,7 @@ describe("ImportJobRunner", () => {
         const finished = {
             state: JobState.COMPLETED,
             files: [],
-            importedGraphUris: ["http://example.org/core"],
+            importedSchemaNames: ["http://example.org/core"],
         };
         vi.mocked(graphStore.getImportStatus)
             .mockResolvedValueOnce({ data: running })
@@ -112,7 +112,7 @@ describe("ImportJobRunner", () => {
         expect(result).toEqual({
             workspaceName: "ws",
             state: JobState.COMPLETED,
-            importedGraphUris: ["http://example.org/core"],
+            importedSchemaNames: ["http://example.org/core"],
         });
     });
 

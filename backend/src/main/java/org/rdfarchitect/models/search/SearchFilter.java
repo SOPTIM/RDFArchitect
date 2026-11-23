@@ -22,7 +22,7 @@ import lombok.Data;
 @Data
 public class SearchFilter {
 
-    private String datasetName;
-    private String graphUri;
+    private String workspaceName;
+    private String schemaName;
     private String packageUUID;
 }

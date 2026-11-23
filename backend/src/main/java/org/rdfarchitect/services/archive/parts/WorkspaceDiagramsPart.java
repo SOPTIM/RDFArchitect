@@ -49,7 +49,7 @@ public final class WorkspaceDiagramsPart
                         .map(
                                 diagram ->
                                         ArchivedWorkspaceDiagram.of(
-                                                diagram, out.folderByGraphUri()))
+                                                diagram, out.folderBySchemaName()))
                         .toList());
     }
 
@@ -71,14 +71,14 @@ public final class WorkspaceDiagramsPart
     CustomDiagram readDiagram(ArchivedWorkspaceDiagram diagram, String where, PartReader in) {
         var valid = true;
         for (var folder : diagram.classes().keySet()) {
-            if (!in.graphUriByFolder().containsKey(folder)) {
+            if (!in.schemaNameByFolder().containsKey(folder)) {
                 in.problem(
                         WorkspaceArchiveFormat.DIAGRAMS,
                         where + ": \"" + folder + "\" is not a graph of the workspace file.");
                 valid = false;
             }
         }
-        return valid ? diagram.toCustomDiagram(in.graphUriByFolder()) : null;
+        return valid ? diagram.toCustomDiagram(in.schemaNameByFolder()) : null;
     }
 
     @Override

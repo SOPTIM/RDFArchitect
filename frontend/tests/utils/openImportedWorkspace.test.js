@@ -35,7 +35,7 @@ function selectClasses(workspaceName, ...classUuids) {
     multiSelectState.selectedClasses.updateValue(
         classUuids.map(classUuid => ({
             workspaceName,
-            graphUri: GRAPH,
+            schemaName: GRAPH,
             classUuid,
             classLabel: classUuid,
         })),

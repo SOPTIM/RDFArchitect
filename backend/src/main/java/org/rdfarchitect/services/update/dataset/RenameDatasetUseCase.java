@@ -20,11 +20,11 @@ package org.rdfarchitect.services.update.dataset;
 public interface RenameDatasetUseCase {
 
     /**
-     * Renames the dataset addressed by {@code oldDatasetName}. All graphs, diagrams and namespaces
-     * of the dataset are kept.
+     * Renames the dataset addressed by {@code oldWorkspaceName}. All graphs, diagrams and
+     * namespaces of the dataset are kept.
      *
-     * @param oldDatasetName the current literal name of the dataset
-     * @param newDatasetName the literal name to rename the dataset to
+     * @param oldWorkspaceName the current literal name of the dataset
+     * @param newWorkspaceName the literal name to rename the dataset to
      */
-    void renameDataset(String oldDatasetName, String newDatasetName);
+    void renameDataset(String oldWorkspaceName, String newWorkspaceName);
 }

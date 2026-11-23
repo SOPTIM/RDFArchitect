@@ -143,7 +143,7 @@ function createVersionControlStore() {
             steppable: new Map(s.steppable).set(key, { ...read(s), ...patch }),
         });
         const ask = () =>
-            MOVES[direction].check({ path: { datasetName: target } });
+            MOVES[direction].check({ path: { workspaceName: target } });
 
         const cached = await loadSlot(
             store,
@@ -329,7 +329,7 @@ function createVersionControlStore() {
             expectedChangeId = confirmation.changeId;
         }
         const { data, error, response } = await MOVES[direction].apply({
-            path: { datasetName: target },
+            path: { workspaceName: target },
             query: expectedChangeId ? { expectedChangeId } : undefined,
         });
         if (error && response?.status === 409) {
@@ -349,7 +349,7 @@ function createVersionControlStore() {
      * be reloaded and what the user has to be told.
      *
      * @param changeId the version to restore to
-     * @param graphUris the graphs to put back, or empty for the whole workspace
+     * @param schemaNames the graphs to put back, or empty for the whole workspace
      * @param workspace the workspace to act on, or the selected one
      * @param standingOn where the workspace stood in its history when the
      *     restore was confirmed — the change it stood on and the newest one
@@ -357,7 +357,7 @@ function createVersionControlStore() {
      */
     async function restore(
         changeId: string,
-        graphUris: string[] = [],
+        schemaNames: string[] = [],
         workspace?: string,
         standingOn?: { current?: string; newest?: string },
     ) {
@@ -372,10 +372,10 @@ function createVersionControlStore() {
                 return { error: null, skipped: true };
             }
             const { data, error, response } = await sdkRestore({
-                path: { datasetName: target },
+                path: { workspaceName: target },
                 body: {
                     versionId: changeId,
-                    graphUris,
+                    schemaNames,
                     expectedCurrentChangeId: standingOn?.current,
                     expectedNewestChangeId: standingOn?.newest,
                 },
@@ -396,13 +396,13 @@ function createVersionControlStore() {
             if (!data?.change) {
                 toastStore.info(
                     "Nothing to restore",
-                    graphUris.length > 0
+                    schemaNames.length > 0
                         ? "This schema is already at that version."
                         : "The workspace is already at that version.",
                 );
                 return { error: null, skipped: true };
             }
-            if (graphUris.length > 0) {
+            if (schemaNames.length > 0) {
                 // A schema restore is a change of its own, and its message says
                 // what it restored.
                 return landed("restore", target, data);
@@ -448,7 +448,7 @@ function createVersionControlStore() {
         workspace: string,
     ): Promise<{ confirmed: boolean; changeId?: string }> {
         const { data, error } = await sdkUndoPreview({
-            path: { datasetName: workspace },
+            path: { workspaceName: workspace },
         });
         if (error) {
             console.error(`${LOG} could not read the undo preview`, error);
@@ -520,18 +520,12 @@ function settled<T>(data: T): AsyncSlot<T> {
  */
 function describe(move: Move, change: ChangeLogEntryDto | undefined): string {
     const what = change?.message ?? MOVES[move].unnamedChange;
-    const elsewhere = (change?.affectedGraphUris ?? []).filter(
+    const elsewhere = (change?.affectedSchemaNames ?? []).filter(
         graph => graph !== editorState.selectedGraph.getValue(),
     );
     if (elsewhere.length === 0) return what;
-    if (elsewhere.length === 1) return `${what} in ${shortName(elsewhere[0])}`;
+    if (elsewhere.length === 1) return `${what} in ${elsewhere[0]}`;
     return `${what} in ${elsewhere.length} graphs`;
-}
-
-/** The readable tail of a graph URI, for a label that has to fit in a toast. */
-function shortName(graphUri: string): string {
-    const tail = graphUri.split(/[#/]/).filter(Boolean).pop();
-    return tail || graphUri;
 }
 
 export { createVersionControlStore };

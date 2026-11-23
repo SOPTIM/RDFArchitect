@@ -1,5 +1,11 @@
 # Third-Party Licenses
 
+### Apache Commons IO
+- **Package:** commons-io
+- **Version:** 2.22.0
+- **License:** Apache License 2.0
+- **URL:** [https://commons.apache.org/proper/commons-io/](https://commons.apache.org/proper/commons-io/)
+
 ### Apache Commons Lang
 - **Package:** org.apache.commons
 - **Version:** 3.21.0

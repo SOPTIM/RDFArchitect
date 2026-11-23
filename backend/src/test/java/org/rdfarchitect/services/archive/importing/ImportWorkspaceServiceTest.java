@@ -95,9 +95,9 @@ class ImportWorkspaceServiceTest {
         var result = importAs("imported", archive, ImportProgressListener.NOOP);
 
         assertThat(databasePort.listDatasets()).contains("imported");
-        assertThat(databasePort.listGraphUris("imported"))
+        assertThat(databasePort.listSchemaNames("imported"))
                 .containsExactlyInAnyOrder(CORE, EXTENSION);
-        assertThat(result.importedGraphUris()).containsExactlyInAnyOrder(CORE, EXTENSION);
+        assertThat(result.importedSchemaNames()).containsExactlyInAnyOrder(CORE, EXTENSION);
     }
 
     @Test
@@ -127,8 +127,8 @@ class ImportWorkspaceServiceTest {
                     }
 
                     @Override
-                    public void finished(int index, Outcome outcome, String graphUri) {
-                        events.add(outcome + " " + graphUri);
+                    public void finished(int index, Outcome outcome, String schemaName) {
+                        events.add(outcome + " " + schemaName);
                     }
                 };
 
@@ -148,7 +148,7 @@ class ImportWorkspaceServiceTest {
 
         assertThatThrownBy(() -> importAs("taken", archive, ImportProgressListener.NOOP))
                 .isInstanceOf(ResourceConflictException.class);
-        assertThat(databasePort.listGraphUris("taken")).isEmpty();
+        assertThat(databasePort.listSchemaNames("taken")).isEmpty();
     }
 
     @Test
@@ -167,7 +167,7 @@ class ImportWorkspaceServiceTest {
         var listener =
                 new ImportProgressListener() {
                     @Override
-                    public void finished(int index, Outcome outcome, String graphUri) {
+                    public void finished(int index, Outcome outcome, String schemaName) {
                         outcomes.put(index, outcome);
                     }
 
@@ -180,7 +180,7 @@ class ImportWorkspaceServiceTest {
         var result = importAs("imported", archive, listener);
 
         assertThat(result.cancelled()).isTrue();
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(databasePort.listDatasets()).doesNotContain("imported");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
     }
@@ -198,7 +198,7 @@ class ImportWorkspaceServiceTest {
                     }
 
                     @Override
-                    public void finished(int index, Outcome outcome, String graphUri) {
+                    public void finished(int index, Outcome outcome, String schemaName) {
                         outcomes.put(index, outcome);
                     }
                 };
@@ -214,7 +214,7 @@ class ImportWorkspaceServiceTest {
         var listener =
                 new ImportProgressListener() {
                     @Override
-                    public void finished(int index, Outcome outcome, String graphUri) {
+                    public void finished(int index, Outcome outcome, String schemaName) {
                         outcomes.put(index, outcome);
                     }
 
@@ -227,7 +227,7 @@ class ImportWorkspaceServiceTest {
         var result = importAs("imported", archive, listener);
 
         assertThat(result.cancelled()).isTrue();
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(databasePort.listDatasets()).doesNotContain("imported");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
     }

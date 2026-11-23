@@ -38,27 +38,27 @@ public final class PartWriter {
             new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private final ZipOutputStream zip;
-    private final Map<String, String> folderByGraphUri;
+    private final Map<String, String> folderBySchemaName;
     private final String folder;
 
-    public PartWriter(ZipOutputStream zip, Map<String, String> folderByGraphUri) {
-        this(zip, folderByGraphUri, null);
+    public PartWriter(ZipOutputStream zip, Map<String, String> folderBySchemaName) {
+        this(zip, folderBySchemaName, null);
     }
 
-    private PartWriter(ZipOutputStream zip, Map<String, String> folderByGraphUri, String folder) {
+    private PartWriter(ZipOutputStream zip, Map<String, String> folderBySchemaName, String folder) {
         this.zip = zip;
-        this.folderByGraphUri = folderByGraphUri;
+        this.folderBySchemaName = folderBySchemaName;
         this.folder = folder;
     }
 
     /** Writes into the folder of the graph instead of the top level. */
-    public PartWriter inGraph(String graphUri) {
-        return new PartWriter(zip, folderByGraphUri, folderByGraphUri.get(graphUri));
+    public PartWriter inGraph(String schemaName) {
+        return new PartWriter(zip, folderBySchemaName, folderBySchemaName.get(schemaName));
     }
 
     /** The folder each graph is stored in, by graph URI. */
-    public Map<String, String> folderByGraphUri() {
-        return folderByGraphUri;
+    public Map<String, String> folderBySchemaName() {
+        return folderBySchemaName;
     }
 
     /** Writes a graph as Turtle. */

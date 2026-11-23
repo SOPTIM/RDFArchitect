@@ -58,7 +58,7 @@ class FindDeleteDependenciesServiceTest {
             "src/test/java/org/rdfarchitect/services/delete/testdata.ttl";
 
     private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("default", "default");
+            new GraphIdentifier("default", "http://example.org/graph");
 
     // UUIDs from the TTL test data
     private static final UUID PARENT_CLASS_UUID =
@@ -88,9 +88,9 @@ class FindDeleteDependenciesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
+        workspace = new Workspace(GRAPH_IDENTIFIER.workspaceName());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_IDENTIFIER.graphUri(), graph);
+            transaction.createGraph(GRAPH_IDENTIFIER.schemaName(), graph);
             transaction.commit("created the test graph");
         }
         when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))

@@ -47,7 +47,7 @@ import java.util.UUID;
  * the import of a workspace file.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/imports")
+@RequestMapping("api/workspaces/{workspaceName}/imports")
 @RequiredArgsConstructor
 public class ImportJobRESTController {
 
@@ -70,10 +70,10 @@ public class ImportJobRESTController {
     @GetMapping("/{jobId}")
     public ResponseEntity<ImportJobUseCase.ImportJobStatus> getImportStatus(
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         return importJobUseCase
-                .getStatus(datasetName, jobId)
+                .getStatus(workspaceName, jobId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
@@ -100,22 +100,22 @@ public class ImportJobRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId,
             @Parameter(description = "What to do with each contested namespace binding.")
                     @RequestBody
                     List<PrefixResolutionDTO> resolutions) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/imports/{{}}/prefix-resolutions\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/imports/{{}}/prefix-resolutions\" from \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
 
-        var resolved = importJobUseCase.resolvePrefixConflicts(datasetName, jobId, resolutions);
+        var resolved = importJobUseCase.resolvePrefixConflicts(workspaceName, jobId, resolutions);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/imports/{{}}/prefix-resolutions\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/imports/{{}}/prefix-resolutions\" to \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
         return resolved
@@ -141,15 +141,15 @@ public class ImportJobRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/imports/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/imports/{{}}\" from \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
 
-        return importJobUseCase.cancel(datasetName, jobId)
+        return importJobUseCase.cancel(workspaceName, jobId)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }

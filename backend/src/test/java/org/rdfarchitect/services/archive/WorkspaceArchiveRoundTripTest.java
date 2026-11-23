@@ -81,18 +81,18 @@ class WorkspaceArchiveRoundTripTest {
 
     @Test
     void importedWorkspace_drawsItsDiagramsWhereTheOriginalDid() {
-        var graphUris =
+        var schemaNames =
                 cgmes.build("original", List.of(CgmesWorkspace.HEADER, CgmesWorkspace.TOPOLOGY));
         var exported = exportService.exportWorkspace("original");
 
         importService.importWorkspace(
                 "imported", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
 
-        for (var graphUri : graphUris) {
-            assertThat(cgmes.positionsOfFirstPackage("imported", graphUri))
-                    .as(graphUri)
+        for (var schemaName : schemaNames) {
+            assertThat(cgmes.positionsOfFirstPackage("imported", schemaName))
+                    .as(schemaName)
                     .isNotEmpty()
-                    .isEqualTo(cgmes.positionsOfFirstPackage("original", graphUri));
+                    .isEqualTo(cgmes.positionsOfFirstPackage("original", schemaName));
         }
     }
 

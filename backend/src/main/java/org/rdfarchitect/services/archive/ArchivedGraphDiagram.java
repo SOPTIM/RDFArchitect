@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,19 +29,19 @@ import java.util.UUID;
 public record ArchivedGraphDiagram(
         UUID diagramId, @JsonSetter(nulls = Nulls.SET) String name, List<UUID> classes) {
 
-    public static ArchivedGraphDiagram of(CustomDiagram diagram, String graphUri) {
+    public static ArchivedGraphDiagram of(CustomDiagram diagram, String schemaName) {
         var classes =
                 diagram.getClasses().stream()
                         // The editor only puts a graph's own classes on its diagrams.
-                        .filter(entry -> entry.getGraphUri().toString().equals(graphUri))
+                        .filter(entry -> entry.getSchemaName().equals(schemaName))
                         .map(ClassInDiagram::getUuid)
                         .toList();
         return new ArchivedGraphDiagram(diagram.getDiagramId(), diagram.getName(), classes);
     }
 
-    public CustomDiagram toCustomDiagram(String graphUri) {
-        var uri = new URI(graphUri);
-        var classesInDiagram = classes.stream().map(uuid -> new ClassInDiagram(uuid, uri)).toList();
+    public CustomDiagram toCustomDiagram(String schemaName) {
+        var classesInDiagram =
+                classes.stream().map(uuid -> new ClassInDiagram(uuid, schemaName)).toList();
         return new CustomDiagram(diagramId, name, classesInDiagram);
     }
 }

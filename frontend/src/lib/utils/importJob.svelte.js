@@ -33,11 +33,11 @@ const INVALID_WORKSPACE_NAME_CHARACTERS = /[/\\?#]/;
  * Everything cached under the workspace's name is dropped, since a new workspace can take the name
  * of one that was renamed or deleted, and the caches are kept by name.
  */
-export function openImportedWorkspace(workspaceName, importedGraphUris) {
+export function openImportedWorkspace(workspaceName, importedSchemaNames) {
     versionControlStore.invalidateWorkspace(workspaceName);
     workspaceState.activate(workspaceName);
 
-    editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
+    editorState.selectedGraph.updateValue(importedSchemaNames[0] || null);
     editorState.selectedDiagram.updateValue({ type: null, id: null });
     editorState.selectedClassWorkspace.updateValue(null);
     editorState.selectedClassGraph.updateValue(null);
@@ -138,7 +138,7 @@ export class ImportJobRunner {
      * Ends the dialog's part in the current import: cancels it while it still runs and forgets
      * it. Cancelling only stops the job where it is, so what it already wrote is still reported.
      *
-     * @returns {Promise<{workspaceName: string, state: string, importedGraphUris: string[]}|null>}
+     * @returns {Promise<{workspaceName: string, state: string, importedSchemaNames: string[]}|null>}
      *     how the import ended, `null` if there was none
      */
     async dismiss() {
@@ -155,7 +155,7 @@ export class ImportJobRunner {
         }
         let status = {
             state: progress.jobState,
-            importedGraphUris: progress.importedGraphUris,
+            importedSchemaNames: progress.importedSchemaNames,
         };
         if (!progress.finished) {
             progress.cancel();
@@ -173,7 +173,7 @@ export class ImportJobRunner {
         return {
             workspaceName,
             state: status.state,
-            importedGraphUris: status.importedGraphUris ?? [],
+            importedSchemaNames: status.importedSchemaNames ?? [],
         };
     }
 

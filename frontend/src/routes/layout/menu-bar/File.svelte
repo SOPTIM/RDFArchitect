@@ -129,7 +129,7 @@
         const workspaceName = selectedWorkspace;
         try {
             const { data, error, response } = await exportWorkspace({
-                path: { datasetName: workspaceName },
+                path: { workspaceName },
             });
             if (error) {
                 toastStore.error(

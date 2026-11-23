@@ -37,7 +37,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
 import java.util.List;
@@ -74,9 +73,7 @@ class ExportWorkspaceServiceTest {
                             .setNsPrefixes(Map.of("only", "http://example.org/only#")));
             var diagram =
                     new CustomDiagram(
-                            diagramId,
-                            "Core",
-                            List.of(new ClassInDiagram(classUuid, new URI(CORE))));
+                            diagramId, "Core", List.of(new ClassInDiagram(classUuid, CORE)));
             transaction.graph(CORE).getCustomDiagrams().put(diagramId, diagram);
             transaction.crossProfileColors().setColor(CORE, "#abcdef");
             transaction.commit("Set up the workspace");

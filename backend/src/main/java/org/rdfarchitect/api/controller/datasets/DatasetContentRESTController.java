@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.services.select.GetDatasetSchemaUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,11 +38,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/content")
+@RequestMapping("api/workspaces/{workspaceName}/content")
 @RequiredArgsConstructor
 public class DatasetContentRESTController {
 
@@ -74,31 +74,28 @@ public class DatasetContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/content\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/content\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var format = getRdfFormat(acceptHeader);
 
         var fileName =
-                datasetName
+                workspaceName
                         + "."
                         + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
 
-        var outStream = getDatasetSchemaUseCase.getDatasetSchema(datasetName, format);
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
+        var outStream = getDatasetSchemaUseCase.getDatasetSchema(workspaceName, format);
         var body =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                        .headers(DownloadHeaders.attachment(fileName))
                         .body(outStream.toByteArray());
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/content\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/content\" to \"{}\".",
+                workspaceName,
                 originURL);
         return body;
     }

@@ -44,8 +44,9 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     }
 
     @Override
-    public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    public RenderingLayoutData fetchGlobalRenderingLayoutData(
+            String workspaceName, UUID diagramId) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var diagramLayout = transaction.layout();
             return fetchRenderingLayoutData(
                     diagramLayout.getDefaultPackageMRID().getUuid(),

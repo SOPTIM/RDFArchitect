@@ -23,5 +23,5 @@ import java.util.List;
 
 public interface ListGraphsUseCase {
 
-    List<GraphDTO> listGraphs(String datasetName);
+    List<GraphDTO> listGraphs(String workspaceName);
 }

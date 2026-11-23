@@ -37,20 +37,20 @@ import java.util.UUID;
 
 public class CIMClass extends CIMResource implements ICIMClass {
 
-    public CIMClass(String graphUri, Model model, UUID uuid) {
-        super(graphUri, model, uuid);
+    public CIMClass(String schemaName, Model model, UUID uuid) {
+        super(schemaName, model, uuid);
     }
 
-    public CIMClass(String graphUri, Model model, Resource resource) {
-        super(graphUri, model, resource);
+    public CIMClass(String schemaName, Model model, Resource resource) {
+        super(schemaName, model, resource);
     }
 
-    public static ICIMClass fromResource(String graphUri, Model model, Resource resource) {
+    public static ICIMClass fromResource(String schemaName, Model model, Resource resource) {
         var inModel = resource.inModel(model);
         if (!inModel.hasProperty(RDFA.uuid) || CIMResourceUtils.isExternalResource(inModel)) {
-            return new ExternalCIMClass(graphUri, model, resource);
+            return new ExternalCIMClass(schemaName, model, resource);
         }
-        return new CIMClass(graphUri, model, resource);
+        return new CIMClass(schemaName, model, resource);
     }
 
     @Override
@@ -71,20 +71,20 @@ public class CIMClass extends CIMResource implements ICIMClass {
         var resources = this.getJenaProperties(RDFS.subClassOf);
         var superClasses = new ArrayList<ICIMClass>();
         for (var res : resources) {
-            superClasses.add(fromResource(this.getGraphUri(), this.getModel(), res));
+            superClasses.add(fromResource(this.getSchemaName(), this.getModel(), res));
         }
         return superClasses;
     }
 
     @Override
     public List<ICIMClass> getSubClasses() {
-        return subClassesOf(this.getGraphUri(), this.getModel(), this.getJenaResource());
+        return subClassesOf(this.getSchemaName(), this.getModel(), this.getJenaResource());
     }
 
-    static List<ICIMClass> subClassesOf(String graphUri, Model model, Resource resource) {
+    static List<ICIMClass> subClassesOf(String schemaName, Model model, Resource resource) {
         var subClasses = new ArrayList<ICIMClass>();
         for (var res : byUri(model.listSubjectsWithProperty(RDFS.subClassOf, resource))) {
-            subClasses.add(fromResource(graphUri, model, res));
+            subClasses.add(fromResource(schemaName, model, res));
         }
         return subClasses;
     }
@@ -95,7 +95,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
         if (category == null) {
             return null;
         }
-        return CIMClassCategory.fromResource(getGraphUri(), getModel(), category);
+        return CIMClassCategory.fromResource(getSchemaName(), getModel(), category);
     }
 
     @Override
@@ -108,7 +108,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
         var attributes = new ArrayList<ICIMAttribute>();
         for (var property : listDirectProperties()) {
             if (CIMPropertyUtils.isAttribute(property)) {
-                attributes.add(new CIMAttribute(getGraphUri(), getModel(), property));
+                attributes.add(new CIMAttribute(getSchemaName(), getModel(), property));
             }
         }
         return attributes;
@@ -119,7 +119,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
         var associations = new ArrayList<ICIMAssociation>();
         for (var property : listDirectProperties()) {
             if (CIMPropertyUtils.isAssociation(property)) {
-                associations.add(new CIMAssociation(getGraphUri(), getModel(), property));
+                associations.add(new CIMAssociation(getSchemaName(), getModel(), property));
             }
         }
         return associations;
@@ -133,7 +133,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
         }
         var entries = new ArrayList<ICIMEnumEntry>();
         for (var entry : byUri(getModel().listSubjectsWithProperty(RDF.type, jenaResource))) {
-            entries.add(new CIMEnumEntry(getGraphUri(), getModel(), entry));
+            entries.add(new CIMEnumEntry(getSchemaName(), getModel(), entry));
         }
         return entries;
     }

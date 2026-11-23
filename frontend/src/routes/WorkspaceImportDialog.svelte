@@ -121,7 +121,7 @@
         if (result?.state === JobState.COMPLETED) {
             openImportedWorkspace(
                 result.workspaceName,
-                result.importedGraphUris,
+                result.importedSchemaNames,
             );
         }
     }

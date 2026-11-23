@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,10 +35,10 @@ public record ArchivedWorkspaceDiagram(
         Map<String, List<UUID>> classes) {
 
     public static ArchivedWorkspaceDiagram of(
-            CustomDiagram diagram, Map<String, String> folderByGraphUri) {
+            CustomDiagram diagram, Map<String, String> folderBySchemaName) {
         var classes = new LinkedHashMap<String, List<UUID>>();
         for (var entry : diagram.getClasses()) {
-            var folder = folderByGraphUri.get(entry.getGraphUri().toString());
+            var folder = folderBySchemaName.get(entry.getSchemaName());
             if (folder != null) {
                 classes.computeIfAbsent(folder, _ -> new ArrayList<>()).add(entry.getUuid());
             }
@@ -47,12 +46,13 @@ public record ArchivedWorkspaceDiagram(
         return new ArchivedWorkspaceDiagram(diagram.getDiagramId(), diagram.getName(), classes);
     }
 
-    public CustomDiagram toCustomDiagram(Map<String, String> graphUriByFolder) {
+    public CustomDiagram toCustomDiagram(Map<String, String> schemaNameByFolder) {
         var classesInDiagram = new ArrayList<ClassInDiagram>();
         classes.forEach(
                 (folder, uuids) -> {
-                    var graphUri = new URI(graphUriByFolder.get(folder));
-                    uuids.forEach(uuid -> classesInDiagram.add(new ClassInDiagram(uuid, graphUri)));
+                    var schemaName = schemaNameByFolder.get(folder);
+                    uuids.forEach(
+                            uuid -> classesInDiagram.add(new ClassInDiagram(uuid, schemaName)));
                 });
         return new CustomDiagram(diagramId, name, classesInDiagram);
     }

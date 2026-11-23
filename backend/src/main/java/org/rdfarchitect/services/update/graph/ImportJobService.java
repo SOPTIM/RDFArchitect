@@ -69,9 +69,10 @@ public class ImportJobService implements ImportJobUseCase {
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Override
-    public UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+    public UUID startImport(
+            String workspaceName, List<MultipartFile> files, List<String> schemaNames) {
         return start(
-                datasetName, files, (job, ownedFiles) -> runImport(job, ownedFiles, graphUris));
+                workspaceName, files, (job, ownedFiles) -> runImport(job, ownedFiles, schemaNames));
     }
 
     @Override
@@ -83,7 +84,7 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     private UUID start(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             BiConsumer<ImportJob, List<MultipartFile>> task) {
         dropExpiredJobs();
@@ -93,7 +94,7 @@ public class ImportJobService implements ImportJobUseCase {
                 job -> job.getSessionId().equals(sessionId) && job.isAwaitingPrefixResolution(),
                 "superseded by a new import of the same session");
 
-        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName, Instant.now());
+        var job = new ImportJob(UUID.randomUUID(), sessionId, workspaceName, Instant.now());
         // Claiming the session and registering the job has to be one step, otherwise two parallel
         // starts both pass the guard and import into the same store with their own reservations.
         synchronized (jobs) {
@@ -124,9 +125,9 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     @Override
-    public Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId) {
+    public Optional<ImportJobStatus> getStatus(String workspaceName, UUID jobId) {
         dropExpiredJobs();
-        return findJob(datasetName, jobId)
+        return findJob(workspaceName, jobId)
                 .map(
                         job -> {
                             job.markPolled(Instant.now());
@@ -136,8 +137,8 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions) {
-        var job = findJob(datasetName, jobId).orElse(null);
+            String workspaceName, UUID jobId, List<PrefixResolutionDTO> resolutions) {
+        var job = findJob(workspaceName, jobId).orElse(null);
         if (job == null) {
             return false;
         }
@@ -154,8 +155,8 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     @Override
-    public boolean cancel(String datasetName, UUID jobId) {
-        var job = findJob(datasetName, jobId);
+    public boolean cancel(String workspaceName, UUID jobId) {
+        var job = findJob(workspaceName, jobId);
         job.ifPresent(
                 cancelledJob -> {
                     cancelledJob.requestCancel();
@@ -187,24 +188,26 @@ public class ImportJobService implements ImportJobUseCase {
         }
     }
 
-    private void runImport(ImportJob job, List<MultipartFile> files, List<String> graphUris) {
-        var result = importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
+    private void runImport(ImportJob job, List<MultipartFile> files, List<String> schemaNames) {
+        var result =
+                importGraphsUseCase.importGraphs(job.getWorkspaceName(), files, schemaNames, job);
         job.complete(result);
         logger.info(
                 "Import job {} finished: {} graph(s) imported, {} file(s) failed.",
                 job.getId(),
-                result.importedGraphUris().size(),
+                result.importedSchemaNames().size(),
                 result.failedFileNames().size());
     }
 
     private void runWorkspaceImport(ImportJob job, MultipartFile archive) {
         try (var content = archive.getInputStream()) {
-            var result = importWorkspaceUseCase.importWorkspace(job.getDatasetName(), content, job);
+            var result =
+                    importWorkspaceUseCase.importWorkspace(job.getWorkspaceName(), content, job);
             job.complete(result);
             logger.info(
                     "Workspace import job {} finished: {} graph(s) imported.",
                     job.getId(),
-                    result.importedGraphUris().size());
+                    result.importedSchemaNames().size());
         } catch (InvalidWorkspaceArchiveException e) {
             logger.info(
                     "Workspace import job {} rejected the archive: {}",
@@ -225,11 +228,11 @@ public class ImportJobService implements ImportJobUseCase {
     /**
      * A job is only reachable through the session that started it and the dataset it imports into.
      */
-    private Optional<ImportJob> findJob(String datasetName, UUID jobId) {
+    private Optional<ImportJob> findJob(String workspaceName, UUID jobId) {
         var job = jobs.get(jobId);
         if (job == null
                 || !job.getSessionId().equals(SessionContext.getSessionId())
-                || !job.getDatasetName().equals(datasetName)) {
+                || !job.getWorkspaceName().equals(workspaceName)) {
             return Optional.empty();
         }
         return Optional.of(job);

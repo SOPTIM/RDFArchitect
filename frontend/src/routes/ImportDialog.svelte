@@ -24,7 +24,12 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import {
+        isInvalidSchemaName,
+        schemaNameFromFileName,
+    } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import {
@@ -48,7 +53,6 @@
     } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
-    const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
         type => type.fileExtension,
@@ -110,10 +114,14 @@
               ])
             : "",
     );
+    let fileNameViolations = $derived(
+        files.map((_, index) => schemaNameViolations(index)),
+    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
             !newWorkspaceNameError &&
+            fileNameViolations.every(violations => violations.length === 0) &&
             progress === null,
     );
 
@@ -160,7 +168,11 @@
         return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
-    function getSanitizedGraphName(fileName) {
+    /**
+     * The file name without its extension, made a valid schema name, which is how the backend names
+     * the entries of a zip as well.
+     */
+    function buildSchemaName(fileName) {
         if (!fileName) {
             return DEFAULT_GRAPH_NAME;
         }
@@ -170,24 +182,23 @@
             lastDotIndex === -1
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
-        const sanitized = baseName.replace(/\W/g, "_");
-        return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
+        return schemaNameFromFileName(baseName, DEFAULT_GRAPH_NAME);
     }
 
-    function buildGraphUri(fileName) {
-        const sanitized = getSanitizedGraphName(fileName);
-        return `${GRAPH_NAMESPACE_URI}${sanitized}`;
-    }
-
-    function ensureGraphNamespaceUri(graphUri, fallbackName) {
-        const trimmed = graphUri?.trim();
-        if (!trimmed) {
-            return buildGraphUri(fallbackName);
+    /**
+     * What is wrong with the name a file is to be imported under. Two files of the upload may not
+     * share a name, but one may take the name of an existing schema: the backend then imports it
+     * under that name with a number appended.
+     */
+    function schemaNameViolations(index) {
+        const entry = files[index];
+        if (entry.isZip) {
+            return [];
         }
-        if (trimmed.includes("://")) {
-            return trimmed;
-        }
-        return `${GRAPH_NAMESPACE_URI}${trimmed}`;
+        const otherNames = files
+            .filter((other, idx) => idx !== index && !other.isZip)
+            .map(other => other.schemaName.trim());
+        return isInvalidSchemaName(entry.schemaName, otherNames);
     }
 
     function addFiles(newFiles, directoryNames = []) {
@@ -200,9 +211,9 @@
                 }
                 return {
                     file,
-                    graphUri: isZipFile(file.name)
+                    schemaName: isZipFile(file.name)
                         ? ""
-                        : buildGraphUri(file.name),
+                        : buildSchemaName(file.name),
                     isZip: isZipFile(file.name),
                 };
             })
@@ -218,12 +229,12 @@
         files = files.filter((_, idx) => idx !== index);
     }
 
-    function updateGraphUri(index, graphUri) {
+    function updateSchemaName(index, schemaName) {
         if (files[index]?.isZip) {
             return;
         }
         files = files.map((entry, idx) =>
-            idx === index ? { ...entry, graphUri } : entry,
+            idx === index ? { ...entry, schemaName } : entry,
         );
     }
 
@@ -234,16 +245,14 @@
     function importGraphs() {
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
-        const graphUris = files.map(entry =>
-            entry.isZip
-                ? ""
-                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
+        const schemaNames = files.map(entry =>
+            entry.isZip ? "" : entry.schemaName.trim(),
         );
         void job.start(workspaceName, options =>
             graphStore.startImport(
                 workspaceName,
                 filesToImport,
-                graphUris,
+                schemaNames,
                 options,
             ),
         );
@@ -271,10 +280,10 @@
      */
     async function dismissImport() {
         const result = await job.dismiss();
-        if (result && result.importedGraphUris.length > 0) {
+        if (result && result.importedSchemaNames.length > 0) {
             openImportedWorkspace(
                 result.workspaceName,
-                result.importedGraphUris,
+                result.importedSchemaNames,
             );
         }
     }
@@ -433,18 +442,22 @@
                             >
                                 <div class="flex-1">
                                     <input
-                                        id={`graph-uri-${index}`}
+                                        id={`graph-name-${index}`}
                                         class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                         type="text"
                                         value={fileEntry.isZip
                                             ? fileEntry.file.name
-                                            : fileEntry.graphUri}
+                                            : fileEntry.schemaName}
                                         disabled={fileEntry.isZip}
                                         oninput={event =>
-                                            updateGraphUri(
+                                            updateSchemaName(
                                                 index,
                                                 event.target.value,
                                             )}
+                                    />
+                                    <ViolationMessages
+                                        violations={fileNameViolations[index] ??
+                                            []}
                                     />
                                 </div>
                                 <div

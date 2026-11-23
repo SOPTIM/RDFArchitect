@@ -51,42 +51,42 @@ public final class PartReader {
                     .setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL, Nulls.FAIL));
 
     private final Map<String, byte[]> entries;
-    private final Map<String, String> graphUriByFolder;
+    private final Map<String, String> schemaNameByFolder;
     private final List<String> problems;
     private final String folder;
 
     /** Reads the top level of the unpacked file, collecting the problems into {@code problems}. */
     public PartReader(
             Map<String, byte[]> entries,
-            Map<String, String> graphUriByFolder,
+            Map<String, String> schemaNameByFolder,
             List<String> problems) {
-        this(entries, graphUriByFolder, problems, null);
+        this(entries, schemaNameByFolder, problems, null);
     }
 
     private PartReader(
             Map<String, byte[]> entries,
-            Map<String, String> graphUriByFolder,
+            Map<String, String> schemaNameByFolder,
             List<String> problems,
             String folder) {
         this.entries = entries;
-        this.graphUriByFolder = graphUriByFolder;
+        this.schemaNameByFolder = schemaNameByFolder;
         this.problems = problems;
         this.folder = folder;
     }
 
     /** Reads from the folder of a graph instead of the top level. */
     public PartReader inGraph(String folder) {
-        return new PartReader(entries, graphUriByFolder, problems, folder);
+        return new PartReader(entries, schemaNameByFolder, problems, folder);
     }
 
     /** The graph whose folder this reads from, {@code null} at the top level. */
-    public String graphUri() {
-        return folder == null ? null : graphUriByFolder.get(folder);
+    public String schemaName() {
+        return folder == null ? null : schemaNameByFolder.get(folder);
     }
 
     /** The graph stored in each folder, by folder name. */
-    public Map<String, String> graphUriByFolder() {
-        return graphUriByFolder;
+    public Map<String, String> schemaNameByFolder() {
+        return schemaNameByFolder;
     }
 
     /** Reports a problem with the file of the given name. */

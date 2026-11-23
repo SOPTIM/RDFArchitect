@@ -46,7 +46,7 @@ import java.util.List;
 
 /** Exports a whole workspace as one workspace file and imports such a file as a new workspace. */
 @RestController
-@RequestMapping("api/datasets/{datasetName}")
+@RequestMapping("api/workspaces/{workspaceName}")
 @RequiredArgsConstructor
 public class WorkspaceFileRESTController {
 
@@ -76,13 +76,13 @@ public class WorkspaceFileRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/export\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/export\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var workspaceFile = exportWorkspaceUseCase.exportWorkspace(datasetName);
+        var workspaceFile = exportWorkspaceUseCase.exportWorkspace(workspaceName);
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
         var response =
@@ -90,13 +90,13 @@ public class WorkspaceFileRESTController {
                         .headers(headers)
                         .header(
                                 HttpHeaders.CONTENT_DISPOSITION,
-                                WorkspaceArchiveFormat.fileNameFor(datasetName))
+                                WorkspaceArchiveFormat.fileNameFor(workspaceName))
                         .contentType(MediaType.parseMediaType("application/zip"))
                         .body(workspaceFile);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/export\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/export\" to \"{}\".",
+                workspaceName,
                 originURL);
         return response;
     }
@@ -104,7 +104,7 @@ public class WorkspaceFileRESTController {
     @Operation(
             summary = "Start importing a workspace file",
             description =
-                    "Starts importing a workspace file, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}. The file is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
+                    "Starts importing a workspace file, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress at /api/workspaces/{workspaceName}/imports/{jobId}. The file is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
             tags = {"dataset"},
             responses = {
                 @ApiResponse(responseCode = "202", description = "Import started"),
@@ -121,19 +121,19 @@ public class WorkspaceFileRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The name of the workspace to create.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The workspace file") @RequestParam("file")
                     MultipartFile file) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/import\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/import\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var jobId = importJobUseCase.startWorkspaceImport(datasetName, file);
+        var jobId = importJobUseCase.startWorkspaceImport(workspaceName, file);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/import\" to \"{}\": job {}.",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/import\" to \"{}\": job {}.",
+                workspaceName,
                 originURL,
                 jobId);
         return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));

@@ -96,7 +96,7 @@
     }
 
     function schemaLabel(occurrence) {
-        return occurrence.keyword ?? localName(occurrence.graphUri ?? "");
+        return occurrence.keyword ?? localName(occurrence.schemaName ?? "");
     }
 
     function hasDetails(issue) {
@@ -300,7 +300,7 @@
                                     {#each issue.occurrences ?? [] as occurrence}
                                         <span
                                             class="bg-border-strong text-default-text rounded-full px-2 py-[0.05rem] text-xs tracking-[0.04em] uppercase"
-                                            title={occurrence.graphUri}
+                                            title={occurrence.schemaName}
                                         >
                                             {schemaLabel(occurrence)}
                                         </span>
@@ -327,7 +327,7 @@
                                         >
                                             <span
                                                 class="bg-border-strong text-default-text w-16 shrink-0 rounded-full px-2 py-[0.05rem] text-center tracking-[0.04em] uppercase"
-                                                title={occurrence.graphUri}
+                                                title={occurrence.schemaName}
                                             >
                                                 {schemaLabel(occurrence)}
                                             </span>

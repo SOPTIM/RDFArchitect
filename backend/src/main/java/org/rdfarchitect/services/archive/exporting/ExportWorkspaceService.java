@@ -52,15 +52,16 @@ public class ExportWorkspaceService implements ExportWorkspaceUseCase {
         var bytes = new ByteArrayOutputStream();
         try (var zip = new ZipOutputStream(bytes);
                 var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            var folders = GraphFolderNames.assign(transaction.graphUris());
+            var folders = GraphFolderNames.assign(transaction.schemaNames());
             var out = new PartWriter(zip, folders);
             var graphEntries = new ArrayList<WorkspaceArchiveManifest.GraphEntry>();
             folders.forEach(
-                    (graphUri, folder) -> {
-                        var scope = new GraphScope(transaction, graphUri);
-                        var graphOut = out.inGraph(graphUri);
+                    (schemaName, folder) -> {
+                        var scope = new GraphScope(transaction, schemaName);
+                        var graphOut = out.inGraph(schemaName);
                         WorkspaceFileParts.OF_GRAPH.forEach(part -> part.write(scope, graphOut));
-                        graphEntries.add(new WorkspaceArchiveManifest.GraphEntry(folder, graphUri));
+                        graphEntries.add(
+                                new WorkspaceArchiveManifest.GraphEntry(folder, schemaName));
                     });
             WorkspaceFileParts.OF_WORKSPACE.forEach(part -> part.write(transaction, out));
             var manifest =

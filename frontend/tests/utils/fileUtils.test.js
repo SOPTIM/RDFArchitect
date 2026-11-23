@@ -14,14 +14,67 @@
  *    limitations under the License.
  *
  */
-
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
 import {
+    filenameFromContentDisposition,
     isImportableFile,
     isWorkspaceArchiveFile,
     workspaceNameOfArchiveFile,
 } from "$lib/utils/fileUtils.ts";
+
+describe("filenameFromContentDisposition", () => {
+    it("reads the UTF-8 encoded name first", () => {
+        expect(
+            filenameFromContentDisposition(
+                "attachment; filename=\"=?UTF-8?Q?=E4=B8=AD=E6=96=87.ttl?=\"; filename*=UTF-8''%E4%B8%AD%E6%96%87.ttl",
+            ),
+        ).toBe("中文.ttl");
+    });
+
+    it("decodes spaces and other escaped characters", () => {
+        expect(
+            filenameFromContentDisposition(
+                "attachment; filename*=UTF-8''my%20profile%20%231.adoc",
+            ),
+        ).toBe("my profile #1.adoc");
+    });
+
+    it("falls back to the quoted name", () => {
+        expect(
+            filenameFromContentDisposition('attachment; filename="EQ v2.ttl"'),
+        ).toBe("EQ v2.ttl");
+    });
+
+    it("unescapes a quoted name", () => {
+        expect(
+            filenameFromContentDisposition(
+                'attachment; filename="say \\"hi\\".ttl"',
+            ),
+        ).toBe('say "hi".ttl');
+    });
+
+    it("reads an unquoted name", () => {
+        expect(
+            filenameFromContentDisposition("attachment; filename=EQ.ttl"),
+        ).toBe("EQ.ttl");
+    });
+
+    it("falls back to the plain name when the encoded one is malformed", () => {
+        expect(
+            filenameFromContentDisposition(
+                "attachment; filename=\"EQ.ttl\"; filename*=UTF-8''%E4%B8.ttl",
+            ),
+        ).toBe("EQ.ttl");
+    });
+
+    it.each([null, undefined, "", "attachment"])(
+        "suggests no name for %j",
+        header => {
+            expect(filenameFromContentDisposition(header)).toBeNull();
+        },
+    );
+});
 
 describe("workspace archives", () => {
     test("are taken by the workspace import, also when renamed to .zip", () => {

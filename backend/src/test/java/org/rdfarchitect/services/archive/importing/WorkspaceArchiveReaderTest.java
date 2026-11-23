@@ -41,7 +41,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.archive.ArchiveFiles;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.exporting.ExportWorkspaceService;
@@ -88,7 +87,7 @@ class WorkspaceArchiveReaderTest {
                             new CustomDiagram(
                                     workspaceDiagramId,
                                     "Overview",
-                                    List.of(new ClassInDiagram(classUuid, new URI(EXTENSION)))));
+                                    List.of(new ClassInDiagram(classUuid, EXTENSION))));
             transaction
                     .graph(CORE)
                     .getDiagramLayout()

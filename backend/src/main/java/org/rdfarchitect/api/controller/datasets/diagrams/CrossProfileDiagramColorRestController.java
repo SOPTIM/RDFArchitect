@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/crossprofilediagramColors")
+@RequestMapping("/api/workspaces/{workspaceName}/crossprofilediagramColors")
 @RequiredArgsConstructor
 public class CrossProfileDiagramColorRestController {
 
@@ -53,17 +53,17 @@ public class CrossProfileDiagramColorRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/crossprofilediagramColors\" from \"{}\"",
+                workspaceName,
                 originURL);
 
-        var result = colorUseCase.getCrossProfileColors(datasetName);
+        var result = colorUseCase.getCrossProfileColors(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/crossprofilediagramColors\" from \"{}\"",
+                workspaceName,
                 originURL);
         return result;
     }
@@ -77,19 +77,19 @@ public class CrossProfileDiagramColorRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @RequestBody CrossProfileDiagramColorDataDTO colorData) {
 
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/crossprofilediagramColors\" from \"{}\"",
+                workspaceName,
                 originURL);
 
-        colorUseCase.replaceCrossProfileColors(datasetName, colorData);
+        colorUseCase.replaceCrossProfileColors(workspaceName, colorData);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/crossprofilediagramColors\" from \"{}\"",
+                workspaceName,
                 originURL);
     }
 }

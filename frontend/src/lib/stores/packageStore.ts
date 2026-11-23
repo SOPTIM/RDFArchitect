@@ -70,11 +70,11 @@ function createPackageStore() {
     // ----- Getter -----
     async function getPackages(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         force = false,
     ): Promise<PackageListInfo | null> {
-        if (!workspaceName || !graphURI) return null;
-        const key = makeGraphKey(workspaceName, graphURI);
+        if (!workspaceName || !schemaName) return null;
+        const key = makeGraphKey(workspaceName, schemaName);
         return loadSlot(
             store,
             s => getGraphState(s, key),
@@ -85,7 +85,7 @@ function createPackageStore() {
             },
             async () => {
                 const { data, error } = await listPackages({
-                    path: { datasetName: workspaceName, graphURI },
+                    path: { workspaceName: workspaceName, schemaName },
                 });
                 if (error) return { error };
                 return {
@@ -96,7 +96,7 @@ function createPackageStore() {
                 };
             },
             LOG_PREFIX,
-            `packages for workspace="${workspaceName}", graph="${graphURI}"`,
+            `packages for workspace="${workspaceName}", graph="${schemaName}"`,
             force,
         );
     }
@@ -104,11 +104,11 @@ function createPackageStore() {
     // ----- Internal: local cache patch after a successful save -----
     function patchLocalPackage(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         pkg: PackageDto,
     ) {
-        if (!workspaceName || !graphURI || !pkg) return;
-        const key = makeGraphKey(workspaceName, graphURI);
+        if (!workspaceName || !schemaName || !pkg) return;
+        const key = makeGraphKey(workspaceName, schemaName);
 
         update(s => {
             const current = getGraphState(s, key);
@@ -154,18 +154,18 @@ function createPackageStore() {
 
     async function addNewPackage(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         pkg: PackageDto,
     ): Promise<Result<string>> {
         const label = getPackageDisplayLabel(pkg);
 
         console.log(`${LOG_PREFIX} Creating package "${label}" in`, {
             workspaceName,
-            graphURI,
+            schemaName,
         });
 
         const { data, error } = await addPackage({
-            path: { datasetName: workspaceName, graphURI },
+            path: { workspaceName: workspaceName, schemaName },
             body: pkg,
         });
 
@@ -185,7 +185,7 @@ function createPackageStore() {
         // Prefer server-issued uuid; fall back to whatever the caller sent.
         const newUUID = data ?? pkg.uuid;
         const stored: PackageDto = { ...pkg, uuid: newUUID };
-        patchLocalPackage(workspaceName, graphURI, stored);
+        patchLocalPackage(workspaceName, schemaName, stored);
 
         console.log(
             `${LOG_PREFIX} Created package "${label}" (uuid=${newUUID})`,
@@ -197,7 +197,7 @@ function createPackageStore() {
 
     async function replaceExistingPackage(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         pkg: PackageDto,
     ): Promise<Result> {
         const label = getPackageDisplayLabel(pkg);
@@ -214,13 +214,13 @@ function createPackageStore() {
 
         console.log(
             `${LOG_PREFIX} Replacing package "${label}" (uuid=${pkg.uuid}) in`,
-            { workspaceName, graphURI },
+            { workspaceName, schemaName },
         );
 
         const { error } = await replacePackage({
             path: {
-                datasetName: workspaceName,
-                graphURI,
+                workspaceName: workspaceName,
+                schemaName,
                 packageUUID: pkg.uuid,
             },
             body: pkg,
@@ -239,7 +239,7 @@ function createPackageStore() {
             return { error };
         }
 
-        patchLocalPackage(workspaceName, graphURI, pkg);
+        patchLocalPackage(workspaceName, schemaName, pkg);
         // A CGMES 2.4.15 profile may take its name from its profile package.
         graphStore.invalidateWorkspace(workspaceName);
 
@@ -252,26 +252,26 @@ function createPackageStore() {
     // Single convenience method that picks add vs. replace based on uuid
     async function savePackage(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         pkg: PackageDto,
     ): Promise<Result<string | undefined>> {
         if (pkg.uuid) {
             const res = await replaceExistingPackage(
                 workspaceName,
-                graphURI,
+                schemaName,
                 pkg,
             );
             return res.error
                 ? { error: res.error }
                 : { error: null, data: pkg.uuid };
         }
-        return addNewPackage(workspaceName, graphURI, pkg);
+        return addNewPackage(workspaceName, schemaName, pkg);
     }
 
     // ----- Invalidation -----
 
-    function invalidateGraph(workspaceName: string, graphURI: string) {
-        const key = makeGraphKey(workspaceName, graphURI);
+    function invalidateGraph(workspaceName: string, schemaName: string) {
+        const key = makeGraphKey(workspaceName, schemaName);
         update(s => {
             const byGraph = new Map(s.byGraph);
             byGraph.delete(key);

@@ -31,7 +31,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.GetRenderingDataService;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
@@ -79,7 +78,7 @@ final class CgmesWorkspace {
                 new GetRenderingDataService(
                         databasePort,
                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                        datasetName -> List.of(),
+                        workspaceName -> List.of(),
                         new QueryDiagramLayoutService(databasePort));
         this.classLayoutService =
                 new UpdateClassLayoutService(databasePort, Mappers.getMapper(PackageMapper.class));
@@ -92,21 +91,21 @@ final class CgmesWorkspace {
                 new ImportGraphsService(databasePort)
                         .importGraphs(workspace, files, null, ImportProgressListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
-        var graphUris = result.importedGraphUris();
+        var schemaNames = result.importedSchemaNames();
 
         var shownClasses = new ArrayList<ClassInDiagram>();
-        for (var graphUri : graphUris) {
-            var graph = new GraphIdentifier(workspace, graphUri);
+        for (var schemaName : schemaNames) {
+            var graph = new GraphIdentifier(workspace, schemaName);
             var packageUUID = firstPackage(graph);
             var nodes = render(graph, packageUUID);
             layOut(
                     nodes.stream().map(NodeDTO::getId).toList(),
                     positions ->
                             classLayoutService.updateClassPositions(graph, packageUUID, positions));
-            shownClasses.add(new ClassInDiagram(nodes.getFirst().getId(), new URI(graphUri)));
+            shownClasses.add(new ClassInDiagram(nodes.getFirst().getId(), schemaName));
         }
 
-        var firstGraph = graphUris.getFirst();
+        var firstGraph = schemaNames.getFirst();
         var graphDiagram =
                 new CustomDiagram(UUID.randomUUID(), "Graph diagram", shownClasses.subList(0, 1));
         var workspaceDiagram =
@@ -136,11 +135,11 @@ final class CgmesWorkspace {
                 positions ->
                         classLayoutService.updateClassPositions(
                                 workspace, crossProfileDiagramId, positions));
-        return graphUris;
+        return schemaNames;
     }
 
-    Map<UUID, String> positionsOfFirstPackage(String workspace, String graphUri) {
-        var graph = new GraphIdentifier(workspace, graphUri);
+    Map<UUID, String> positionsOfFirstPackage(String workspace, String schemaName) {
+        var graph = new GraphIdentifier(workspace, schemaName);
         var positions = new LinkedHashMap<UUID, String>();
         for (var node : render(graph, firstPackage(graph))) {
             positions.put(

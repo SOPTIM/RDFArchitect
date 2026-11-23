@@ -41,11 +41,11 @@ public final class GraphFolderNames {
     private static final Pattern RESERVED_NAMES =
             Pattern.compile("(?i)^(con|prn|aux|nul|com\\d|lpt\\d)(\\..*)?$");
 
-    public static Map<String, String> assign(List<String> graphUris) {
+    public static Map<String, String> assign(List<String> schemaNames) {
         var folders = new LinkedHashMap<String, String>();
         var taken = new HashSet<String>();
-        for (var graphUri : graphUris) {
-            var base = folderNameOf(graphUri);
+        for (var schemaName : schemaNames) {
+            var base = folderNameOf(schemaName);
             var folder = base;
             for (var counter = 2; !taken.add(folder.toLowerCase(Locale.ROOT)); counter++) {
                 var suffix = "-" + counter;
@@ -53,13 +53,13 @@ public final class GraphFolderNames {
                         base.substring(0, Math.min(base.length(), MAX_LENGTH - suffix.length()))
                                 + suffix;
             }
-            folders.put(graphUri, folder);
+            folders.put(schemaName, folder);
         }
         return folders;
     }
 
-    static String folderNameOf(String graphUri) {
-        var name = SCHEME.matcher(graphUri).replaceFirst("");
+    static String folderNameOf(String schemaName) {
+        var name = SCHEME.matcher(schemaName).replaceFirst("");
         name = UNSAFE_CHARACTERS.matcher(name).replaceAll("-");
         name = UNSAFE_ENDS.matcher(name).replaceAll("");
         if (name.length() > MAX_LENGTH) {

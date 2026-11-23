@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}")
+@RequestMapping("api/workspaces/{workspaceName}")
 @RequiredArgsConstructor
 public class WorkspaceValidationRESTController {
 
@@ -76,17 +76,17 @@ public class WorkspaceValidationRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/validate-workspace\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/validate-workspace\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var report = workspaceValidationUseCase.validateWorkspace(datasetName);
+        var report = workspaceValidationUseCase.validateWorkspace(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/validate-workspace\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/validate-workspace\" to \"{}\".",
+                workspaceName,
                 originURL);
         return report;
     }

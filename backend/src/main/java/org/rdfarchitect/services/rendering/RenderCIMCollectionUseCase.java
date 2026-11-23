@@ -41,10 +41,10 @@ public interface RenderCIMCollectionUseCase {
     /**
      * Generates the rendering data for a dataset-level custom diagram.
      *
-     * @param datasetName the dataset name that the collection belongs to
+     * @param workspaceName the dataset name that the collection belongs to
      * @param diagramId the id of the custom diagram that should be rendered
      * @return a dto that contains all data required to render a UML diagram for the given
      *     collection
      */
-    RenderingDataDTO renderDatasetDiagram(String datasetName, UUID diagramId);
+    RenderingDataDTO renderDatasetDiagram(String workspaceName, UUID diagramId);
 }

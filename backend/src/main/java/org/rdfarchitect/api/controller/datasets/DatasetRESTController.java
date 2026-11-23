@@ -45,7 +45,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets")
+@RequestMapping("api/workspaces")
 @RequiredArgsConstructor
 public class DatasetRESTController {
 
@@ -70,11 +70,11 @@ public class DatasetRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL) {
-        logger.info("Received GET request: \"/api/datasets\" from \"{}\".", originURL);
+        logger.info("Received GET request: \"/api/workspaces\" from \"{}\".", originURL);
 
         var res = listDatasetsUseCase.listDatasets();
 
-        logger.info("Sending response to GET request: \"/api/datasets\" to \"{}\".", originURL);
+        logger.info("Sending response to GET request: \"/api/workspaces\" to \"{}\".", originURL);
         return res;
     }
 
@@ -86,7 +86,7 @@ public class DatasetRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(responseCode = "409", description = "Dataset already exists")
             })
-    @PutMapping("/{datasetName}")
+    @PutMapping("/{workspaceName}")
     public String createDataset(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -95,17 +95,17 @@ public class DatasetRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        createDatasetUseCase.createDataset(datasetName);
+        createDatasetUseCase.createDataset(workspaceName);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}\" to \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -115,7 +115,7 @@ public class DatasetRESTController {
             description = "Renames a dataset, keeping all of its graphs, diagrams and namespaces.",
             tags = {"dataset"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PostMapping("/{datasetName}/rename")
+    @PostMapping("/{workspaceName}/rename")
     public String renameDataset(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -124,19 +124,19 @@ public class DatasetRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The literal name to rename the dataset to.") @RequestParam
-                    String newDatasetName) {
+                    String newWorkspaceName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/rename\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/rename\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        renameDatasetUseCase.renameDataset(datasetName, newDatasetName);
+        renameDatasetUseCase.renameDataset(workspaceName, newWorkspaceName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/rename\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/rename\" to \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -146,7 +146,7 @@ public class DatasetRESTController {
             description = "Deletes a dataset including all of its graphs.",
             tags = {"dataset"},
             responses = {@ApiResponse(responseCode = "200")})
-    @DeleteMapping("/{datasetName}")
+    @DeleteMapping("/{workspaceName}")
     public String deleteDataset(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -155,17 +155,17 @@ public class DatasetRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        deleteDatasetUseCase.deleteDataset(datasetName);
+        deleteDatasetUseCase.deleteDataset(workspaceName);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}\" to \"{}\".",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}\" to \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }

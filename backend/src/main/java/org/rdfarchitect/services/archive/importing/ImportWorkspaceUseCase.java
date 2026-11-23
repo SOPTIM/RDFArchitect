@@ -28,7 +28,7 @@ public interface ImportWorkspaceUseCase {
      * @param cancelled whether the import was cancelled before it was committed
      */
     record WorkspaceImportResult(
-            List<String> importedGraphUris, List<String> notices, boolean cancelled) {}
+            List<String> importedSchemaNames, List<String> notices, boolean cancelled) {}
 
     WorkspaceImportResult importWorkspace(
             String workspaceName, InputStream archive, ImportProgressListener listener);

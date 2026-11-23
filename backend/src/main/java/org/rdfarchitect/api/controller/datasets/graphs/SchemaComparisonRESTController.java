@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.compare.SchemaComparisonUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,13 +45,12 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/compare")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/compare")
 public class SchemaComparisonRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SchemaComparisonRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SchemaComparisonUseCase schemaComparisonUseCase;
 
     @Operation(
@@ -82,30 +80,25 @@ public class SchemaComparisonRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file containing the graph to be compared.")
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/compare\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/compare\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(datasetName, extendedGraphURI), file);
+                        new GraphIdentifier(workspaceName, schemaName), file);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/compare\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/compare\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return changes;
     }
@@ -137,40 +130,34 @@ public class SchemaComparisonRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the base dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the base graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the base schema.") @PathVariable
+                    String schemaName,
             @Parameter(description = "The literal name of the dataset to compare against.")
-                    @RequestParam("otherDataset")
-                    String otherDataset,
-            @Parameter(description = "The url encoded uri of the graph to compare against.")
-                    @RequestParam("otherGraph")
-                    String otherGraph) {
+                    @RequestParam("otherWorkspace")
+                    String otherWorkspace,
+            @Parameter(description = "The name of the schema to compare against.")
+                    @RequestParam("otherSchema")
+                    String otherSchema) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}/graphs/{{}/compare?otherDataset={{}}&otherGraph={{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
-                otherDataset,
-                otherGraph,
+                "Received GET request: \"/api/workspaces/{{}/schemas/{{}/compare?otherWorkspace={{}}&otherSchema={{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
+                otherWorkspace,
+                otherSchema,
                 originURL);
-
-        var baseGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var otherGraphURI = expandURIUseCase.expandUri(otherDataset, otherGraph);
 
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(datasetName, baseGraphURI),
-                        new GraphIdentifier(otherDataset, otherGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName),
+                        new GraphIdentifier(otherWorkspace, otherSchema));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}/graphs/{{}/compare?otherDataset={{}}&otherGraph={{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
-                otherDataset,
-                otherGraph,
+                "Sending response to GET request: \"/api/workspaces/{{}/schemas/{{}/compare?otherWorkspace={{}}&otherSchema={{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
+                otherWorkspace,
+                otherSchema,
                 originURL);
         return changes;
     }

@@ -34,7 +34,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassSource;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,7 +50,8 @@ class CopyClassSourceReaderTest {
     private static final String CLASS_UUID = "43836908-c7f7-4749-bb8b-3ac9250de655";
     private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
 
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     private DatabasePort databasePort;
     private CopyClassSourceReader sourceReader;
@@ -61,13 +61,13 @@ class CopyClassSourceReaderTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort =
                 spy(new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig())));
-        sourceReader = new CopyClassSourceReader(databasePort, new ExpandURIService(databasePort));
+        sourceReader = new CopyClassSourceReader(databasePort);
 
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
@@ -84,7 +84,7 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
 
         verify(databasePort, times(1))
-                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
+                .beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ);
     }
 
     @Test
@@ -93,7 +93,7 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID));
 
         verify(databasePort, times(2))
-                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
+                .beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ);
     }
 
     @Test

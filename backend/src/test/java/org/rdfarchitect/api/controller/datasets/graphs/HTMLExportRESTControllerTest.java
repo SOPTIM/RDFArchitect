@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphHTMLUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -32,27 +31,24 @@ import java.nio.charset.StandardCharsets;
 
 class HTMLExportRESTControllerTest {
 
-    private ExpandURIUseCase expandURIUseCase;
     private ExportGraphHTMLUseCase exportGraphHTMLUseCase;
     private HTMLExportRESTController controller;
 
     @BeforeEach
     void setUp() {
-        expandURIUseCase = mock(ExpandURIUseCase.class);
         exportGraphHTMLUseCase = mock(ExportGraphHTMLUseCase.class);
-        controller = new HTMLExportRESTController(expandURIUseCase, exportGraphHTMLUseCase);
+        controller = new HTMLExportRESTController(exportGraphHTMLUseCase);
     }
 
-    private void stubExport(String graphURI, String expandedGraphURI) {
-        when(expandURIUseCase.expandUri("dataset", graphURI)).thenReturn(expandedGraphURI);
+    private void stubExport(String schemaName) {
         when(exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier("dataset", expandedGraphURI), "png", false))
+                        new GraphIdentifier("dataset", schemaName), "png", false))
                 .thenReturn("<html></html>".getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
     void getHTMLExport_namesTheFileAfterTheGraph() {
-        stubExport("EQ", "http://example.com/EQ");
+        stubExport("EQ");
 
         var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
@@ -62,7 +58,7 @@ class HTMLExportRESTControllerTest {
 
     @Test
     void getHTMLExport_exposesTheContentDispositionToTheBrowser() {
-        stubExport("EQ", "http://example.com/EQ");
+        stubExport("EQ");
 
         var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
@@ -71,13 +67,13 @@ class HTMLExportRESTControllerTest {
     }
 
     @Test
-    void getHTMLExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default", "default");
+    void getHTMLExport_keepsTheSchemaNameAsItIs() {
+        stubExport("my-profile");
 
         var response =
-                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "default", "png", false);
+                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "my-profile", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
-                .isEqualTo("default.html");
+                .isEqualTo("my-profile.html");
     }
 }

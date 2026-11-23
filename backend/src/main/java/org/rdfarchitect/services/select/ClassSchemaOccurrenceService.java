@@ -49,53 +49,53 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
 
     @Override
     public List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(
-            String datasetName, String classUUID) {
-        var classUri = locateClassUseCase.locate(datasetName, classUUID).classUri();
-        var schemas = schemasByGraphUri(datasetName);
+            String workspaceName, String classUUID) {
+        var classUri = locateClassUseCase.locate(workspaceName, classUUID).classUri();
+        var schemas = schemasBySchemaName(workspaceName);
 
         var occurrences = new ArrayList<ClassSchemaOccurrenceDTO>();
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (var graphUri : transaction.graphUris()) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (var schemaName : transaction.schemaNames()) {
                 occurrences.add(
-                        occurrenceIn(datasetName, graphUri, schemas.get(graphUri), classUri));
+                        occurrenceIn(workspaceName, schemaName, schemas.get(schemaName), classUri));
             }
         }
         return occurrences;
     }
 
     /** The schemas of the dataset as the schema pickers know them, by graph URI. */
-    private Map<String, GraphDTO> schemasByGraphUri(String datasetName) {
+    private Map<String, GraphDTO> schemasBySchemaName(String workspaceName) {
         var schemas = new HashMap<String, GraphDTO>();
-        for (var graph : listGraphsUseCase.listGraphs(datasetName)) {
-            if (graph.getUri() != null) {
-                schemas.put(graph.getUri().toString(), graph);
+        for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
+            if (graph.getName() != null) {
+                schemas.put(graph.getName(), graph);
             }
         }
         return schemas;
     }
 
     private ClassSchemaOccurrenceDTO occurrenceIn(
-            String datasetName, String graphUri, GraphDTO schema, String classUri) {
+            String workspaceName, String schemaName, GraphDTO schema, String classUri) {
         var keyword = schema == null ? null : schema.getKeyword();
         var label = schema == null ? null : schema.getLabel();
-        var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             var model = ModelFactory.createModelForGraph(graph);
             var resource = model.getResource(classUri);
             if (!CIMResourceUtils.containsClass(graph, new URI(classUri))
                     || !resource.hasProperty(RDFA.uuid)) {
-                return new ClassSchemaOccurrenceDTO(graphUri, keyword, label, false, null, null);
+                return new ClassSchemaOccurrenceDTO(schemaName, keyword, label, false, null, null);
             }
             return new ClassSchemaOccurrenceDTO(
-                    graphUri,
+                    schemaName,
                     keyword,
                     label,
                     true,
                     CIMResourceUtils.findUuidForResource(resource),
-                    stubOf(new CIMClass(graphUri, model, resource)));
+                    stubOf(new CIMClass(schemaName, model, resource)));
         }
     }
 

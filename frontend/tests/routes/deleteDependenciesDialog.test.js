@@ -28,7 +28,7 @@ import { ontologyStore } from "$lib/stores/ontologyStore.ts";
 import DeleteDependenciesDialog from "../../src/routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
 
 const WORKSPACE = "cgmes";
-const GRAPH = "http://graph#Equipment";
+const GRAPH = "Equipment";
 
 /** Deleting a profile header: the resource the navigation takes a schema's name from. */
 const HEADER = {
@@ -62,7 +62,7 @@ async function deleteHeader() {
         props: {
             showDialog: true,
             workspaceName: WORKSPACE,
-            graphUri: GRAPH,
+            schemaName: GRAPH,
             resourceUuid: HEADER.resourceIdentifier.uuid,
         },
     });

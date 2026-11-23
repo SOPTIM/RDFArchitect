@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * Identifies a single class to be copied, including the graph it originates from.
  *
- * @param graphIdentifier The graph URI and dataset name of the graph the class is copied from.
+ * @param graphIdentifier The schema name and dataset name of the graph the class is copied from.
  * @param classUUID The UUID of the class that will be copied.
  */
 public record CopyClassSource(GraphIdentifier graphIdentifier, UUID classUUID) {}

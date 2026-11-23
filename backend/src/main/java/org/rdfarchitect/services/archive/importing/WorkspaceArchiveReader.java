@@ -20,8 +20,9 @@ package org.rdfarchitect.services.archive.importing;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import org.apache.commons.io.FileUtils;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.database.WorkspaceTransaction;
-import org.rdfarchitect.database.inmemory.Workspace;
+import org.rdfarchitect.exception.graph.InvalidSchemaNameException;
 import org.rdfarchitect.services.archive.FormatVersion;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.WorkspaceArchiveManifest;
@@ -100,10 +101,10 @@ public final class WorkspaceArchiveReader {
             throw new InvalidWorkspaceArchiveException(problems);
         }
 
-        var graphUriByFolder = readGraphEntries(manifest.graphs());
-        var in = new PartReader(entries, graphUriByFolder, problems);
+        var schemaNameByFolder = readGraphEntries(manifest.graphs());
+        var in = new PartReader(entries, schemaNameByFolder, problems);
         var graphs = new ArrayList<WorkspaceArchive.ArchivedGraph>();
-        graphUriByFolder.forEach(
+        schemaNameByFolder.forEach(
                 (folder, uri) ->
                         graphs.add(
                                 new WorkspaceArchive.ArchivedGraph(
@@ -165,27 +166,35 @@ public final class WorkspaceArchiveReader {
     }
 
     private Map<String, String> readGraphEntries(List<WorkspaceArchiveManifest.GraphEntry> graphs) {
-        var graphUriByFolder = new LinkedHashMap<String, String>();
+        var schemaNameByFolder = new LinkedHashMap<String, String>();
         var uris = new HashSet<String>();
         for (var graph : graphs) {
             var where = WorkspaceArchiveFormat.MANIFEST + ": graph \"" + graph.folder() + "\"";
             var valid = true;
-            if (graphUriByFolder.containsKey(graph.folder())) {
+            if (schemaNameByFolder.containsKey(graph.folder())) {
                 problems.add(where + ": two graphs are stored in this folder.");
                 valid = false;
             }
-            if (!Workspace.isValidGraphName(graph.uri())) {
-                problems.add(where + ": \"" + graph.uri() + "\" is not a valid graph URI.");
+            if (!isValidSchemaName(graph.uri())) {
+                problems.add(where + ": \"" + graph.uri() + "\" is not a valid schema name.");
                 valid = false;
             } else if (!uris.add(graph.uri())) {
-                problems.add(where + ": the graph URI " + graph.uri() + " is used twice.");
+                problems.add(where + ": the schema name " + graph.uri() + " is used twice.");
                 valid = false;
             }
             if (valid) {
-                graphUriByFolder.put(graph.folder(), graph.uri());
+                schemaNameByFolder.put(graph.folder(), graph.uri());
             }
         }
-        return graphUriByFolder;
+        return schemaNameByFolder;
+    }
+
+    private static boolean isValidSchemaName(String name) {
+        try {
+            return SchemaNames.validate(name).equals(name);
+        } catch (InvalidSchemaNameException _) {
+            return false;
+        }
     }
 
     private static InvalidWorkspaceArchiveException invalid(String problem) {

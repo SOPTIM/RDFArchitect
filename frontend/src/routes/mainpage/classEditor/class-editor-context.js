@@ -39,7 +39,7 @@ export const openClassEditor = {
         }
     },
 
-    match(workspaceName, graphUri, classUuid) {
+    match(workspaceName, schemaName, classUuid) {
         const source = openEditorSource;
         if (!source || !classUuid || !source.reactiveClass) {
             return null;
@@ -51,9 +51,9 @@ export const openClassEditor = {
             return null;
         }
         if (
-            graphUri &&
-            source.graphUri &&
-            String(source.graphUri) !== String(graphUri)
+            schemaName &&
+            source.schemaName &&
+            String(source.schemaName) !== String(schemaName)
         ) {
             return null;
         }
@@ -65,13 +65,13 @@ export const openClassEditor = {
 // copies cannot overwrite each other's unsaved changes.
 let openEditorSource = null;
 
-export async function loadClassEditorContextData(workspaceName, graphUri) {
+export async function loadClassEditorContextData(workspaceName, schemaName) {
     const [classes, packages, datatypes, stereotypes, namespaces] =
         await Promise.all([
-            getClasses(workspaceName, graphUri),
-            getPackages(workspaceName, graphUri),
-            getDataTypes(workspaceName, graphUri),
-            datatypesStore.getStereotypes(workspaceName, graphUri),
+            getClasses(workspaceName, schemaName),
+            getPackages(workspaceName, schemaName),
+            getDataTypes(workspaceName, schemaName),
+            datatypesStore.getStereotypes(workspaceName, schemaName),
             workspaceStore.getNamespaces(workspaceName),
         ]);
     return { classes, packages, datatypes, stereotypes, namespaces };
@@ -90,8 +90,8 @@ export function createClassEditorContextValue(getSource, openClass = () => {}) {
         get workspaceName() {
             return getSource().workspaceName;
         },
-        get graphUri() {
-            return getSource().graphUri;
+        get schemaName() {
+            return getSource().schemaName;
         },
         get readOnly() {
             return getSource().readOnly;
