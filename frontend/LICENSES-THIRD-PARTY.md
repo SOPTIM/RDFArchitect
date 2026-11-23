@@ -92,7 +92,7 @@
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.7.0
+- **Version:** 2.0.0
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
