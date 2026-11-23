@@ -27,8 +27,9 @@
  * Widgets that answer for their own keys, matched by class because they are not form controls.
  *
  * `.monaco-editor` covers the code editor and the widgets it renders inside itself — the
- * suggestion list, the find box, the hover; `.monaco-menu` covers its context menu, which is
- * portalled to the document body.
+ * suggestion list, the find box, the hover, and the context menu, whose shadow root hangs off the
+ * editor, so a key press in the menu reaches the page from inside the editor. `.monaco-menu` covers
+ * the context menu where Monaco draws it without a shadow root, outside the editor, as on iOS.
  */
 const SELF_HANDLING = ".monaco-editor, .monaco-menu";
 

@@ -66,7 +66,13 @@ describe("ownsKeyboardInput", () => {
         );
     });
 
-    test("and so does its context menu, which is portalled out of the editor", () => {
+    test("and so does its context menu, inside the editor or out of it", () => {
+        // Drawn in a shadow root hanging off the editor, the menu's key presses reach the page as
+        // ones on that root's host.
+        const host = inside("monaco-editor");
+        host.className = "shadow-root-host";
+        expect(ownsKeyboardInput(host)).toBe(true);
+        // Without a shadow root, as on iOS, Monaco draws the menu next to the editor.
         expect(ownsKeyboardInput(inside("monaco-menu"))).toBe(true);
     });
 });
