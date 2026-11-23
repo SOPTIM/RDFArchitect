@@ -22,6 +22,9 @@ import org.apache.jena.update.Update;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 
+import java.util.Collection;
+import java.util.Map;
+
 /** Defines how to execute a SPARQL {@link Update} against a dataset of a database. */
 public interface DatabaseUpdateCommand {
 
@@ -58,6 +61,16 @@ public interface DatabaseUpdateCommand {
      * @param graphSource {@link GraphSource} containing the to be inserted {@link Graph}
      */
     void insertGraph(GraphSource graphSource) throws DataAccessException;
+
+    /**
+     * Removes some graphs of the specified dataset and writes others, in one request, which the
+     * store applies as one transaction.
+     *
+     * @param removed names of the graphs to remove
+     * @param written the graphs to write by name, each replacing a graph of that name
+     */
+    void replaceGraphs(Collection<String> removed, Map<String, Graph> written)
+            throws DataAccessException;
 
     /**
      * Deletes a graph from the specified dataset of the database.

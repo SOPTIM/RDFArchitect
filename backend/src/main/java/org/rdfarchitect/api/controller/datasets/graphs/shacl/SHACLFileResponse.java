@@ -1,0 +1,101 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.api.controller.datasets.graphs.shacl;
+
+import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+import java.util.Map;
+
+/** What a SHACL download is negotiated and named as. */
+public final class SHACLFileResponse {
+
+    /**
+     * The media types offered, in the order they are preferred.
+     *
+     * <p>A list rather than a map, because an Accept header may name several of them and the answer
+     * has to be the same every time. An immutable map iterates in an order the JDK is free to vary
+     * between runs, so picking from one made the chosen format depend on it.
+     */
+    private static final List<Map.Entry<String, RDFFormat>> SUPPORTED_FORMATS =
+            List.of(
+                    Map.entry("text/turtle", RDFFormat.TURTLE),
+                    Map.entry("application/rdf+xml", RDFFormat.RDFXML),
+                    Map.entry("application/rdf+json", RDFFormat.RDFJSON),
+                    Map.entry("application/n-triples", RDFFormat.NTRIPLES));
+
+    private SHACLFileResponse() {}
+
+    /**
+     * The first supported type the header names, preferring the earliest listed above.
+     *
+     * <p>No header, or one accepting anything, gets Turtle.
+     *
+     * @throws ResponseStatusException 406 when the header names none of the supported types
+     */
+    public static RDFFormat rdfFormat(String acceptHeader) {
+        if (acceptHeader == null || acceptHeader.isBlank()) {
+            return RDFFormat.TURTLE;
+        }
+        for (var entry : SUPPORTED_FORMATS) {
+            if (acceptHeader.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        if (acceptHeader.contains("*/*")) {
+            return RDFFormat.TURTLE;
+        }
+        throw new ResponseStatusException(
+                HttpStatus.NOT_ACCEPTABLE,
+                "Constraints can be exported as "
+                        + String.join(
+                                ", ", SUPPORTED_FORMATS.stream().map(Map.Entry::getKey).toList())
+                        + ".");
+    }
+
+    /** The download, named after the schema it was exported from. */
+    public static ResponseEntity<byte[]> of(
+            String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
+        return named(schemaName + "-shacl", format, outStream);
+    }
+
+    /** The download, named after the workspace it was exported from. */
+    public static ResponseEntity<byte[]> ofWorkspace(
+            String workspaceName, RDFFormat format, ByteArrayOutputStream outStream) {
+        return named(workspaceName + "-shacl", format, outStream);
+    }
+
+    private static ResponseEntity<byte[]> named(
+            String stem, RDFFormat format, ByteArrayOutputStream outStream) {
+        var fileName = stem + "." + format.getLang().getFileExtensions().getFirst();
+        return ResponseEntity.ok()
+                .headers(DownloadHeaders.attachment(fileName))
+                // Stated, since Spring would otherwise pick from the Accept header on its own and
+                // could label the bytes as a format other than the one they were written in.
+                .contentType(
+                        MediaType.parseMediaType(
+                                format.getLang().getContentType().getContentTypeStr()))
+                .body(outStream.toByteArray());
+    }
+}

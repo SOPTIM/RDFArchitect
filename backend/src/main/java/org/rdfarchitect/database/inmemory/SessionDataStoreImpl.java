@@ -33,6 +33,8 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
@@ -218,6 +220,28 @@ public class SessionDataStoreImpl implements SessionDataStore {
                             .setGraphName(SchemaIri.of(schemaName))
                             .build();
             databaseConnection.insertGraph(graphSource, workspaceName);
+            writeShapesDocuments(databaseConnection, workspaceName, transaction);
+        }
+    }
+
+    /**
+     * Makes the database hold the workspace's shapes documents as they stand, in the layout {@link
+     * ShapesDocumentGraphs} defines.
+     *
+     * <p>All in one request, because an insert appends and so what is stored has to go first, and a
+     * failure between the two would lose it.
+     */
+    private void writeShapesDocuments(
+            DatabaseConnection databaseConnection,
+            String workspaceName,
+            WorkspaceTransaction transaction) {
+        var stored =
+                listGraphNames(databaseConnection, workspaceName).stream()
+                        .filter(ShapesGraphNaming::isReserved)
+                        .toList();
+        var current = ShapesDocumentGraphs.of(transaction.shapesDocuments().values());
+        if (!stored.isEmpty() || !current.isEmpty()) {
+            databaseConnection.replaceGraphs(stored, current, workspaceName);
         }
     }
 
@@ -269,17 +293,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @return fetched {@link Graph}
      */
     private Dataset fetchDataset(DatabaseConnection databaseConnection, String workspaceName) {
-        // build query
-        var graphVar = "?graph";
-        var graphQuery =
-                new SelectBuilder()
-                        .addVar(graphVar)
-                        .setDistinct(true)
-                        .addGraph(graphVar, "?s", "?p", "?o")
-                        .build();
-
         // fetch data
-        var queryResultSet = databaseConnection.sendSelect(graphQuery, workspaceName).asResultSet();
+        var graphNames = listGraphNames(databaseConnection, workspaceName);
         var prefixMapping = databaseConnection.getPrefixMapping(workspaceName);
 
         // insert prefixes
@@ -287,12 +302,29 @@ public class SessionDataStoreImpl implements SessionDataStore {
         dataset.getPrefixMapping().setNsPrefixes(prefixMapping);
 
         // insert named graphs, the default graph holds no graph of the workspace
-        while (queryResultSet.hasNext()) {
-            var graphIri = queryResultSet.next().get(graphVar).asNode().getURI();
+        for (var graphIri : graphNames) {
             var graph = fetchGraph(databaseConnection, workspaceName, graphIri);
             dataset.addNamedModel(graphIri, ModelFactory.createModelForGraph(graph));
         }
         return dataset;
+    }
+
+    /** Returns the names of the dataset's non-empty named graphs. */
+    private static List<String> listGraphNames(
+            DatabaseConnection databaseConnection, String workspaceName) {
+        var graphVar = "?graph";
+        var graphQuery =
+                new SelectBuilder()
+                        .addVar(graphVar)
+                        .setDistinct(true)
+                        .addGraph(graphVar, "?s", "?p", "?o")
+                        .build();
+        var resultSet = databaseConnection.sendSelect(graphQuery, workspaceName).asResultSet();
+        var names = new ArrayList<String>();
+        while (resultSet.hasNext()) {
+            names.add(resultSet.next().get(graphVar).asNode().getURI());
+        }
+        return names;
     }
 
     /**

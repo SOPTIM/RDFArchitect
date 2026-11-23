@@ -33,7 +33,7 @@ public record ParticipantId(Kind kind, String scope) {
     public enum Kind {
         /** The RDF schema of a graph. */
         RDF,
-        /** The custom SHACL shapes of a graph. */
+        /** The custom SHACL shapes of a graph, or the shapes documents of the workspace. */
         SHACL,
         /** Diagram layout information. */
         DL,

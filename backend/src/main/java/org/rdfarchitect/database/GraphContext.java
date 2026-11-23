@@ -44,4 +44,14 @@ public interface GraphContext {
 
     /** Returns the custom diagrams defined on the graph, by id. */
     Map<UUID, CustomDiagram> getCustomDiagrams();
+
+    /**
+     * Identifies the schema's committed content. A commit that changes the schema gives it a new
+     * id, one that leaves it alone keeps it, and an undo or redo returns the id of the content it
+     * moves to, so two reads seeing the same id are looking at the same triples.
+     *
+     * <p>Exposed so that work derived from a schema can be kept until the schema actually changes,
+     * without the commit path having to notify anyone.
+     */
+    UUID getRdfGraphVersion();
 }
