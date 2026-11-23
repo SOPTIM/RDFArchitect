@@ -137,6 +137,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public UUID workspaceId(String workspaceName) {
+        return getOrCreateSessionDataStore().workspaceId(workspaceName);
+    }
+
+    @Override
     public UUID currentChangeId(String workspaceName) {
         return getOrCreateSessionDataStore().currentChangeId(workspaceName);
     }

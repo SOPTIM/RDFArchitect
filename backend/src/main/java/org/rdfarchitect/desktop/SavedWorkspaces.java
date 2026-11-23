@@ -24,7 +24,6 @@ import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -78,11 +77,6 @@ public class SavedWorkspaces {
         }
         markSaved(workspaceName, version);
         return true;
-    }
-
-    /** Returns the version the workspace was last saved at, in the current session. */
-    public Optional<UUID> savedVersion(String workspaceName) {
-        return Optional.ofNullable(savedVersions.get(key(workspaceName)));
     }
 
     /** Returns the workspaces of the current session that hold changes no file has. */

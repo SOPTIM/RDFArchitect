@@ -228,10 +228,7 @@ public class DesktopRESTController {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "The workspace is being changed right now.");
         }
-        fileLocations.remember(
-                workspaceName,
-                request.path(),
-                savedWorkspaces.savedVersion(workspaceName).orElseThrow());
+        fileLocations.remember(workspaceName, request.path());
     }
 
     @Operation(
@@ -255,7 +252,6 @@ public class DesktopRESTController {
             var saved = workspaceFiles.writeTo(workspaceName, path);
             if (saved != null) {
                 savedWorkspaces.markSaved(workspaceName, saved);
-                fileLocations.remember(workspaceName, path, saved);
             }
             logger.info("Saved workspace \"{}\" to {}.", workspaceName, path);
         } catch (IOException e) {

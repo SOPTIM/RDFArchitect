@@ -88,6 +88,9 @@ public class Workspace {
 
     @Setter @Getter private volatile boolean isReadOnly = true;
 
+    /** Stays the same through every change and rename; a workspace created anew gets another. */
+    @Getter private final UUID id = UUID.randomUUID();
+
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final WorkspaceChangeLog changeLog;

@@ -25,6 +25,7 @@ import org.apache.jena.riot.RDFParser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
@@ -70,7 +71,7 @@ class WorkspaceFileLocationsTest {
     @Test
     void keepsTheFileWhileTheWorkspaceGoesOn() {
         addSchema("a");
-        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+        locations.remember("Draft", FILE);
 
         addSchema("b");
         databasePort.undo("Draft");
@@ -83,7 +84,7 @@ class WorkspaceFileLocationsTest {
     @Test
     void doesNotHandTheFileToAWorkspaceCreatedAnewUnderTheSameName() {
         addSchema("a");
-        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+        locations.remember("Draft", FILE);
 
         databasePort.deleteDataset("Draft");
         databasePort.createDataset("Draft");
@@ -93,8 +94,51 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
+    void keepsTheFileThroughARename() {
+        locations.remember("Draft", FILE);
+
+        databasePort.renameDataset("Draft", "Final");
+
+        assertThat(locations.locationOf("Final")).contains(FILE);
+        assertThat(locations.locationOf("Draft")).isEmpty();
+        assertThat(locations.workspacesWithFile()).containsExactly("Final");
+    }
+
+    @Test
+    void keepsTheFileWhenAnUndoneChangeIsReplacedByAnother() {
+        addSchema("a");
+        locations.remember("Draft", FILE);
+
+        databasePort.undo("Draft");
+        addSchema("b");
+
+        assertThat(locations.locationOf("Draft")).contains(FILE);
+    }
+
+    @Test
+    void keepsTheFileOnceTheHistoryNoLongerReachesBackToIt() {
+        var maxVersions = GraphCompressionConfig.getMaxVersions();
+        new GraphCompressionConfig().setMaxVersions(3);
+        try {
+            databasePort.createDataset("Long");
+            locations.remember("Long", FILE);
+            for (var i = 0; i < 5; i++) {
+                try (var transaction = databasePort.beginTransaction("Long", ReadWrite.WRITE)) {
+                    transaction.createGraph(
+                            "s" + i, RDFParser.fromString(SCHEMA, Lang.TURTLE).toGraph());
+                    transaction.commit("Add s" + i);
+                }
+            }
+
+            assertThat(locations.locationOf("Long")).contains(FILE);
+        } finally {
+            new GraphCompressionConfig().setMaxVersions(maxVersions);
+        }
+    }
+
+    @Test
     void forgetsTheFileOfADeletedWorkspace() {
-        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+        locations.remember("Draft", FILE);
 
         databasePort.deleteDataset("Draft");
 
@@ -103,7 +147,7 @@ class WorkspaceFileLocationsTest {
 
     @Test
     void forgetsAFileReplacedByAnother() {
-        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+        locations.remember("Draft", FILE);
 
         locations.forget("Draft");
 
@@ -113,7 +157,7 @@ class WorkspaceFileLocationsTest {
 
     @Test
     void keepsFilesPerSession() {
-        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+        locations.remember("Draft", FILE);
 
         SessionContext.setSessionId("another session");
 

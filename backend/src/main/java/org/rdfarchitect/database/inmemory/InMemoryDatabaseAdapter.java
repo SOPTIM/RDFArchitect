@@ -88,6 +88,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public UUID workspaceId(String workspaceName) {
+        return database.workspaceId(workspaceName);
+    }
+
+    @Override
     public UUID currentChangeId(String workspaceName) {
         return database.currentChangeId(workspaceName);
     }
