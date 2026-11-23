@@ -21,7 +21,6 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.shacl.vocabulary.SHACL;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 
 import java.util.ArrayList;
@@ -269,99 +268,6 @@ public final class EffectiveConstraints {
                 .reduce(EffectiveConstraints::conjunction)
                 .orElseGet(Constraint::empty);
     }
-
-    /**
-     * A constraint in words, listing only what was actually stated.
-     *
-     * <p>Lives here rather than beside either caller so that "0..1, xsd:float" means the same thing
-     * in the conformance report and in the class dialog.
-     */
-    public static String describe(Constraint constraint, PrefixMapping prefixes) {
-        return describe(constraint, prefixes, ClassHierarchy.NONE);
-    }
-
-    /**
-     * As {@link #describe(Constraint, PrefixMapping)}, naming a value type by its most general
-     * classes: a generated list of a range and every class deriving from it reads as the range.
-     */
-    public static String describe(
-            Constraint constraint, PrefixMapping prefixes, ClassHierarchy hierarchy) {
-        var parts = new ArrayList<String>();
-        if (constraint.minCount() != null || constraint.maxCount() != null) {
-            parts.add(
-                    "%s..%s"
-                            .formatted(
-                                    constraint.minCount() == null ? "0" : constraint.minCount(),
-                                    constraint.maxCount() == null ? "n" : constraint.maxCount()));
-        }
-        if (!constraint.dataTypes().isEmpty()) {
-            parts.add(terms(constraint.dataTypes(), prefixes));
-        }
-        // Every sh:class applies, while a list offers alternatives and reads as the most general of
-        // them. A list saying nothing the classes don't already say is left out.
-        if (!constraint.valueClasses().isEmpty()) {
-            parts.add("of class " + terms(constraint.valueClasses(), prefixes));
-        }
-        if (constraint.valueTypes() != null) {
-            var alternatives = hierarchy.roots(constraint.valueTypes());
-            if (alternatives.isEmpty()) {
-                parts.add("of class nothing");
-            } else if (!constraint.valueClasses().containsAll(alternatives)) {
-                parts.add("of class " + terms(alternatives, prefixes, " or "));
-            }
-        }
-        if (!constraint.nodeKinds().isEmpty()) {
-            parts.add(terms(constraint.nodeKinds(), prefixes));
-        }
-        if (constraint.allowedValues() != null) {
-            parts.add("one of " + values(constraint.allowedValues(), prefixes));
-        }
-        return String.join(", ", parts);
-    }
-
-    /** The terms of a set, shortest form first, joined as prose. */
-    public static String terms(Set<String> iris, PrefixMapping prefixes) {
-        return terms(iris, prefixes, " and ");
-    }
-
-    private static String terms(Set<String> iris, PrefixMapping prefixes, String separator) {
-        return iris.stream()
-                .map(iri -> term(iri, prefixes))
-                .sorted()
-                .collect(Collectors.joining(separator));
-    }
-
-    /** The values of an {@code sh:in} list as a reader would write them, sorted. */
-    public static String values(Set<Node> values, PrefixMapping prefixes) {
-        if (values.isEmpty()) {
-            return "nothing";
-        }
-        return values.stream()
-                .map(value -> value.isURI() ? term(value.getURI(), prefixes) : value.toString())
-                .sorted()
-                .collect(Collectors.joining(", "));
-    }
-
-    private static String term(String iri, PrefixMapping prefixes) {
-        var shortened = prefixes.shortForm(iri);
-        if (shortened.equals(iri)) {
-            shortened = STANDARD.shortForm(iri);
-        }
-        return shortened.equals(iri) ? "<" + iri + ">" : shortened;
-    }
-
-    /**
-     * The vocabularies a constraint is written in, for a workspace whose prefixes do not bind them.
-     * Most do not: a schema declares {@code cim:}, not {@code sh:} or {@code xsd:}, and {@code
-     * <http://www.w3.org/ns/shacl#IRI>} reads far worse than {@code sh:IRI}.
-     */
-    private static final PrefixMapping STANDARD =
-            PrefixMapping.Factory.create()
-                    .setNsPrefix("sh", "http://www.w3.org/ns/shacl#")
-                    .setNsPrefix("xsd", "http://www.w3.org/2001/XMLSchema#")
-                    .setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-                    .setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
-                    .lock();
 
     private static Constraint read(Graph shapes, Node property) {
         var in = listOf(shapes, property, SHACL.in);

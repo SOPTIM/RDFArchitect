@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-class EffectiveConstraintsDescribeTest {
+class ConstraintFormatterTest {
 
     private static final String CIM = "https://cim.ucaiug.io/ns#";
 
@@ -46,7 +46,7 @@ class EffectiveConstraintsDescribeTest {
                         Set.of("http://www.w3.org/ns/shacl#IRI"),
                         null);
 
-        assertThat(EffectiveConstraints.describe(constraint, prefixes))
+        assertThat(ConstraintFormatter.describe(constraint, prefixes))
                 .contains("xsd:string")
                 .contains("sh:IRI")
                 .contains("cim:Equipment")
@@ -67,7 +67,7 @@ class EffectiveConstraintsDescribeTest {
                         Set.of("http://www.w3.org/ns/shacl#IRI"),
                         null);
 
-        assertThat(EffectiveConstraints.describe(constraint, prefixes)).contains("shacl:IRI");
+        assertThat(ConstraintFormatter.describe(constraint, prefixes)).contains("shacl:IRI");
     }
 
     private static final String BASE = CIM + "Base";
@@ -85,7 +85,7 @@ class EffectiveConstraintsDescribeTest {
     }
 
     private static String describeClasses(Set<String> classes, Set<String> types) {
-        return EffectiveConstraints.describe(
+        return ConstraintFormatter.describe(
                 new EffectiveConstraints.Constraint(
                         null, null, Set.of(), classes, types, Set.of(), null),
                 PrefixMapping.Factory.create().setNsPrefix("cim", CIM),
