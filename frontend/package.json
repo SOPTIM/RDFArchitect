@@ -49,7 +49,7 @@
         "@fortawesome/free-brands-svg-icons": "^7.0.1",
         "@fortawesome/free-regular-svg-icons": "^7.0.1",
         "@fortawesome/free-solid-svg-icons": "^7.0.1",
-        "@sveltejs/adapter-static": "^3.0.8",
+        "@sveltejs/adapter-static": "^4.0.0",
         "@tailwindcss/vite": "^4.1.8",
         "@xyflow/svelte": "^1.4.0",
         "asciidoctor": "^4.0.0",
