@@ -82,6 +82,22 @@ describe("tokenAt", () => {
         expect(tokenAt("    ", 2)).toBeNull();
         expect(tokenAt("", 1)).toBeNull();
     });
+
+    test("does not read a comparison or a string as an IRI around a name", () => {
+        const query = "  FILTER (?a < cim:Line.length || ?b > 3)";
+        expect(tokenAt(query, query.indexOf("cim:") + 3).text).toBe(
+            "cim:Line.length",
+        );
+
+        const message =
+            '  sh:message "must be < 10" ; sh:class cim:Line ; sh:datatype <http://x#y> .';
+        expect(tokenAt(message, message.indexOf("cim:") + 5).text).toBe(
+            "cim:Line",
+        );
+        expect(tokenAt(message, message.indexOf("x#y")).text).toBe(
+            "<http://x#y>",
+        );
+    });
 });
 
 describe("resolveTerm", () => {

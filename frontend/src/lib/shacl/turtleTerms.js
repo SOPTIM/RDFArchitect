@@ -26,6 +26,9 @@
 /** Characters a prefixed name is made of. Turtle allows `.` inside one, as `cim:Class.attr` does. */
 const NAME_CHARS = /[A-Za-z0-9_.:%-]/;
 
+/** What an IRI in angle brackets cannot hold, so a `<` or `>` beyond it is something else. */
+const NOT_IN_IRI = /[\s<>"{}|^`\\]/;
+
 const PREFIX_DIRECTIVE =
     /^\s*(?:@prefix|PREFIX)\s+([A-Za-z][\w.-]*)?:\s*<([^>]*)>/gim;
 
@@ -110,15 +113,34 @@ export function tokenAt(lineText, column) {
     };
 }
 
-/** The `<...>` IRI the column sits inside, if it sits inside one. */
+/**
+ * The `<...>` IRI the column sits inside, if it sits inside one.
+ *
+ * Only a span an IRI can be: `?a < cim:X || ?b > 3` in a query, or a `<` in a message, is not one.
+ */
 function angleBracketedAt(lineText, column) {
     const index = column - 1;
-    const open = lineText.lastIndexOf("<", index);
+    if (index < 0 || index >= lineText.length) {
+        return null;
+    }
+    let open = lineText[index] === ">" ? index - 1 : index;
+    while (open >= 0 && lineText[open] !== "<") {
+        if (NOT_IN_IRI.test(lineText[open])) {
+            return null;
+        }
+        open -= 1;
+    }
     if (open < 0) {
         return null;
     }
-    const close = lineText.indexOf(">", open);
-    if (close < 0 || close < index) {
+    let close = open + 1;
+    while (close < lineText.length && lineText[close] !== ">") {
+        if (NOT_IN_IRI.test(lineText[close])) {
+            return null;
+        }
+        close += 1;
+    }
+    if (close >= lineText.length || close < index) {
         return null;
     }
     return {
