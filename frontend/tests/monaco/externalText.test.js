@@ -15,12 +15,13 @@
  *
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import {
     openText,
     pushExternalText,
 } from "../../src/lib/monaco/externalText.js";
+import { fake } from "./fakeMonaco.js";
 
 /**
  * Text written into the editor from outside it.
@@ -28,66 +29,72 @@ import {
  * The behaviour under test is what `setValue` took away: an undoable edit that leaves the view
  * where it was.
  */
-function fakeEditor(text) {
-    const calls = [];
-    let value = text;
-    const model = {
-        getValue: () => value,
-        getFullModelRange: () => "whole model",
-        pushStackElement: () => calls.push("stack"),
-        pushEditOperations: (before, edits) => {
-            calls.push("edit");
-            value = edits[0].text;
-        },
-        setValue: next => {
-            calls.push("setValue");
-            value = next;
-        },
-    };
-    return {
-        calls,
-        model,
-        getModel: () => model,
-        getValue: () => value,
-        saveViewState: vi.fn(() => "view state"),
-        restoreViewState: vi.fn(() => calls.push("restore")),
-        setValue: vi.fn(),
-        setScrollPosition: vi.fn(),
-        setPosition: vi.fn(),
-    };
+function editorWith(text) {
+    return fake.api.editor.create(null, { value: text });
+}
+
+/** Typing, as far as undo is concerned: an edit that the next one may still join. */
+function type(editor, text) {
+    const model = editor.getModel();
+    const end = model.getFullModelRange();
+    model.pushEditOperations(
+        [],
+        [
+            {
+                range: {
+                    startLineNumber: end.endLineNumber,
+                    startColumn: end.endColumn,
+                    endLineNumber: end.endLineNumber,
+                    endColumn: end.endColumn,
+                },
+                text,
+            },
+        ],
+        () => null,
+    );
 }
 
 describe("pushing external text into the editor", () => {
-    test("replaces the text as one undoable edit, not with setValue", () => {
-        const editor = fakeEditor("before");
+    test("replaces the text as one step that undo takes back", () => {
+        const editor = editorWith("before");
 
         expect(pushExternalText(editor, "after")).toBe(true);
-
         expect(editor.getValue()).toBe("after");
-        expect(editor.setValue).not.toHaveBeenCalled();
-        // Bracketed, so undo takes the whole change back rather than merging it into the typing
-        // that came before it.
-        expect(editor.calls).toEqual(["stack", "edit", "stack", "restore"]);
+
+        editor.trigger("test", "undo");
+        expect(editor.getValue()).toBe("before");
+    });
+
+    test("keeps what was typed before it out of that step", () => {
+        const editor = editorWith("typed");
+        type(editor, " more");
+
+        pushExternalText(editor, "replaced");
+        editor.trigger("test", "undo");
+
+        expect(editor.getValue()).toBe("typed more");
     });
 
     test("puts the scroll position and cursor back", () => {
-        const editor = fakeEditor("before");
+        const editor = editorWith("one\ntwo\nthree");
+        editor.setPosition({ lineNumber: 3, column: 2 });
+        editor.setScrollPosition({ scrollTop: 40 });
 
-        pushExternalText(editor, "after");
+        pushExternalText(editor, "one\ntwo\nthree, changed");
 
-        expect(editor.saveViewState).toHaveBeenCalled();
-        expect(editor.restoreViewState).toHaveBeenCalledWith("view state");
+        expect(editor.getPosition()).toEqual({ lineNumber: 3, column: 2 });
+        expect(editor.getScrollTop()).toBe(40);
     });
 
     test("leaves text the editor already holds alone", () => {
         // A keystroke sets the bound value from the editor itself; pushing it back would move the
         // cursor on every character typed.
-        const editor = fakeEditor("same");
+        const editor = editorWith("same");
+        const version = editor.getModel().getAlternativeVersionId();
 
         expect(pushExternalText(editor, "same")).toBe(false);
 
-        expect(editor.calls).toEqual([]);
-        expect(editor.saveViewState).not.toHaveBeenCalled();
+        expect(editor.getModel().getAlternativeVersionId()).toBe(version);
     });
 
     test("does nothing before the editor exists", () => {
@@ -100,29 +107,26 @@ describe("pushing external text into the editor", () => {
 
 describe("opening another document in the editor", () => {
     test("starts a history of its own instead of an undoable edit", () => {
-        const editor = fakeEditor("the previous document");
+        const editor = editorWith("the previous document");
+        type(editor, ", edited");
 
         expect(openText(editor, "the next document")).toBe(true);
-
         expect(editor.getValue()).toBe("the next document");
+
         // Undo after opening must not bring the previous document's text back.
-        expect(editor.calls).toEqual(["setValue"]);
-        expect(editor.restoreViewState).not.toHaveBeenCalled();
+        editor.trigger("test", "undo");
+        expect(editor.getValue()).toBe("the next document");
     });
 
     test("starts at the top rather than where the previous one was scrolled to", () => {
-        const editor = fakeEditor("before");
+        const editor = editorWith("one\ntwo\nthree");
+        editor.setPosition({ lineNumber: 3, column: 2 });
+        editor.setScrollPosition({ scrollTop: 40 });
 
         openText(editor, "after");
 
-        expect(editor.setScrollPosition).toHaveBeenCalledWith({
-            scrollTop: 0,
-            scrollLeft: 0,
-        });
-        expect(editor.setPosition).toHaveBeenCalledWith({
-            lineNumber: 1,
-            column: 1,
-        });
+        expect(editor.getPosition()).toEqual({ lineNumber: 1, column: 1 });
+        expect(editor.getScrollTop()).toBe(0);
     });
 
     test("does nothing before the editor exists", () => {

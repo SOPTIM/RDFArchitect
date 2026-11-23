@@ -19,66 +19,8 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, expect, test, vi } from "vitest";
 
 import TurtleEditor from "../../src/lib/monaco/TurtleEditor.svelte";
+import { fake } from "../monaco/fakeMonaco.js";
 import { reactiveProps } from "./reactiveProps.svelte.js";
-
-/** Just enough of Monaco to see which markers the editor sets, and against which text. */
-const fake = vi.hoisted(() => {
-    const state = { text: "", markers: [], listeners: [] };
-    const model = {
-        getValue: () => state.text,
-        setValue: text => {
-            state.text = text;
-            // Monaco drops markers whose range the new text no longer has; an emptied model has
-            // none of them left.
-            state.markers = [];
-        },
-        getLineCount: () => state.text.split("\n").length,
-        getWordAtPosition: () => null,
-        getLineMaxColumn: () => 20,
-        getFullModelRange: () => ({}),
-        pushEditOperations: () => {},
-        pushStackElement: () => {},
-        dispose: () => {},
-    };
-    const editor = {
-        getModel: () => model,
-        getValue: () => state.text,
-        onDidChangeModelContent: listener => state.listeners.push(listener),
-        onDidContentSizeChange: () => {},
-        getContentHeight: () => 100,
-        addAction: () => {},
-        updateOptions: () => {},
-        setScrollPosition: () => {},
-        setPosition: () => {},
-        saveViewState: () => null,
-        restoreViewState: () => {},
-        focus: () => {},
-        layout: () => {},
-        revealPositionInCenterIfOutsideViewport: () => {},
-        dispose: () => {},
-    };
-    const api = {
-        KeyMod: { CtrlCmd: 0 },
-        KeyCode: { KeyS: 0 },
-        MarkerSeverity: { Error: 8, Warning: 4, Info: 2 },
-        editor: {
-            create: (_container, options) => {
-                state.text = options.value;
-                return editor;
-            },
-            setTheme: () => {},
-            setModelMarkers: (_model, _owner, markers) => {
-                // Monaco keeps a marker only if its line exists in the text at the time.
-                const lines = state.text.split("\n").length;
-                state.markers = markers.filter(
-                    marker =>
-                        marker.startLineNumber <= lines && state.text !== "",
-                );
-            },
-        },
-    };
-    return { state, api };
-});
 
 const FINDINGS = [
     {
