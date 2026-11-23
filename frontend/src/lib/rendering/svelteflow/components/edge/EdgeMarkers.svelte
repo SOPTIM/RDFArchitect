@@ -19,25 +19,25 @@
     <defs>
         <marker
             id="inheritance"
-            viewBox="0 0 20 12"
-            refX="20"
+            viewBox="-1 -1 23 14"
+            refX="19.2"
             refY="6"
-            markerWidth="14"
+            markerWidth="16.1"
             markerHeight="12"
             orient="auto"
         >
             <path
                 d="M0,0 L20,6 L0,12 Z"
                 fill="white"
-                style="stroke: var(--color-inheritance-edge); stroke-width: 1"
+                style="stroke: context-stroke; stroke-width: 1"
             />
         </marker>
         <marker
             id="associationTo"
-            viewBox="0 0 10 10"
+            viewBox="0 0 11 10"
             refX="10"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >
@@ -45,10 +45,10 @@
         </marker>
         <marker
             id="associationFrom"
-            viewBox="0 0 10 10"
+            viewBox="-1 0 11 10"
             refX="0"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >

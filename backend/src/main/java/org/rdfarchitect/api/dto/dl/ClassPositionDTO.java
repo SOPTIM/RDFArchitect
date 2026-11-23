@@ -28,14 +28,13 @@ import java.util.UUID;
 @NoArgsConstructor
 public class ClassPositionDTO {
 
-    @JsonProperty("classUUID")
     private UUID classUUID;
 
     @JsonProperty("xPosition")
-    private float xPosition;
+    private double xPosition;
 
     @JsonProperty("yPosition")
-    private float yPosition;
+    private double yPosition;
 
     @JsonProperty("zPosition")
     private int zPosition;

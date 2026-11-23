@@ -24,17 +24,20 @@
     } from "@xyflow/svelte";
     import { tick } from "svelte";
 
-    import AssociationEdge from "./components/AssociationEdge.svelte";
+    import EdgeMarkers from "$lib/rendering/svelteflow/components/edge/EdgeMarkers.svelte";
+
     import ClassNode from "./components/ClassNode.svelte";
     import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
-    import EdgeMarkers from "./components/EdgeMarkers.svelte";
-    import InheritanceEdge from "./components/InheritanceEdge.svelte";
+    import AssociationEdge from "./components/edge/AssociationEdge.svelte";
+    import InheritanceEdge from "./components/edge/InheritanceEdge.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
     import { buildLabelNodes, LABEL_NODE_TYPE } from "./diagram/labelNodes.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import { EDGE_INTERACTION_CONFIG } from "./interaction/edgeInteractionConfig.js";
+    import { withDefaultSelfLoops } from "./interaction/edgePointOperations.js";
+    import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
         inputNodes,
@@ -64,10 +67,15 @@
     async function layoutOnce() {
         laidOut = true;
         if (hasDefaultNodeLayout(nodes)) {
-            const layouted = await getLayoutedNodes(nodes, edges);
-            nodes = [...layouted];
+            const { nodes: layoutedNodes } = await layoutDiagram(nodes, edges);
+            nodes = [...layoutedNodes];
         }
 
+        edges = withDefaultSelfLoops(
+            edges,
+            nodes,
+            EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
+        );
         nodes = [...nodes, ...buildLabelNodes(nodes, edges)];
 
         const padding = 60;

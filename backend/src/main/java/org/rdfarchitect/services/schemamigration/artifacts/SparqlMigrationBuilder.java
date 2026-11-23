@@ -189,7 +189,23 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             sb.append(update).append("\n");
         }
 
+        if (enumEntryChange.getSemanticResourceChangeType() == SemanticResourceChangeType.CHANGE) {
+            processEnumEntryFieldChanges(enumEntryChange, sb);
+        }
+
         return sb.toString();
+    }
+
+    private void processEnumEntryFieldChanges(
+            SemanticEnumEntryChange enumEntryChange, StringBuilder sb) {
+        if (enumEntryChange.getChanges().stream()
+                .anyMatch(
+                        change ->
+                                change.getSemanticFieldChangeType()
+                                        == SemanticFieldChangeType.DOMAIN_RENAME)) {
+            var update = updateGenerator.generateDomainRenameUpdate(enumEntryChange);
+            sb.append(update).append("\n");
+        }
     }
 
     private String generateUpdateForAssociation(SemanticAssociationChange associationChange) {

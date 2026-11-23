@@ -20,7 +20,7 @@
         faCaretDown,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount, onDestroy } from "svelte";
+    import { onMount, onDestroy, untrack } from "svelte";
     import { Fa } from "svelte-fa";
 
     import {
@@ -42,6 +42,7 @@
     import { askForExtendSource } from "$lib/extendSourceRequest.svelte.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
+    import { superClassFocusRequest } from "$lib/propertyEditorRequest.svelte.js";
     import {
         ClassType,
         editorState,
@@ -230,6 +231,23 @@
                 classUUID: occurrence.classUUID,
             })),
         });
+    });
+
+    /**
+     * A diagram asks to focus the super class of a class by the UUID it shows the class under. In a
+     * merged diagram that is the merged UUID, while the editor knows the class by its UUID in the
+     * schema it is opened in, so the request is passed on under that UUID.
+     */
+    $effect(() => {
+        const request = superClassFocusRequest.current;
+        const schemaClassUuid = activeOccurrence?.classUUID;
+        if (
+            request?.classUuid === classUuid &&
+            schemaClassUuid &&
+            schemaClassUuid !== classUuid
+        ) {
+            untrack(() => superClassFocusRequest.open(schemaClassUuid));
+        }
     });
 
     onMount(() =>
