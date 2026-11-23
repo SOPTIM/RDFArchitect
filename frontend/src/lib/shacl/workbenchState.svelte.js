@@ -25,6 +25,7 @@ import {
     replaceShapesDocumentText,
     updateShapesDocument,
 } from "$lib/api/generated/index.ts";
+import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 import { graphLabeller, schemaName as nameOf } from "$lib/utils/graph-label.js";
@@ -131,6 +132,14 @@ export class ShapesWorkbench {
     /** The workspace's schemas, as `{ name, label }`, in the order the navigation shows them. */
     schemas = $state([]);
     selectedId = $state(null);
+    /**
+     * The open document as it was listed, while it is gone from the workspace — undone, or deleted
+     * in another tab — and the buffer still holds unsaved edits to it. Null otherwise.
+     *
+     * The edits stay in the buffer rather than move on with the selection: under another document,
+     * the next save would write them there. Saving them makes a new document.
+     */
+    detached = $state(null);
     /** Moves with every reading of the documents, for what is derived from them elsewhere. */
     documentsRevision = $state(0);
     text = $state("");
@@ -273,11 +282,11 @@ export class ShapesWorkbench {
         try {
             await this.refreshReadOnly();
             await this.#refreshSchemas();
-            await this.#refreshDocuments();
+            const gone = await this.#refreshDocuments();
             if (this.error) {
                 return;
             }
-            await this.select(this.selectedId);
+            await this.select(gone ? this.#firstToOpen() : this.selectedId);
         } finally {
             this.loading = false;
         }
@@ -295,11 +304,13 @@ export class ShapesWorkbench {
         await this.refreshReadOnly();
         this.#generated.clear();
         await this.#refreshSchemas(true);
-        await this.#refreshDocuments();
+        const gone = await this.#refreshDocuments();
         if (this.error) {
             return;
         }
-        if (!this.dirty) {
+        if (gone) {
+            await this.select(this.#firstToOpen());
+        } else if (!this.dirty) {
             await this.#reread();
         }
     }
@@ -340,6 +351,7 @@ export class ShapesWorkbench {
     async select(documentId) {
         const selection = ++this.#selection;
         this.selectedId = documentId;
+        this.detached = null;
         if (documentId === null) {
             this.#replaceBuffer("");
             this.#textReady = true;
@@ -369,6 +381,13 @@ export class ShapesWorkbench {
     revert() {
         if (this.dirty) {
             this.text = this.savedText;
+        }
+    }
+
+    /** Throws away the unsaved edits to a document that is gone, and opens what is left. */
+    async discardDetached() {
+        if (this.detached) {
+            await this.select(this.#firstToOpen());
         }
     }
 
@@ -461,7 +480,9 @@ export class ShapesWorkbench {
             // and on a large file make the user wait for one.
             return { saved: true, reason: null, unchanged: true };
         }
-        const run = this.#write(overwrite);
+        const run = this.detached
+            ? this.#writeDetached()
+            : this.#write(overwrite);
         this.#saveInFlight = run;
         try {
             return await run;
@@ -500,6 +521,10 @@ export class ShapesWorkbench {
                 headers: { "Content-Type": "text/plain" },
             });
             if (error) {
+                if (response?.status === 404) {
+                    // Gone since it was last listed: listing again keeps the edits as `detached`.
+                    await this.#refreshDocuments();
+                }
                 return {
                     saved: false,
                     reason: reasonFrom(error),
@@ -509,7 +534,53 @@ export class ShapesWorkbench {
             if (this.bufferKey === bufferKey) {
                 this.savedText = sent;
             }
-            await this.#refreshDocuments();
+            await this.#relist();
+            return { saved: true, reason: null };
+        } finally {
+            this.saving = false;
+        }
+    }
+
+    /**
+     * Saves the edits to a document that is gone as a new document, under the same name when that
+     * is free and applying to the same schemas where they are still there.
+     *
+     * The buffer stays as it is, with its history: it now holds the new document's text.
+     */
+    async #writeDetached() {
+        if (await this.refreshReadOnly()) {
+            return { saved: false, reason: READ_ONLY };
+        }
+        const { name, schemas } = this.detached;
+        const known = new Set(this.schemas.map(schema => schema.name));
+        const bufferKey = this.bufferKey;
+        const sent = this.text;
+        this.saving = true;
+        try {
+            const { data, error } = await createShapesDocument({
+                ...this.#requestOptions,
+                path: this.path,
+                query: {
+                    name: uniqueDocumentName(
+                        this.documents.map(document => document.name),
+                        name,
+                    ),
+                    schema: schemas.filter(schema => known.has(schema)),
+                },
+                body: sent === "" ? " " : sent,
+                bodySerializer: null,
+                headers: { "Content-Type": "text/plain" },
+            });
+            if (error) {
+                return { saved: false, reason: reasonFrom(error) };
+            }
+            if (this.bufferKey === bufferKey && this.detached) {
+                this.#selection += 1;
+                this.selectedId = data.id;
+                this.detached = null;
+                this.savedText = sent;
+            }
+            await this.#relist();
             return { saved: true, reason: null };
         } finally {
             this.saving = false;
@@ -630,13 +701,11 @@ export class ShapesWorkbench {
         if (error) {
             return false;
         }
-        // Asked before the relisting, which moves the selection off a document that is gone: asked
-        // after, this is always false, the editor keeps the deleted document's text, and the next
-        // save writes that text into whichever document the list moved to.
+        // The user deleted it, so unsaved edits to it go with it rather than being kept.
         const wasOpen = this.selectedId === documentId;
-        await this.#refreshDocuments();
-        if (wasOpen) {
-            await this.select(this.selectedId);
+        const gone = await this.#refreshDocuments();
+        if (wasOpen || gone) {
+            await this.select(this.#firstToOpen());
         }
         return true;
     }
@@ -654,7 +723,7 @@ export class ShapesWorkbench {
         if (error) {
             return false;
         }
-        await this.#refreshDocuments();
+        await this.#relist();
         return true;
     }
 
@@ -667,14 +736,22 @@ export class ShapesWorkbench {
             .sort(compareGraphs);
     }
 
+    /**
+     * Reads the documents again.
+     *
+     * @returns whether what was open is gone with nothing unsaved in the buffer, so something else
+     *     has to be opened. A document gone while the buffer holds edits to it stays selected and
+     *     becomes `detached`.
+     */
     async #refreshDocuments() {
+        const listed = this.selected ?? this.detached;
         const { data, error } = await listShapesDocuments({
             ...this.#requestOptions,
             path: this.path,
         });
         if (error) {
             this.error = "The constraints documents could not be listed.";
-            return;
+            return false;
         }
         this.documents = [...(data ?? [])].sort(
             (a, b) => (a.order ?? 0) - (b.order ?? 0),
@@ -684,8 +761,26 @@ export class ShapesWorkbench {
         const stillThere = this.showingGenerated
             ? this.schemas.some(schema => schema.name === this.generatedSchema)
             : this.documents.some(document => document.id === this.selectedId);
-        if (!stillThere) {
-            this.selectedId = this.#firstToOpen();
+        if (stillThere) {
+            this.detached = null;
+            return false;
+        }
+        if (this.dirty) {
+            this.detached = {
+                id: this.selectedId,
+                name: listed?.name ?? "constraints.ttl",
+                schemas: [...(listed?.schemas ?? [])],
+            };
+            return false;
+        }
+        this.detached = null;
+        return true;
+    }
+
+    /** Reads the documents again, and opens what is left when what was open is gone. */
+    async #relist() {
+        if (await this.#refreshDocuments()) {
+            await this.select(this.#firstToOpen());
         }
     }
 

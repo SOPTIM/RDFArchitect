@@ -20,6 +20,7 @@
         faFileShield,
         faFloppyDisk,
         faLock,
+        faTriangleExclamation,
     } from "@fortawesome/free-solid-svg-icons";
     import { untrack } from "svelte";
     import { Fa } from "svelte-fa";
@@ -442,6 +443,37 @@
                                     class="border-border text-text-subtle flex h-9 shrink-0 items-center border-b px-3 text-xs"
                                 >
                                     Generated from {generatedSchemaLabel} — read-only
+                                </div>
+                            {:else if workbench.detached}
+                                <div
+                                    class="border-border text-default-text flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-xs"
+                                    role="status"
+                                >
+                                    <Fa
+                                        icon={faTriangleExclamation}
+                                        class="text-orange"
+                                    />
+                                    <span class="min-w-0 flex-1">
+                                        "{workbench.detached.name}" is no longer
+                                        in this workspace. Your unsaved changes
+                                        to it are still here: save them as a new
+                                        document, or discard them.
+                                    </span>
+                                    {#if !workbench.readOnly}
+                                        <button
+                                            class="text-blue cursor-pointer underline underline-offset-2"
+                                            onclick={() => save()}
+                                        >
+                                            Save as a new document
+                                        </button>
+                                    {/if}
+                                    <button
+                                        class="text-blue cursor-pointer underline underline-offset-2"
+                                        onclick={() =>
+                                            workbench.discardDetached()}
+                                    >
+                                        Discard
+                                    </button>
                                 </div>
                             {/if}
                             <div

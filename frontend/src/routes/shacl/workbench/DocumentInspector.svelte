@@ -80,7 +80,11 @@
     </div>
 
     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3 text-sm">
-        {#if !document}
+        {#if workbench.detached}
+            <p class="text-text-subtle italic">
+                "{workbench.detached.name}" is no longer in this workspace.
+            </p>
+        {:else if !document}
             <p class="text-text-subtle italic">No document open.</p>
         {:else}
             <section>

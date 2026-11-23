@@ -1078,6 +1078,227 @@ describe("reloading after the schema changed elsewhere", () => {
     });
 });
 
+describe("when the open document is gone from the list", () => {
+    const TYPED = `${SHAPES}# typed, not saved\n`;
+
+    /** Takes the open document away on the server, as an undo or another tab does. */
+    function takeAway(documentId = EQ) {
+        server.documents = server.documents.filter(
+            document => document.id !== documentId,
+        );
+    }
+
+    /** Lists a document the server is asked to create, as the server does. */
+    function listCreated() {
+        const answer = server.respond;
+        server.respond = (entry, url) => {
+            if (entry.method === "POST") {
+                server.documents = [
+                    ...server.documents,
+                    {
+                        id: "new-id",
+                        name: entry.query.get("name"),
+                        order: server.documents.length,
+                        enabled: true,
+                        schemas: entry.query.getAll("schema"),
+                    },
+                ];
+                server.texts["new-id"] = entry.body;
+            }
+            return answer(entry, url);
+        };
+    }
+
+    test("keeps unsaved text, and under no other document", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+
+        await workbench.reload();
+
+        expect(workbench.text).toBe(TYPED);
+        expect(workbench.dirty).toBe(true);
+        expect(workbench.selected).toBeNull();
+        expect(workbench.detached).toMatchObject({
+            id: EQ,
+            name: "eq.ttl",
+            schemas: [EQ_SCHEMA],
+        });
+    });
+
+    test("keeps unsaved text when a change to another document relists them", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+
+        await workbench.setEnabled(CUSTOM, false);
+
+        expect(workbench.text).toBe(TYPED);
+        expect(workbench.selected).toBeNull();
+        expect(workbench.detached?.name).toBe("eq.ttl");
+    });
+
+    test("keeps unsaved text when only the generated shapes are left", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        server.documents = [];
+
+        await workbench.reload();
+
+        expect(workbench.showingGenerated).toBe(false);
+        expect(workbench.text).toBe(TYPED);
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("saves the kept text as a new document, never into another", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        await workbench.reload();
+        listCreated();
+        server.requests.length = 0;
+
+        expect(await workbench.save()).toMatchObject({ saved: true });
+
+        expect(server.requests.some(entry => entry.method === "PUT")).toBe(
+            false,
+        );
+        const post = server.requests.find(entry => entry.method === "POST");
+        expect(post.path).toBe("/api/workspaces/cgmes/shacl/documents");
+        expect(post.query.get("name")).toBe("eq.ttl");
+        expect(post.query.getAll("schema")).toEqual([EQ_SCHEMA]);
+        expect(post.body).toBe(TYPED);
+        expect(workbench.detached).toBeNull();
+        expect(workbench.selectedId).toBe("new-id");
+        expect(workbench.text).toBe(TYPED);
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("gives the new document a free name and only schemas that are there", async () => {
+        server.documents = [
+            ...server.documents,
+            {
+                id: "third",
+                name: "third.ttl",
+                order: 2,
+                enabled: true,
+                tripleCount: 4,
+                schemas: [EQ_SCHEMA, "Deleted"],
+            },
+        ];
+        await workbench.load();
+        await workbench.select("third");
+        workbench.text = TYPED;
+        server.documents = server.documents
+            .filter(document => document.id !== "third")
+            .map(document =>
+                document.id === CUSTOM
+                    ? { ...document, name: "third.ttl" }
+                    : document,
+            );
+        await workbench.reload();
+        server.requests.length = 0;
+
+        await workbench.save();
+
+        const post = server.requests.find(entry => entry.method === "POST");
+        expect(post.query.get("name")).toBe("third (2).ttl");
+        expect(post.query.getAll("schema")).toEqual([EQ_SCHEMA]);
+    });
+
+    test("can be told to drop the kept text, and opens what is left", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        await workbench.reload();
+
+        await workbench.discardDetached();
+
+        expect(workbench.detached).toBeNull();
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.text).toBe("");
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("finds its document again when it comes back", async () => {
+        const all = server.documents;
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        await workbench.reload();
+        server.documents = all;
+
+        await workbench.reload();
+
+        expect(workbench.detached).toBeNull();
+        expect(workbench.selectedId).toBe(EQ);
+        expect(workbench.text).toBe(TYPED);
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("opens what is left when nothing was unsaved", async () => {
+        await workbench.load();
+        takeAway();
+
+        await workbench.setEnabled(CUSTOM, false);
+
+        expect(workbench.detached).toBeNull();
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.text).toBe("");
+        expect(workbench.textReady).toBe(true);
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("opens what is left on a reload when nothing was unsaved", async () => {
+        await workbench.load();
+        const opened = workbench.bufferKey;
+        takeAway();
+
+        await workbench.reload();
+
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.text).toBe("");
+        expect(workbench.bufferKey).not.toBe(opened);
+    });
+
+    test("is noticed by a save the server refuses for that reason", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "PUT"
+                ? new Response(
+                      JSON.stringify({
+                          detail: "No constraints document with id eq-document-id in this workspace.",
+                      }),
+                      {
+                          status: 404,
+                          headers: { "content-type": "application/json" },
+                      },
+                  )
+                : answer(entry, url);
+
+        const result = await workbench.save();
+
+        expect(result.saved).toBe(false);
+        expect(workbench.detached?.name).toBe("eq.ttl");
+        expect(workbench.text).toBe(TYPED);
+    });
+
+    test("is dropped with its text when the user deletes it", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+
+        await workbench.remove(EQ);
+
+        expect(workbench.detached).toBeNull();
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.dirty).toBe(false);
+    });
+});
+
 describe("a new document", () => {
     test("starts with the text it is given", async () => {
         await workbench.load();
