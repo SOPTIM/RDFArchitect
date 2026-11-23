@@ -401,6 +401,26 @@ class ConformanceComparatorTest {
     }
 
     @Test
+    void everyShClassStatedApplies() {
+        // A rule on a class and one on its subclass meet on the subclass; a value then has to be an
+        // instance of both classes, which only the narrower one's instances are.
+        var document =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:Shape a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [ sh:path cim:Terminal.ConductingEquipment ; sh:maxCount 1 ;
+                                  sh:class cim:Equipment ; sh:nodeKind sh:IRI ] ,
+                                [ sh:path cim:Terminal.ConductingEquipment ; sh:class cim:Switch ] .
+                """;
+
+        assertThat(compareInSchema(typedAs("cim:Switch cim:Breaker"), document)).isEmpty();
+    }
+
+    @Test
     void aTypeListNamingOnlyUnrelatedClassesContradictsShClass() {
         var findings = compareInSchema(typedAs("cim:BaseVoltage"), ofClass("cim:Switch"));
 

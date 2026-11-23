@@ -100,6 +100,17 @@ public final class ClassHierarchy {
         return classes.isEmpty();
     }
 
+    /**
+     * {@code name} and every class deriving from it: the classes a rule with {@code sh:targetClass
+     * name} applies to.
+     */
+    public Set<String> withSubClasses(String name) {
+        var classes = new LinkedHashSet<String>();
+        classes.add(name);
+        classes.addAll(descendants(name));
+        return classes;
+    }
+
     /** Whether {@code sub} is {@code sup} or derives from it. */
     private boolean isSubClassOf(String sub, String sup) {
         return sub.equals(sup) || descendants(sup).contains(sub);

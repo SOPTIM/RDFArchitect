@@ -177,7 +177,7 @@ public class ConformanceService implements ConformanceUseCase {
         var implies = impliedFor(schema, targetedClasses(documentShapes.values()));
         var asserted =
                 OtherVocabularies.leaveOut(
-                        EffectiveConstraints.of(documentShapes),
+                        EffectiveConstraints.of(documentShapes, implies.hierarchy()),
                         implies.hierarchy(),
                         implies.properties());
         var stated = new HashSet<>(asserted.constraints().keySet());
@@ -284,6 +284,12 @@ public class ConformanceService implements ConformanceUseCase {
                             });
         }
 
+        // A rule on a class applies to the classes deriving from it, so the schema has to speak for
+        // those as well.
+        var hierarchy = ClassHierarchy.of(union);
+        var reached = new HashSet<String>();
+        targetedClasses.forEach(target -> reached.addAll(hierarchy.withSubClasses(target)));
+
         var ontology = ModelFactory.createModelForGraph(union);
         ontology.setNsPrefixes(databasePort.getPrefixMapping(schema.workspaceName()));
         var shapes =
@@ -293,12 +299,12 @@ public class ConformanceService implements ConformanceUseCase {
                                 true)
                         .generate(
                                 instantiableClass ->
-                                        targetedClasses.contains(instantiableClass.getURI())
+                                        reached.contains(instantiableClass.getURI())
                                                 || ownClasses.declares(instantiableClass.getURI()))
                         .getGraph();
         return new Implied(
                 EffectiveConstraints.of(shapes),
-                ClassHierarchy.of(union),
+                hierarchy,
                 ownClassUris,
                 ownProperties,
                 subjectsOf(union, RDFS.domain.asNode()));

@@ -65,6 +65,44 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void aRuleOnAClassIsFiledUnderTheClassesDerivingFromIt() {
+        var hierarchy =
+                ClassHierarchy.of(
+                        RDFParser.fromString(
+                                        """
+                                        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                                        @prefix ex: <http://example.org/> .
+                                        ex:Thing a rdfs:Class .
+                                        ex:Part a rdfs:Class ; rdfs:subClassOf ex:Thing .
+                                        """,
+                                        Lang.TURTLE)
+                                .toGraph());
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "thing.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                        """));
+        documents.put(
+                "part.ttl",
+                shapes(
+                        """
+                        ex:PartShape sh:targetClass ex:Part ;
+                            sh:property [ sh:path ex:value ; sh:maxCount 1 ] .
+                        """));
+
+        var asserted = EffectiveConstraints.of(documents, hierarchy);
+
+        var part = new Key(EX + "Part", EX + "value");
+        assertThat(asserted.constraints().get(part).minCount()).isEqualTo(1);
+        assertThat(asserted.constraints().get(part).maxCount()).isEqualTo(1);
+        assertThat(asserted.statedIn().get(part)).containsExactly("thing.ttl", "part.ttl");
+        assertThat(asserted.constraints().get(THING_VALUE).maxCount()).isNull();
+    }
+
+    @Test
     void aDocumentsOwnDefinitionOfARuleIsTheOneItMeans() {
         var referring =
                 shapes(

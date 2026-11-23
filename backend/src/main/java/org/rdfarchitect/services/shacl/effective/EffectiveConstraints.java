@@ -137,8 +137,23 @@ public final class EffectiveConstraints {
      * by the document naming the rule it comes from.
      */
     public static Asserted of(Map<String, Graph> documents) {
+        return of(documents, ClassHierarchy.NONE);
+    }
+
+    /**
+     * As {@link #of(Map)}, with each rule also filed under every class deriving from its target.
+     *
+     * <p>{@code sh:targetClass C} targets the instances of {@code C} and of its subclasses, so a
+     * rule written on an abstract class constrains the classes data is typed with, and joins
+     * whatever their own shapes require.
+     *
+     * @param hierarchy the classes deriving from each target
+     */
+    public static Asserted of(Map<String, Graph> documents, ClassHierarchy hierarchy) {
         var read = new Read();
-        documents.values().forEach(document -> readTargets(document, documents.values(), read));
+        documents
+                .values()
+                .forEach(document -> readTargets(document, documents.values(), hierarchy, read));
         var statedIn = new LinkedHashMap<Key, List<String>>();
         read.namedIn()
                 .forEach(
@@ -155,7 +170,7 @@ public final class EffectiveConstraints {
     /** Reads a shapes graph into one enforced constraint per class and property. */
     public static Map<Key, Constraint> of(Graph shapes) {
         var read = new Read();
-        readTargets(shapes, List.of(shapes), read);
+        readTargets(shapes, List.of(shapes), ClassHierarchy.NONE, read);
         return read.enforced();
     }
 
@@ -163,7 +178,8 @@ public final class EffectiveConstraints {
      * Adds what the shapes targeting a class in {@code shapes} require, finding their rules in
      * {@code documents}.
      */
-    private static void readTargets(Graph shapes, Collection<Graph> documents, Read into) {
+    private static void readTargets(
+            Graph shapes, Collection<Graph> documents, ClassHierarchy hierarchy, Read into) {
         shapes.stream(Node.ANY, SHACL.targetClass, Node.ANY)
                 .filter(triple -> triple.getObject().isURI())
                 .filter(triple -> !isDeactivated(shapes, triple.getSubject()))
@@ -173,12 +189,16 @@ public final class EffectiveConstraints {
                                         shapes,
                                         documents,
                                         triple.getSubject(),
-                                        triple.getObject().getURI(),
+                                        hierarchy.withSubClasses(triple.getObject().getURI()),
                                         into));
     }
 
     private static void collect(
-            Graph shapes, Collection<Graph> documents, Node shape, String targetClass, Read into) {
+            Graph shapes,
+            Collection<Graph> documents,
+            Node shape,
+            Set<String> targetClasses,
+            Read into) {
         for (var rule : rulesOf(shape, shapes, documents).toList()) {
             var property = rule.node();
             var definedIn = definedIn(property, rule.namedIn(), documents);
@@ -201,13 +221,16 @@ public final class EffectiveConstraints {
                     isAdvisory(rule.namedIn(), property) || isAdvisory(definedIn, property)
                             ? into.advisory()
                             : into.enforced();
-            for (var path : paths) {
-                var key = new Key(targetClass, path);
-                merged.merge(key, constraint, EffectiveConstraints::conjunction);
-                into.namedIn()
-                        .computeIfAbsent(
-                                key, ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
-                        .add(rule.namedIn());
+            for (var targetClass : targetClasses) {
+                for (var path : paths) {
+                    var key = new Key(targetClass, path);
+                    merged.merge(key, constraint, EffectiveConstraints::conjunction);
+                    into.namedIn()
+                            .computeIfAbsent(
+                                    key,
+                                    ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                            .add(rule.namedIn());
+                }
             }
         }
     }

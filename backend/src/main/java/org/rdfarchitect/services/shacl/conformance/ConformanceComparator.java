@@ -26,6 +26,7 @@ import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -107,9 +108,15 @@ final class ConformanceComparator {
 
         var stated = new LinkedHashSet<>(document.keySet());
         stated.addAll(advisory.keySet());
+        var statedOn = new HashMap<String, Set<String>>();
+        stated.forEach(
+                key ->
+                        statedOn.computeIfAbsent(key.path(), ignored -> new LinkedHashSet<>())
+                                .add(key.targetClass()));
         stated.forEach(
                 key -> {
-                    if (!schema.containsKey(key)) {
+                    if (!schema.containsKey(key)
+                            && !comparedElsewhere(key, schema, statedOn, hierarchy)) {
                         var asserted = document.getOrDefault(key, advisory.get(key));
                         findings.add(
                                 finding(
@@ -127,6 +134,38 @@ final class ConformanceComparator {
                         .thenComparing(ConformanceFinding::getTargetClass)
                         .thenComparing(ConformanceFinding::getPath));
         return List.copyOf(findings);
+    }
+
+    /**
+     * Whether a rule the schema has nothing for on this class is answered on another one.
+     *
+     * <p>A rule applies to the classes deriving from its target, and the schema only has the
+     * classes data is typed with. So a rule on an abstract class is compared where a subclass has
+     * the property, and a class reached through a rule on its superclass is reported there, once,
+     * if at all.
+     */
+    private static boolean comparedElsewhere(
+            EffectiveConstraints.Key key,
+            Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> schema,
+            Map<String, Set<String>> statedOn,
+            ClassHierarchy hierarchy) {
+        var below = hierarchy.withSubClasses(key.targetClass());
+        if (below.stream()
+                .anyMatch(
+                        subClass ->
+                                !subClass.equals(key.targetClass())
+                                        && schema.containsKey(
+                                                new EffectiveConstraints.Key(
+                                                        subClass, key.path())))) {
+            return true;
+        }
+        return statedOn.getOrDefault(key.path(), Set.of()).stream()
+                .anyMatch(
+                        other ->
+                                !below.contains(other)
+                                        && hierarchy
+                                                .withSubClasses(other)
+                                                .contains(key.targetClass()));
     }
 
     /** Why the schema implies nothing for a key a document constrains. */
@@ -161,13 +200,18 @@ final class ConformanceComparator {
         /**
          * The types a value may carry under {@code constraint}, or {@code null} when it states no
          * value type. {@code sh:class} admits subclasses and a value-type list does not; stated
-         * together, both apply.
+         * together, both apply, and so does every {@code sh:class} stated.
          */
         Set<String> admitted(EffectiveConstraints.Constraint constraint) {
-            Set<String> admitted =
-                    constraint.valueClasses().isEmpty()
-                            ? null
-                            : hierarchy.instancesOf(constraint.valueClasses());
+            Set<String> admitted = null;
+            for (var valueClass : constraint.valueClasses()) {
+                var instances = hierarchy.instancesOf(Set.of(valueClass));
+                if (admitted == null) {
+                    admitted = new LinkedHashSet<>(instances);
+                } else {
+                    admitted.retainAll(instances);
+                }
+            }
             if (constraint.valueTypes() != null) {
                 var typed = hierarchy.typedAs(constraint.valueTypes());
                 if (admitted == null) {
