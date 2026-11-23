@@ -153,10 +153,6 @@ class GraphUtilsNormalizeBlankNodesTest {
         assertTrue(blankLabels(normalized(text)).containsAll(blankLabels(alone)));
     }
 
-    /**
-     * Refining splits a list of identical values two cells a pass, so a long enough one could take
-     * longer than anybody waits. It has to end anyway, and still as a list.
-     */
     /** Nor may it rename true duplicates, which share a label just as lookalikes do. */
     @Test
     void duplicatesKeepTheirLabelWhenLookalikesElsewhereSplit() {
@@ -178,6 +174,10 @@ class GraphUtilsNormalizeBlankNodesTest {
         assertTrue(blankLabels(normalized(text)).containsAll(blankLabels(normalized(duplicates))));
     }
 
+    /**
+     * Refining splits a list of identical values two cells a pass, so a long enough one could take
+     * longer than anybody waits. It has to end anyway, and still as a list.
+     */
     @Test
     void aHugeListOfTheSameValueEndsAndStaysAList() {
         var text = PREFIXES + "ex:A sh:path ex:p ; sh:in ( " + "ex:same ".repeat(20_000) + ") .\n";
