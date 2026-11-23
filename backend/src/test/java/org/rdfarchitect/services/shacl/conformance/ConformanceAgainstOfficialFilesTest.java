@@ -94,6 +94,35 @@ class ConformanceAgainstOfficialFilesTest {
                                                 "61970-600-2_Operation-AP-Con-Complex-Implicit-CrossProfile-SHACL.ttl"));
     }
 
+    @Test
+    void aValueTypeListingClassesOnlyAnotherProfileDeclaresIsNotAContradiction() {
+        // The Operation files list the equipment a measurement may be on, declared in Equipment,
+        // which is not in this workspace.
+        var report = service.compare(profile("Operation"));
+
+        assertThat(report.getContradictedCount()).isZero();
+        assertThat(report.getFindings())
+                .filteredOn(
+                        finding ->
+                                finding.getPath().equals(CIM + "Measurement.PowerSystemResource"))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getMessage())
+                                        .contains("cannot be checked")
+                                        .contains("cim:ACLineSegment"));
+    }
+
+    @Test
+    void withTheProfileDeclaringThemTheSameListAgrees() {
+        profile("Equipment");
+        var report = service.compare(profile("Operation"));
+
+        assertThat(report.getContradictedCount()).isZero();
+        assertThat(report.getFindings())
+                .noneMatch(finding -> finding.getMessage().contains("cannot be checked"));
+    }
+
     /** Imports a profile's vocabulary as a schema, with every official file named after it. */
     private GraphIdentifier profile(String name) {
         var schema = new GraphIdentifier(WORKSPACE, name);

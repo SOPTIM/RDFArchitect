@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * Compares what a schema implies with what a constraints document asserts.
@@ -49,6 +51,12 @@ import java.util.Set;
  * counting silence as disagreement made such a file read as "0 of 49 agree".
  */
 final class ConformanceComparator {
+
+    private static final String DIFFERENT =
+            "Both can be satisfied, but the schema and the document do not say the same thing.";
+
+    /** How many classes a message names before it counts the rest. */
+    private static final int SHOWN = 3;
 
     private ConformanceComparator() {}
 
@@ -226,11 +234,42 @@ final class ConformanceComparator {
 
         /** The classes a constraint names as its value type, for a message. */
         String valueType(EffectiveConstraints.Constraint constraint) {
+            return classes(named(constraint));
+        }
+
+        /**
+         * The classes either constraint names as a value type that the schema does not declare.
+         * Without any hierarchy every class stands for itself, as {@link ClassHierarchy#NONE} says.
+         */
+        Set<String> undeclared(
+                EffectiveConstraints.Constraint schema, EffectiveConstraints.Constraint document) {
+            var undeclared = new TreeSet<String>();
+            if (hierarchy.isEmpty()) {
+                return undeclared;
+            }
+            named(schema).stream()
+                    .filter(name -> !hierarchy.declares(name))
+                    .forEach(undeclared::add);
+            named(document).stream()
+                    .filter(name -> !hierarchy.declares(name))
+                    .forEach(undeclared::add);
+            return undeclared;
+        }
+
+        /** A few of {@code iris}, and how many more there are. */
+        String some(Set<String> iris) {
+            var shown = iris.stream().limit(SHOWN).collect(Collectors.toSet());
+            var rest = iris.size() - shown.size();
+            return ConstraintFormatter.terms(shown, prefixes)
+                    + (rest > 0 ? " and %d more".formatted(rest) : "");
+        }
+
+        private static Set<String> named(EffectiveConstraints.Constraint constraint) {
             var named = new LinkedHashSet<>(constraint.valueClasses());
             if (constraint.valueTypes() != null) {
                 named.addAll(constraint.valueTypes());
             }
-            return classes(named);
+            return named;
         }
     }
 
@@ -261,15 +300,45 @@ final class ConformanceComparator {
         if (same(schema, document, context)) {
             return Optional.empty();
         }
+        var unchecked = uncheckedValueType(schema, document, context);
         return Optional.of(
                 finding(
                         ConformanceFinding.Kind.DIFFERENT,
                         key,
                         context.describe(schema),
                         context.describe(document),
-                        "Both can be satisfied, but the schema and the document do not say the same"
-                                + " thing.",
+                        unchecked != null ? unchecked : DIFFERENT,
                         statedIn));
+    }
+
+    /**
+     * Why two value types that differ cannot be judged, or {@code null} when they agree or
+     * everything they name is known.
+     *
+     * <p>Only a schema declaring a class can say what derives from it, so a type naming a class no
+     * schema in the workspace declares cannot be told apart from one admitting the other's. The
+     * Operation profile lists the equipment a measurement may be on, which only the Equipment
+     * profile declares: without it, the lists share nothing, and that is no contradiction.
+     */
+    private static String uncheckedValueType(
+            EffectiveConstraints.Constraint schema,
+            EffectiveConstraints.Constraint document,
+            Context context) {
+        var schemaTypes = context.admitted(schema);
+        var documentTypes = context.admitted(document);
+        if (schemaTypes == null || documentTypes == null || schemaTypes.equals(documentTypes)) {
+            return null;
+        }
+        var undeclared = context.undeclared(schema, document);
+        if (undeclared.isEmpty()) {
+            return null;
+        }
+        var unknown = "no schema in the workspace declares " + context.some(undeclared) + ".";
+        if (disjoint(schemaTypes, documentTypes)) {
+            return "Whether a value can be an instance of both %s and %s cannot be checked: %s"
+                    .formatted(context.valueType(schema), context.valueType(document), unknown);
+        }
+        return DIFFERENT + " Whether their value types agree cannot be checked: " + unknown;
     }
 
     /**
@@ -289,6 +358,10 @@ final class ConformanceComparator {
                 "The documents state this only at a severity below sh:Violation, so data breaking"
                         + " it still conforms.");
         reasons.addAll(contradictions(schema, reported, context));
+        var unchecked = uncheckedValueType(schema, reported, context);
+        if (unchecked != null) {
+            reasons.add(unchecked);
+        }
         return finding(
                 ConformanceFinding.Kind.DIFFERENT,
                 key,
@@ -325,7 +398,10 @@ final class ConformanceComparator {
         }
         var schemaTypes = context.admitted(schema);
         var documentTypes = context.admitted(document);
-        if (schemaTypes != null && documentTypes != null && disjoint(schemaTypes, documentTypes)) {
+        if (schemaTypes != null
+                && documentTypes != null
+                && disjoint(schemaTypes, documentTypes)
+                && context.undeclared(schema, document).isEmpty()) {
             reasons.add(
                     "A value cannot be an instance of both %s and %s."
                             .formatted(context.valueType(schema), context.valueType(document)));

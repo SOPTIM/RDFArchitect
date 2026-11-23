@@ -434,6 +434,41 @@ class ConformanceComparatorTest {
                         });
     }
 
+    @Test
+    void aClassNoSchemaDeclaresMakesTheValueTypeUncheckableNotContradictory() {
+        // cim:PowerTransformer may well be a kind of cim:Equipment; only a schema declaring it
+        // could say, and none here does.
+        var findings =
+                compareInSchema(
+                        typedAs("cim:Switch cim:Breaker"),
+                        typedAs("cim:PowerTransformer cim:SynchronousMachine"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.DIFFERENT);
+                            assertThat(finding.getMessage())
+                                    .contains("cannot be checked")
+                                    .contains("cim:PowerTransformer")
+                                    .contains("cim:SynchronousMachine");
+                        });
+    }
+
+    @Test
+    void aValueTypeNamingOnlyDeclaredUnrelatedClassesStillContradicts() {
+        var findings =
+                compareInSchema(typedAs("cim:Switch cim:Breaker"), ofClass("cim:BaseVoltage"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding ->
+                                assertThat(finding.getKind())
+                                        .isEqualTo(ConformanceFinding.Kind.CONTRADICTED));
+    }
+
     // -------------------------------------------------------------------------
     // What cannot fail validation
     // -------------------------------------------------------------------------
