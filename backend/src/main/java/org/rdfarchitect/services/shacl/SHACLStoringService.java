@@ -587,23 +587,44 @@ public class SHACLStoringService
     public void replaceShapesDocumentText(
             String workspaceName, UUID documentId, String turtle, String expectedRevision) {
         assertEditable(workspaceName);
-        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
+        var stored = storedTurtle(turtle);
+        // Saving what is already stored changes nothing; not even parsing it is needed.
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var document = requireDocument(transaction, documentId);
-            if (expectedRevision != null
-                    && !expectedRevision.equalsIgnoreCase(
-                            SHACLDocumentUseCase.revisionOf(textOf(document)))) {
-                throw new StaleWriteException(
-                        "\"%s\" has changed since it was opened. Saving would discard that change."
-                                .formatted(document.getName()));
-            }
-            // Saving what is already stored changes nothing; not even parsing it is needed.
-            if (storedTurtle(turtle).equals(document.getRawText())) {
+            assertRevision(document, expectedRevision);
+            if (stored.equals(document.getRawText())) {
                 return;
             }
-            writeContent(document, parse(turtle, Lang.TURTLE), turtle, Lang.TURTLE);
+        }
+        // Parsed before the write lock is taken, as creating a document does: a large file takes a
+        // while to read, and every other request on the workspace would wait for it.
+        var parsed = parse(turtle, Lang.TURTLE);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
+            var document = requireDocument(transaction, documentId);
+            assertRevision(document, expectedRevision);
+            if (stored.equals(document.getRawText())) {
+                return;
+            }
+            writeContent(document, parsed, turtle, Lang.TURTLE);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Edited", "constraints document", document.getName()));
+        }
+    }
+
+    /**
+     * Refuses a write made to a text the document no longer holds.
+     *
+     * @param expectedRevision the revision the edit was made to, or {@code null} to write
+     *     regardless
+     */
+    private static void assertRevision(ShapesDocument document, String expectedRevision) {
+        if (expectedRevision != null
+                && !expectedRevision.equalsIgnoreCase(
+                        SHACLDocumentUseCase.revisionOf(textOf(document)))) {
+            throw new StaleWriteException(
+                    "\"%s\" has changed since it was opened. Saving would discard that change."
+                            .formatted(document.getName()));
         }
     }
 
