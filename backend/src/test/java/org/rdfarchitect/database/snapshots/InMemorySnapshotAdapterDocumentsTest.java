@@ -143,6 +143,20 @@ class InMemorySnapshotAdapterDocumentsTest {
     }
 
     @Test
+    void aFetchedSnapshotHoldsTheSameSchemasAndNoMore() {
+        createImported();
+        var token = adapter.createSnapshot(WORKSPACE);
+
+        SessionContext.setSessionId("session-b");
+        adapter.fetchSnapshot(token);
+
+        assertThat(
+                        databasePort.listSchemaNames(
+                                SnapshotUtils.constructSnapshotName(WORKSPACE, token)))
+                .containsExactly(SCHEMA);
+    }
+
+    @Test
     void eachFetchLoadsItsOwnCopyOfTheDocuments() {
         var id = createImported();
         var token = adapter.createSnapshot(WORKSPACE);

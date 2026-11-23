@@ -47,6 +47,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.formatter.ResultSetFormatterImpl;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
@@ -262,12 +263,23 @@ class SessionDataStorePersistShapesTest {
     }
 
     @Test
-    void theShapesDoNotBecomeGraphsOfTheirOwn() {
+    void theGraphsTheDocumentsAreStoredInDoNotBecomeSchemas() {
         create("eq.ttl", null);
+        write(
+                transaction ->
+                        transaction.createShapesDocument(
+                                "draft.ttl", ShapesDocument.Origin.AUTHORED, List.of()));
 
         store.writeToDatabase(connection, GRAPH);
 
-        assertThat(fetched().listSchemaNames(WORKSPACE)).containsExactly(GRAPH.schemaName());
+        assertThat(remote.containsNamedModel(ShapesGraphNaming.metadataGraph())).isTrue();
+        var reloaded = fetched();
+        assertThat(reloaded.listSchemaNames(WORKSPACE)).containsExactly(GRAPH.schemaName());
+        try (var transaction = reloaded.beginTransaction(WORKSPACE, ReadWrite.READ)) {
+            assertThat(transaction.shapesDocuments().values())
+                    .extracting(ShapesDocument::getName)
+                    .containsExactlyInAnyOrder("eq.ttl", "draft.ttl");
+        }
     }
 
     @Test
