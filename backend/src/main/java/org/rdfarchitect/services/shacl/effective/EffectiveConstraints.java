@@ -201,7 +201,9 @@ public final class EffectiveConstraints {
         properties.forEach(
                 property -> {
                     var definedIn = definedIn(property, shapes, documents);
-                    if (isDeactivated(definedIn, property)) {
+                    // Both the document naming a rule and the one defining it can switch it off
+                    // or lower its severity: validation reads them together.
+                    if (isDeactivated(shapes, property) || isDeactivated(definedIn, property)) {
                         return;
                     }
                     // Usually one path. A path expression rather than a property yields
@@ -210,7 +212,10 @@ public final class EffectiveConstraints {
                     if (paths.isEmpty()) {
                         return;
                     }
-                    var into = isAdvisory(definedIn, property) ? advisory : enforced;
+                    var into =
+                            isAdvisory(shapes, property) || isAdvisory(definedIn, property)
+                                    ? advisory
+                                    : enforced;
                     var constraint = read(definedIn, property);
                     paths.forEach(
                             path ->

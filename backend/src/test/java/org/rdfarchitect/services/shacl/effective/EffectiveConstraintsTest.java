@@ -196,6 +196,42 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void aRuleSwitchedOffByTheDocumentNamingItAsksNothing() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "naming.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule .
+                        ex:Rule sh:deactivated true .
+                        """));
+        documents.put("defining.ttl", shapes("ex:Rule sh:path ex:value ; sh:minCount 1 ."));
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.constraints()).isEmpty();
+        assertThat(asserted.advisory()).isEmpty();
+    }
+
+    @Test
+    void aRuleTheDocumentNamingItOnlyReportsOnIsAdvisory() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "naming.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule .
+                        ex:Rule sh:severity sh:Warning .
+                        """));
+        documents.put("defining.ttl", shapes("ex:Rule sh:path ex:value ; sh:minCount 1 ."));
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.constraints()).isEmpty();
+        assertThat(asserted.advisory().get(THING_VALUE).minCount()).isEqualTo(1);
+    }
+
+    @Test
     void anIllTypedDeactivationDoesNotFailTheRead() {
         // It parses, and "maybe" is simply not true.
         var shapes =
