@@ -23,8 +23,8 @@
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    import Association from "./Association.svelte";
     import InheritedSection from "../InheritedSection.svelte";
+    import Association from "./Association.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
 
     const {

@@ -17,10 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { graphStore } from "./graphStore";
-import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     listPackages,
     addPackage,
@@ -28,6 +24,10 @@ import {
     type PackageDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { graphStore } from "./graphStore";
+import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 
 type PackageListInfo = {
     internal: PackageDto[];

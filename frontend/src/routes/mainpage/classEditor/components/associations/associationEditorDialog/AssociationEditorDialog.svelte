@@ -24,10 +24,10 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
 
-    import Direct from "./Direct.svelte";
-    import Inverse from "./Inverse.svelte";
     import { resolveSaveTarget } from "../../resolve-save-target.js";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
+    import Direct from "./Direct.svelte";
+    import Inverse from "./Inverse.svelte";
 
     let {
         showDialog = $bindable(),

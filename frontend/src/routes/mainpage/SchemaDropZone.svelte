@@ -23,8 +23,8 @@
     import { fileDragState } from "$lib/fileDragState.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
-    import { acceptSchemaDrop } from "./schemaDrop.js";
     import ImportDialog from "../ImportDialog.svelte";
+    import { acceptSchemaDrop } from "./schemaDrop.js";
 
     let {
         workspaceName = null,

@@ -32,10 +32,10 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
-    import WorkspaceTab from "./WorkspaceTab.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NewWorkspaceDialog from "../../NewWorkspaceDialog.svelte";
     import { acceptSchemaDrop } from "../schemaDrop.js";
+    import WorkspaceTab from "./WorkspaceTab.svelte";
 
     let showNewWorkspaceDialog = $state(false);
     let showImportDialog = $state(false);
