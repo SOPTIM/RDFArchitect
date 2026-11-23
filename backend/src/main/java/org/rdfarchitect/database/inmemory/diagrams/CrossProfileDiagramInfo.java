@@ -43,7 +43,7 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
         super(txnContext);
     }
 
-    public void restoreCrossProfileDiagramUUID(UUID crossProfileDiagramUUID) {
+    public void setCrossProfileDiagramUUID(UUID crossProfileDiagramUUID) {
         this.crossProfileDiagramUUID = crossProfileDiagramUUID;
     }
 

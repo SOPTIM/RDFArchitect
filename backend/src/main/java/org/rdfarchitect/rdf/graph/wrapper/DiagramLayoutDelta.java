@@ -56,7 +56,7 @@ public class DiagramLayoutDelta
     }
 
     @Override
-    public void restoreDefaultPackageMRID(MRID defaultPackageMRID) {
+    public void setDefaultPackageMRID(MRID defaultPackageMRID) {
         this.defaultPackageMRID = defaultPackageMRID;
     }
 

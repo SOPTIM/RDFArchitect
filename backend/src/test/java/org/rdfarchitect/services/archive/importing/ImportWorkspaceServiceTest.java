@@ -92,27 +92,27 @@ class ImportWorkspaceServiceTest {
 
     @Test
     void importWorkspace_createsTheWorkspaceUnderTheGivenName() {
-        var result = importAs("restored", archive, ImportProgressListener.NOOP);
+        var result = importAs("imported", archive, ImportProgressListener.NOOP);
 
-        assertThat(databasePort.listDatasets()).contains("restored");
-        assertThat(databasePort.listGraphUris("restored"))
+        assertThat(databasePort.listDatasets()).contains("imported");
+        assertThat(databasePort.listGraphUris("imported"))
                 .containsExactlyInAnyOrder(CORE, EXTENSION);
         assertThat(result.importedGraphUris()).containsExactlyInAnyOrder(CORE, EXTENSION);
     }
 
     @Test
-    void importWorkspace_restoresExactlyThePrefixesOfTheWorkspace() {
-        importAs("restored", archive, ImportProgressListener.NOOP);
+    void importWorkspace_takesExactlyThePrefixesOfTheWorkspace() {
+        importAs("imported", archive, ImportProgressListener.NOOP);
 
-        assertThat(databasePort.getPrefixMapping("restored").getNsPrefixMap())
+        assertThat(databasePort.getPrefixMapping("imported").getNsPrefixMap())
                 .isEqualTo(Map.of("only", "http://example.org/only#"));
     }
 
     @Test
-    void importWorkspace_restoresTheReadOnlyFlag() {
-        importAs("restored", archive, ImportProgressListener.NOOP);
+    void importWorkspace_keepsTheReadOnlyFlag() {
+        importAs("imported", archive, ImportProgressListener.NOOP);
 
-        assertThat(databasePort.isReadOnly("restored")).isTrue();
+        assertThat(databasePort.isReadOnly("imported")).isTrue();
     }
 
     @Test
@@ -132,7 +132,7 @@ class ImportWorkspaceServiceTest {
                     }
                 };
 
-        importAs("restored", archive, listener);
+        importAs("imported", archive, listener);
 
         assertThat(events)
                 .containsExactlyInAnyOrder(
@@ -156,9 +156,9 @@ class ImportWorkspaceServiceTest {
         var files = unzip(archive);
         files.remove(WorkspaceArchiveFormat.COLORS);
 
-        assertThatThrownBy(() -> importAs("restored", zip(files), ImportProgressListener.NOOP))
+        assertThatThrownBy(() -> importAs("imported", zip(files), ImportProgressListener.NOOP))
                 .isInstanceOf(InvalidWorkspaceArchiveException.class);
-        assertThat(databasePort.listDatasets()).doesNotContain("restored");
+        assertThat(databasePort.listDatasets()).doesNotContain("imported");
     }
 
     @Test
@@ -177,11 +177,11 @@ class ImportWorkspaceServiceTest {
                     }
                 };
 
-        var result = importAs("restored", archive, listener);
+        var result = importAs("imported", archive, listener);
 
         assertThat(result.cancelled()).isTrue();
         assertThat(result.importedGraphUris()).isEmpty();
-        assertThat(databasePort.listDatasets()).doesNotContain("restored");
+        assertThat(databasePort.listDatasets()).doesNotContain("imported");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
     }
 
@@ -203,8 +203,8 @@ class ImportWorkspaceServiceTest {
                     }
                 };
 
-        assertThatThrownBy(() -> importAs("restored", archive, listener)).hasMessage("broke down");
-        assertThat(databasePort.listDatasets()).doesNotContain("restored");
+        assertThatThrownBy(() -> importAs("imported", archive, listener)).hasMessage("broke down");
+        assertThat(databasePort.listDatasets()).doesNotContain("imported");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
     }
 
@@ -224,11 +224,11 @@ class ImportWorkspaceServiceTest {
                     }
                 };
 
-        var result = importAs("restored", archive, listener);
+        var result = importAs("imported", archive, listener);
 
         assertThat(result.cancelled()).isTrue();
         assertThat(result.importedGraphUris()).isEmpty();
-        assertThat(databasePort.listDatasets()).doesNotContain("restored");
+        assertThat(databasePort.listDatasets()).doesNotContain("imported");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
     }
 
@@ -239,7 +239,7 @@ class ImportWorkspaceServiceTest {
         manifest.put("formatVersion", "1.9");
         files.put(WorkspaceArchiveFormat.MANIFEST, ArchiveFiles.json(manifest));
 
-        var result = importAs("restored", zip(files), ImportProgressListener.NOOP);
+        var result = importAs("imported", zip(files), ImportProgressListener.NOOP);
 
         assertThat(result.notices()).singleElement().asString().contains("format 1.9");
     }

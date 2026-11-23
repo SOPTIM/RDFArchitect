@@ -586,7 +586,7 @@ class ImportJobServiceTest {
     }
 
     @Test
-    void startWorkspaceImport_reportsTheRestoredGraphsAndTheNotices() {
+    void startWorkspaceImport_reportsTheImportedGraphsAndTheNotices() {
         var received = new AtomicReference<String>();
         service =
                 new ImportJobService(

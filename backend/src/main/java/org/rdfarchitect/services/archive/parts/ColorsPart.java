@@ -74,7 +74,7 @@ public final class ColorsPart
     }
 
     @Override
-    public void restore(WorkspaceTransaction target, Map<String, String> colors) {
+    public void apply(WorkspaceTransaction target, Map<String, String> colors) {
         colors.forEach(target.crossProfileColors()::setColor);
     }
 }

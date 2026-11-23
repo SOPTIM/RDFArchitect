@@ -98,7 +98,7 @@ public interface ImportJobUseCase {
      */
     UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
 
-    /** Starts restoring a workspace archive as a new workspace; all or nothing. */
+    /** Starts importing a workspace file as a new workspace; all or nothing. */
     UUID startWorkspaceImport(String workspaceName, MultipartFile archive);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */

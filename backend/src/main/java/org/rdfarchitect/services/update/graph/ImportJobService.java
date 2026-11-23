@@ -202,7 +202,7 @@ public class ImportJobService implements ImportJobUseCase {
             var result = importWorkspaceUseCase.importWorkspace(job.getDatasetName(), content, job);
             job.complete(result);
             logger.info(
-                    "Workspace import job {} finished: {} graph(s) restored.",
+                    "Workspace import job {} finished: {} graph(s) imported.",
                     job.getId(),
                     result.importedGraphUris().size());
         } catch (InvalidWorkspaceArchiveException e) {

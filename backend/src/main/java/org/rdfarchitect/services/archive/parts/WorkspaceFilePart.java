@@ -20,8 +20,8 @@ package org.rdfarchitect.services.archive.parts;
 /**
  * One part of the workspace file, such as the schema of a graph or the colours of the workspace.
  * The export writes it, the import first reads and checks it together with every other part, and
- * restores it only once the whole file turned out valid. Keeping the three in one class keeps them
- * in step when the part changes.
+ * applies it to the new workspace only once the whole file turned out valid. Keeping the three in
+ * one class keeps them in step when the part changes.
  *
  * @param <S> where the part lives: a graph of the workspace or the workspace itself
  * @param <T> what the part holds once read
@@ -32,13 +32,16 @@ public interface WorkspaceFilePart<S, T> {
     void write(S source, PartWriter out);
 
     /**
-     * Reads the part and reports to {@code in} whatever keeps it from being restored. Changes
-     * nothing, since the import reads every part before it restores the first.
+     * Reads the part and reports to {@code in} whatever keeps it from being applied. Changes
+     * nothing, since the import reads every part before it applies the first.
      *
      * @return what the part holds, {@code null} if it reported a problem
      */
     T read(PartReader in);
 
-    /** Restores what {@link #read} returned, once no part of the file reported a problem. */
-    void restore(S target, T value);
+    /**
+     * Applies what {@link #read} returned to the new workspace, once no part of the file reported a
+     * problem.
+     */
+    void apply(S target, T value);
 }

@@ -71,8 +71,8 @@ class WorkspaceArchiveRoundTripTest {
         var exported = exportService.exportWorkspace("original");
 
         importService.importWorkspace(
-                "restored", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
-        var reexported = unzip(exportService.exportWorkspace("restored"));
+                "imported", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
+        var reexported = unzip(exportService.exportWorkspace("imported"));
 
         var original = unzip(exported);
         assertThat(reexported.keySet()).isEqualTo(original.keySet());
@@ -80,16 +80,16 @@ class WorkspaceArchiveRoundTripTest {
     }
 
     @Test
-    void restoredWorkspace_drawsItsDiagramsWhereTheOriginalDid() {
+    void importedWorkspace_drawsItsDiagramsWhereTheOriginalDid() {
         var graphUris =
                 cgmes.build("original", List.of(CgmesWorkspace.HEADER, CgmesWorkspace.TOPOLOGY));
         var exported = exportService.exportWorkspace("original");
 
         importService.importWorkspace(
-                "restored", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
+                "imported", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
 
         for (var graphUri : graphUris) {
-            assertThat(cgmes.positionsOfFirstPackage("restored", graphUri))
+            assertThat(cgmes.positionsOfFirstPackage("imported", graphUri))
                     .as(graphUri)
                     .isNotEmpty()
                     .isEqualTo(cgmes.positionsOfFirstPackage("original", graphUri));
@@ -97,16 +97,16 @@ class WorkspaceArchiveRoundTripTest {
     }
 
     @Test
-    void restoredWorkspace_hasNothingToUndo() {
+    void importedWorkspace_hasNothingToUndo() {
         cgmes.build("original", List.of(CgmesWorkspace.HEADER));
         var exported = exportService.exportWorkspace("original");
 
         importService.importWorkspace(
-                "restored", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
+                "imported", new ByteArrayInputStream(exported), ImportProgressListener.NOOP);
 
         databasePort.createDataset("fresh");
-        assertThat(databasePort.canUndo("restored")).isFalse();
-        assertThat(databasePort.listChanges("restored"))
+        assertThat(databasePort.canUndo("imported")).isFalse();
+        assertThat(databasePort.listChanges("imported"))
                 .as("the history of a workspace that was just created")
                 .extracting(WorkspaceChangeLogEntry::message)
                 .isEqualTo(

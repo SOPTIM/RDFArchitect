@@ -104,7 +104,7 @@ public class WorkspaceFileRESTController {
     @Operation(
             summary = "Start importing a workspace file",
             description =
-                    "Starts restoring a workspace file, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}. The file is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
+                    "Starts importing a workspace file, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}. The file is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
             tags = {"dataset"},
             responses = {
                 @ApiResponse(responseCode = "202", description = "Import started"),

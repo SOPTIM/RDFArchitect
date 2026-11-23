@@ -48,12 +48,12 @@ public record ArchivedWorkspaceDiagram(
     }
 
     public CustomDiagram toCustomDiagram(Map<String, String> graphUriByFolder) {
-        var restored = new ArrayList<ClassInDiagram>();
+        var classesInDiagram = new ArrayList<ClassInDiagram>();
         classes.forEach(
                 (folder, uuids) -> {
                     var graphUri = new URI(graphUriByFolder.get(folder));
-                    uuids.forEach(uuid -> restored.add(new ClassInDiagram(uuid, graphUri)));
+                    uuids.forEach(uuid -> classesInDiagram.add(new ClassInDiagram(uuid, graphUri)));
                 });
-        return new CustomDiagram(diagramId, name, restored);
+        return new CustomDiagram(diagramId, name, classesInDiagram);
     }
 }

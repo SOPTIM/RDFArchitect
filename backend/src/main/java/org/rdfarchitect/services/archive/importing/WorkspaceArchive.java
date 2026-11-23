@@ -23,7 +23,7 @@ import org.rdfarchitect.services.archive.parts.ReadPart;
 
 import java.util.List;
 
-/** A workspace file that was read and found valid as a whole, ready to be restored. */
+/** A workspace file that was read and found valid as a whole, ready to be applied. */
 public record WorkspaceArchive(
         boolean readOnly,
         List<ArchivedGraph> graphs,

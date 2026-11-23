@@ -47,7 +47,7 @@ public final class LayoutPart<S> implements WorkspaceFilePart<S, Graph> {
     }
 
     @Override
-    public void restore(S target, Graph layout) {
+    public void apply(S target, Graph layout) {
         layoutOf.apply(target)
                 .getDiagramLayoutModel()
                 .add(ModelFactory.createModelForGraph(layout));

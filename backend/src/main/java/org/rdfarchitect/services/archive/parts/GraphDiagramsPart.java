@@ -50,14 +50,14 @@ public final class GraphDiagramsPart extends DiagramsPart<GraphScope, ArchivedGr
     }
 
     @Override
-    CustomDiagram restoreDiagram(ArchivedGraphDiagram diagram, String where, PartReader in) {
+    CustomDiagram readDiagram(ArchivedGraphDiagram diagram, String where, PartReader in) {
         return diagram.toCustomDiagram(in.graphUri());
     }
 
     @Override
-    public void restore(GraphScope target, ArchivedDiagrams<CustomDiagram> diagrams) {
+    public void apply(GraphScope target, ArchivedDiagrams<CustomDiagram> diagrams) {
         var graph = target.graph();
-        graph.getDiagramLayout().restoreDefaultPackageMRID(new MRID(diagrams.defaultPackageMRID()));
+        graph.getDiagramLayout().setDefaultPackageMRID(new MRID(diagrams.defaultPackageMRID()));
         diagrams.customDiagrams()
                 .forEach(diagram -> graph.getCustomDiagrams().put(diagram.getDiagramId(), diagram));
     }

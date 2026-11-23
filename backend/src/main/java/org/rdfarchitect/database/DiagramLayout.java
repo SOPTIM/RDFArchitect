@@ -40,6 +40,6 @@ public interface DiagramLayout {
     /** Returns the package shown when no particular one was asked for. */
     MRID getDefaultPackageMRID();
 
-    /** Restores the default package of an archived layout, outside the history. */
-    void restoreDefaultPackageMRID(MRID defaultPackageMRID);
+    /** Sets the default package as a workspace file states it, outside the history. */
+    void setDefaultPackageMRID(MRID defaultPackageMRID);
 }

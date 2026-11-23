@@ -82,19 +82,19 @@ class WorkspaceArchiveFormat10CompatibilityTest {
 
         var reexported =
                 new ExportWorkspaceService(databasePort, new AppVersionResolver("test"))
-                        .exportWorkspace("restored");
+                        .exportWorkspace("imported");
 
         assertContainsEverythingOf(unzip(archive), unzip(reexported));
     }
 
     @Test
-    void restoresTheIdsTheLayoutsAreStoredUnder() {
+    void keepsTheIdsTheLayoutsAreStoredUnder() {
         importArchive();
 
         var files = unzip(archive);
         var manifest = json(files.get(WorkspaceArchiveFormat.MANIFEST));
         var workspaceDiagrams = json(files.get("diagrams.json"));
-        try (var transaction = databasePort.beginTransaction("restored", ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction("imported", ReadWrite.READ)) {
             assertThat(transaction.crossProfileDiagramId())
                     .hasToString(workspaceDiagrams.get("crossProfileDiagramId").asText());
             assertThat(transaction.layout().getDefaultPackageMRID().getUuid())
@@ -124,7 +124,7 @@ class WorkspaceArchiveFormat10CompatibilityTest {
         var positions =
                 new CgmesWorkspace(databasePort)
                         .positionsOfFirstPackage(
-                                "restored", "http://graph#61970_600_2_Header_AP_Voc_RDFS2020");
+                                "imported", "http://graph#61970_600_2_Header_AP_Voc_RDFS2020");
 
         assertThat(positions).isNotEmpty().containsValue("100.0,50.0");
     }
@@ -132,7 +132,7 @@ class WorkspaceArchiveFormat10CompatibilityTest {
     private ImportWorkspaceUseCase.WorkspaceImportResult importArchive() {
         return new ImportWorkspaceService(databasePort)
                 .importWorkspace(
-                        "restored",
+                        "imported",
                         new java.io.ByteArrayInputStream(archive),
                         ImportProgressListener.NOOP);
     }

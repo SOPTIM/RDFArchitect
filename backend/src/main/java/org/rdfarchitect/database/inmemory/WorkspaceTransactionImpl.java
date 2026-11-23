@@ -103,8 +103,8 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public void restoreCrossProfileDiagramId(UUID crossProfileDiagramId) {
-        crossProfileDiagramInfo.restoreCrossProfileDiagramUUID(crossProfileDiagramId);
+    public void setCrossProfileDiagramId(UUID crossProfileDiagramId) {
+        crossProfileDiagramInfo.setCrossProfileDiagramUUID(crossProfileDiagramId);
     }
 
     @Override

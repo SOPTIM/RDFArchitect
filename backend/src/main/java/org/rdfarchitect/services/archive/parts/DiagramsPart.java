@@ -67,11 +67,11 @@ abstract class DiagramsPart<S, D> implements WorkspaceFilePart<S, ArchivedDiagra
                 continue;
             }
             try {
-                var restored = restoreDiagram(diagram, where, in);
-                if (restored == null) {
+                var customDiagram = readDiagram(diagram, where, in);
+                if (customDiagram == null) {
                     valid = false;
                 } else {
-                    diagrams.add(restored);
+                    diagrams.add(customDiagram);
                 }
             } catch (IllegalArgumentException e) {
                 in.problem(WorkspaceArchiveFormat.DIAGRAMS, where + ": " + e.getMessage());
@@ -99,7 +99,7 @@ abstract class DiagramsPart<S, D> implements WorkspaceFilePart<S, ArchivedDiagra
      *
      * @return the diagram, {@code null} if it reported a problem
      */
-    abstract CustomDiagram restoreDiagram(D diagram, String where, PartReader in);
+    abstract CustomDiagram readDiagram(D diagram, String where, PartReader in);
 
     static List<CustomDiagram> sorted(Collection<CustomDiagram> diagrams) {
         return diagrams.stream().sorted(Comparator.comparing(CustomDiagram::getDiagramId)).toList();

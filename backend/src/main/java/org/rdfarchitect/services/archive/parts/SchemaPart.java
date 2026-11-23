@@ -20,7 +20,7 @@ package org.rdfarchitect.services.archive.parts;
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
-/** The schema of a graph, {@code schema.ttl}. Restoring it creates the graph. */
+/** The schema of a graph, {@code schema.ttl}. Applying it creates the graph. */
 public final class SchemaPart implements WorkspaceFilePart<GraphScope, Graph> {
 
     @Override
@@ -34,7 +34,7 @@ public final class SchemaPart implements WorkspaceFilePart<GraphScope, Graph> {
     }
 
     @Override
-    public void restore(GraphScope target, Graph schema) {
+    public void apply(GraphScope target, Graph schema) {
         target.transaction().createGraph(target.uri(), schema);
     }
 }

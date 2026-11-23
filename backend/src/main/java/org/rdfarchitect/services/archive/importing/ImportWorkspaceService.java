@@ -48,15 +48,15 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
                         .toList());
 
         databasePort.createDataset(workspaceName);
-        var restored = false;
+        var applied = false;
         try {
-            restored = restore(workspaceName, contents, listener);
+            applied = apply(workspaceName, contents, listener);
         } finally {
-            if (!restored) {
+            if (!applied) {
                 databasePort.deleteDataset(workspaceName);
             }
         }
-        if (!restored) {
+        if (!applied) {
             return new WorkspaceImportResult(List.of(), contents.notices(), true);
         }
         if (contents.readOnly()) {
@@ -69,7 +69,7 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
     }
 
     /** Returns {@code false} if the import was cancelled before it was committed. */
-    private boolean restore(
+    private boolean apply(
             String workspaceName, WorkspaceArchive contents, ImportProgressListener listener) {
         var graphs = contents.graphs();
         var committed = false;
@@ -82,10 +82,10 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
                 listener.started(index);
                 var graph = graphs.get(index);
                 var scope = new GraphScope(transaction, graph.uri());
-                graph.parts().forEach(part -> part.restore(scope));
+                graph.parts().forEach(part -> part.apply(scope));
                 listener.finished(index, Outcome.IMPORTED, graph.uri());
             }
-            contents.workspaceParts().forEach(part -> part.restore(transaction));
+            contents.workspaceParts().forEach(part -> part.apply(transaction));
             if (listener.isCancelled()) {
                 transaction.abort();
                 return false;

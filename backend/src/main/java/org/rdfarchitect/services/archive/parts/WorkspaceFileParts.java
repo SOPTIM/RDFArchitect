@@ -24,11 +24,11 @@ import org.rdfarchitect.database.WorkspaceTransaction;
 
 import java.util.List;
 
-/** The parts of the workspace file, each list in the order the import restores it. */
+/** The parts of the workspace file, each list in the order the import applies them. */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class WorkspaceFileParts {
 
-    /** The schema comes first, since restoring it creates the graph the other parts go into. */
+    /** The schema comes first, since applying it creates the graph the other parts go into. */
     public static final List<WorkspaceFilePart<GraphScope, ?>> OF_GRAPH =
             List.of(
                     new SchemaPart(),
@@ -37,7 +37,7 @@ public final class WorkspaceFileParts {
                     new GraphDiagramsPart());
 
     /**
-     * Restored after every graph. The namespaces come last, because creating a graph adds the
+     * Applied after every graph. The namespaces come last, because creating a graph adds the
      * prefixes of its schema file.
      */
     public static final List<WorkspaceFilePart<WorkspaceTransaction, ?>> OF_WORKSPACE =

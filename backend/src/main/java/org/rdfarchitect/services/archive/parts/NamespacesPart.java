@@ -63,7 +63,7 @@ public final class NamespacesPart
     }
 
     @Override
-    public void restore(WorkspaceTransaction target, PrefixMapping prefixes) {
+    public void apply(WorkspaceTransaction target, PrefixMapping prefixes) {
         target.setPrefixes(prefixes);
     }
 }

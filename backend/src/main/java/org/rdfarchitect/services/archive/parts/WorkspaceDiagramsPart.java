@@ -68,7 +68,7 @@ public final class WorkspaceDiagramsPart
     }
 
     @Override
-    CustomDiagram restoreDiagram(ArchivedWorkspaceDiagram diagram, String where, PartReader in) {
+    CustomDiagram readDiagram(ArchivedWorkspaceDiagram diagram, String where, PartReader in) {
         var valid = true;
         for (var folder : diagram.classes().keySet()) {
             if (!in.graphUriByFolder().containsKey(folder)) {
@@ -82,9 +82,9 @@ public final class WorkspaceDiagramsPart
     }
 
     @Override
-    public void restore(WorkspaceTransaction target, ArchivedDiagrams<CustomDiagram> diagrams) {
-        target.restoreCrossProfileDiagramId(diagrams.crossProfileDiagramId());
-        target.layout().restoreDefaultPackageMRID(new MRID(diagrams.defaultPackageMRID()));
+    public void apply(WorkspaceTransaction target, ArchivedDiagrams<CustomDiagram> diagrams) {
+        target.setCrossProfileDiagramId(diagrams.crossProfileDiagramId());
+        target.layout().setDefaultPackageMRID(new MRID(diagrams.defaultPackageMRID()));
         diagrams.customDiagrams()
                 .forEach(diagram -> target.diagrams().put(diagram.getDiagramId(), diagram));
     }

@@ -36,7 +36,7 @@ public final class ShaclPart implements WorkspaceFilePart<GraphScope, Graph> {
     }
 
     @Override
-    public void restore(GraphScope target, Graph shacl) {
+    public void apply(GraphScope target, Graph shacl) {
         var shaclModel = ModelFactory.createModelForGraph(target.graph().getCustomSHACL());
         var normalized = GraphUtils.normalizeBlankNodes(shacl);
         shaclModel.add(ModelFactory.createModelForGraph(normalized));

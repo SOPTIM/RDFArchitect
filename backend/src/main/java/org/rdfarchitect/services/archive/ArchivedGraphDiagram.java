@@ -42,7 +42,7 @@ public record ArchivedGraphDiagram(
 
     public CustomDiagram toCustomDiagram(String graphUri) {
         var uri = new URI(graphUri);
-        var restored = classes.stream().map(uuid -> new ClassInDiagram(uuid, uri)).toList();
-        return new CustomDiagram(diagramId, name, restored);
+        var classesInDiagram = classes.stream().map(uuid -> new ClassInDiagram(uuid, uri)).toList();
+        return new CustomDiagram(diagramId, name, classesInDiagram);
     }
 }

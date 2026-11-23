@@ -117,7 +117,7 @@
 
     async function dismissImport() {
         const result = await job.dismiss();
-        // The workspace is restored as a whole or not at all.
+        // The workspace is imported as a whole or not at all.
         if (result?.state === JobState.COMPLETED) {
             openImportedWorkspace(
                 result.workspaceName,
