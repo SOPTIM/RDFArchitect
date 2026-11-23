@@ -53,8 +53,7 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
                     "../external/entsoe-application-profiles-library/CGMES/CurrentRelease/SHACL/TTL/"
                             + "61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl");
 
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier("cgmes", "http://example.org/EQ");
+    private static final GraphIdentifier GRAPH = new GraphIdentifier("cgmes", "EQ");
 
     private String official;
     private long officialTriples;
@@ -73,13 +72,13 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
 
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         SessionContext.setSessionId(getClass().getSimpleName());
-        databasePort.createWorkspaceIfAbsent(GRAPH.datasetName());
+        databasePort.createWorkspaceIfAbsent(GRAPH.workspaceName());
         try (var transaction =
-                databasePort.beginTransaction(GRAPH.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH.graphUri(), GraphFactory.createDefaultGraph());
+                databasePort.beginTransaction(GRAPH.workspaceName(), ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH.schemaName(), GraphFactory.createDefaultGraph());
             transaction.commit("Created the graph");
         }
-        databasePort.enableEditing(GRAPH.datasetName());
+        databasePort.enableEditing(GRAPH.workspaceName());
         service = new SHACLStoringService(databasePort);
     }
 
@@ -92,8 +91,8 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
     void anImportedFileIsHeldAndExportedExactlyAsWritten() {
         var created =
                 service.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        GRAPH.workspaceName(),
+                        List.of(GRAPH.schemaName()),
                         "eq.ttl",
                         "eq.ttl",
                         official,
@@ -101,11 +100,11 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
 
         assertThat(created.getTripleCount()).isEqualTo(officialTriples);
         assertThat(created.getNodeShapeCount()).isPositive();
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), created.getId()))
                 .isEqualTo(official);
         assertThat(
                         service.exportSelectedSHACLGraph(
-                                        GRAPH.datasetName(),
+                                        GRAPH.workspaceName(),
                                         RDFFormat.TURTLE,
                                         List.of(created.getId()),
                                         List.of())
@@ -117,21 +116,22 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
     void anEditDeleteAndRestoreComeBackToTheFileAsWritten() {
         var id =
                 service.createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                GRAPH.workspaceName(),
+                                List.of(GRAPH.schemaName()),
                                 "eq.ttl",
                                 "eq.ttl",
                                 official,
                                 Lang.TURTLE)
                         .getId();
-        var target = databasePort.listChanges(GRAPH.datasetName()).getFirst().changeId();
+        var target = databasePort.listChanges(GRAPH.workspaceName()).getFirst().changeId();
 
-        service.replaceShapesDocumentText(GRAPH.datasetName(), id, official + "\n# edited\n");
-        service.deleteShapesDocument(GRAPH.datasetName(), id);
-        databasePort.restoreToVersion(GRAPH.datasetName(), target, RevertScope.everything(), null);
+        service.replaceShapesDocumentText(GRAPH.workspaceName(), id, official + "\n# edited\n");
+        service.deleteShapesDocument(GRAPH.workspaceName(), id);
+        databasePort.restoreToVersion(
+                GRAPH.workspaceName(), target, RevertScope.everything(), null);
 
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(official);
-        assertThat(service.listShapesDocuments(GRAPH.datasetName()).getFirst().getTripleCount())
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), id)).isEqualTo(official);
+        assertThat(service.listShapesDocuments(GRAPH.workspaceName()).getFirst().getTripleCount())
                 .isEqualTo(officialTriples);
     }
 
@@ -139,20 +139,20 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
     void aShareBringsBackTheFileAsWritten() {
         var id =
                 service.createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                GRAPH.workspaceName(),
+                                List.of(GRAPH.schemaName()),
                                 "eq.ttl",
                                 "eq.ttl",
                                 official,
                                 Lang.TURTLE)
                         .getId();
         var adapter = new InMemorySnapshotAdapter(databasePort);
-        var token = adapter.createSnapshot(GRAPH.datasetName());
+        var token = adapter.createSnapshot(GRAPH.workspaceName());
 
         SessionContext.setSessionId(getClass().getSimpleName() + "-other");
         adapter.fetchSnapshot(token);
 
-        var shared = SnapshotUtils.constructSnapshotName(GRAPH.datasetName(), token);
+        var shared = SnapshotUtils.constructSnapshotName(GRAPH.workspaceName(), token);
         assertThat(service.getShapesDocumentText(shared, id)).isEqualTo(official);
     }
 }

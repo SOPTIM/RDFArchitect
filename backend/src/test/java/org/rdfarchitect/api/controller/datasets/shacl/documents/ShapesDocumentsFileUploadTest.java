@@ -30,7 +30,6 @@ import org.apache.jena.riot.Lang;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.springframework.mock.web.MockMultipartFile;
@@ -47,9 +46,7 @@ import java.util.UUID;
  */
 class ShapesDocumentsFileUploadTest {
 
-    private static final String URL = "/api/datasets/cgmes/shacl/documents/file";
-
-    private static final String GRAPH_URI = "http://example.org/DL";
+    private static final String URL = "/api/workspaces/cgmes/shacl/documents/file";
 
     private static final String FILE_NAME = "61970-600-2_DiagramLayout-AP-Con-Simple-SHACL.ttl";
 
@@ -67,15 +64,12 @@ class ShapesDocumentsFileUploadTest {
 
     @BeforeEach
     void setUp() {
-        var expandURIUseCase = mock(ExpandURIUseCase.class);
         documents = mock(SHACLDocumentUseCase.class);
-        when(expandURIUseCase.expandUri(any(), any())).thenReturn(GRAPH_URI);
         when(documents.createShapesDocument(any(), any(), any(), any(), any(), any()))
                 .thenReturn(ShapesDocumentInfo.builder().id(UUID.randomUUID()).build());
 
         mockMvc =
-                MockMvcBuilders.standaloneSetup(
-                                new ShapesDocumentsRESTController(expandURIUseCase, documents))
+                MockMvcBuilders.standaloneSetup(new ShapesDocumentsRESTController(documents))
                         .build();
     }
 
@@ -95,7 +89,7 @@ class ShapesDocumentsFileUploadTest {
 
     @Test
     void anExplicitNameWins() throws Exception {
-        // What the importer sends when the file's own name is already taken in this graph.
+        // What the importer sends when the file's own name is already taken in this workspace.
         mockMvc.perform(multipart(URL).file(file()).param("name", FILE_NAME + " (2)"))
                 .andExpect(status().isOk());
 

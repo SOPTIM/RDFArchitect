@@ -84,11 +84,11 @@ public class HttpConnectionImpl implements DatabaseConnection {
 
     @Override
     public void replaceGraphs(
-            Collection<String> removed, Map<String, Graph> written, String datasetName)
+            Collection<String> removed, Map<String, Graph> written, String workspaceName)
             throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .replaceGraphs(removed, written);
     }
 

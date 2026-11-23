@@ -41,7 +41,7 @@ import java.util.List;
 /** What the service accepts as the name of a constraints document. */
 class SHACLDocumentNamesTest {
 
-    private static final GraphIdentifier GRAPH = new GraphIdentifier("cgmes", "http://ex.org/EQ");
+    private static final GraphIdentifier GRAPH = new GraphIdentifier("cgmes", "EQ");
 
     private DatabasePort databasePort;
     private SHACLStoringService service;
@@ -50,13 +50,13 @@ class SHACLDocumentNamesTest {
     void setUp() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         SessionContext.setSessionId(getClass().getSimpleName());
-        databasePort.createWorkspaceIfAbsent(GRAPH.datasetName());
+        databasePort.createWorkspaceIfAbsent(GRAPH.workspaceName());
         try (var transaction =
-                databasePort.beginTransaction(GRAPH.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH.graphUri(), GraphFactory.createDefaultGraph());
+                databasePort.beginTransaction(GRAPH.workspaceName(), ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH.schemaName(), GraphFactory.createDefaultGraph());
             transaction.commit("Created the graph");
         }
-        databasePort.enableEditing(GRAPH.datasetName());
+        databasePort.enableEditing(GRAPH.workspaceName());
         service = new SHACLStoringService(databasePort);
     }
 
@@ -67,7 +67,7 @@ class SHACLDocumentNamesTest {
 
     private ShapesDocumentInfo create(String name) {
         return service.createShapesDocument(
-                GRAPH.datasetName(), List.of(GRAPH.graphUri()), name, null, "", Lang.TURTLE);
+                GRAPH.workspaceName(), List.of(GRAPH.schemaName()), name, null, "", Lang.TURTLE);
     }
 
     @Test
@@ -112,15 +112,20 @@ class SHACLDocumentNamesTest {
                 .isThrownBy(
                         () ->
                                 service.updateShapesDocument(
-                                        GRAPH.datasetName(), id, " ", null, null, null));
+                                        GRAPH.workspaceName(), id, " ", null, null, null));
         assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(
                         () ->
                                 service.updateShapesDocument(
-                                        GRAPH.datasetName(), id, "TP.ttl", null, null, null));
+                                        GRAPH.workspaceName(), id, "TP.ttl", null, null, null));
         assertThat(
                         service.updateShapesDocument(
-                                        GRAPH.datasetName(), id, " renamed.ttl ", null, null, null)
+                                        GRAPH.workspaceName(),
+                                        id,
+                                        " renamed.ttl ",
+                                        null,
+                                        null,
+                                        null)
                                 .getName())
                 .isEqualTo("renamed.ttl");
     }
@@ -131,7 +136,7 @@ class SHACLDocumentNamesTest {
 
         assertThat(
                         service.updateShapesDocument(
-                                        GRAPH.datasetName(), id, "EQ.ttl", null, null, null)
+                                        GRAPH.workspaceName(), id, "EQ.ttl", null, null, null)
                                 .getName())
                 .isEqualTo("EQ.ttl");
     }

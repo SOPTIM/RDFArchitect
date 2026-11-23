@@ -35,7 +35,7 @@ import java.util.UUID;
  * @param origin whether it was imported or authored
  * @param enabled whether its shapes take part in validation and export
  * @param order position in the document list
- * @param schemas URIs of the schemas the document applies to
+ * @param schemas names of the schemas the document applies to
  * @param rawText verbatim Turtle source, or {@code null} when only the triples were stored
  * @param graph the shapes themselves
  */

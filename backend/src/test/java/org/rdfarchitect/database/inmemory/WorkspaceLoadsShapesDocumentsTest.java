@@ -27,6 +27,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
@@ -41,19 +42,20 @@ import java.util.UUID;
 /**
  * Loading a dataset that carries shapes documents alongside its schemas.
  *
- * <p>A stored dataset is plain RDF whose content is discovered by listing its named graphs, so a
- * document's graph has to be recognised and routed to the graph owning it — otherwise it would
- * surface as a workspace graph of its own.
+ * <p>A stored dataset is plain RDF whose content is discovered by listing its named graphs, and
+ * every graph found becomes a schema, so a document's graphs have to be recognised and left out —
+ * otherwise each would surface as a schema of its own.
  */
 class WorkspaceLoadsShapesDocumentsTest {
 
-    private static final String GRAPH_URI = "http://example.org/EQ";
+    private static final String NS = "http://example.org/EQ";
+    private static final String SCHEMA = "EQ";
     private static final String SHACL_NS = "http://www.w3.org/ns/shacl#";
 
     private static Model schemaModel() {
         var model = ModelFactory.createDefaultModel();
         model.add(
-                ResourceFactory.createResource(GRAPH_URI + "#ACLineSegment"),
+                ResourceFactory.createResource(NS + "#ACLineSegment"),
                 ResourceFactory.createProperty("http://www.w3.org/2000/01/rdf-schema#label"),
                 "ACLineSegment");
         return model;
@@ -62,9 +64,9 @@ class WorkspaceLoadsShapesDocumentsTest {
     private static Model shapeModel(String localName) {
         var model = ModelFactory.createDefaultModel();
         model.add(
-                ResourceFactory.createResource(GRAPH_URI + "#" + localName),
+                ResourceFactory.createResource(NS + "#" + localName),
                 ResourceFactory.createProperty(SHACL_NS + "targetClass"),
-                ResourceFactory.createResource(GRAPH_URI + "#ACLineSegment"));
+                ResourceFactory.createResource(NS + "#ACLineSegment"));
         return model;
     }
 
@@ -77,12 +79,12 @@ class WorkspaceLoadsShapesDocumentsTest {
                 # the %s
                 eq:%s sh:targetClass eq:ACLineSegment .
                 """
-                .formatted(SHACL_NS, GRAPH_URI, localName, localName);
+                .formatted(SHACL_NS, NS, localName, localName);
     }
 
     private static Dataset datasetWithSchema() {
         var dataset = DatasetFactory.createGeneral();
-        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(SchemaIri.of(SCHEMA), schemaModel());
         return dataset;
     }
 
@@ -101,7 +103,7 @@ class WorkspaceLoadsShapesDocumentsTest {
             UUID id, String name, String sourceFile, int order, boolean enabled, String rawText) {
         var scratch = new Workspace("scratch");
         try (var transaction = scratch.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_URI, GraphFactory.createDefaultGraph());
+            transaction.createGraph(SCHEMA, GraphFactory.createDefaultGraph());
             transaction.restoreShapesDocument(
                     new ShapesDocumentSeed(
                             id,
@@ -110,7 +112,7 @@ class WorkspaceLoadsShapesDocumentsTest {
                             ShapesDocument.Origin.IMPORTED,
                             enabled,
                             order,
-                            Set.of(GRAPH_URI),
+                            Set.of(SCHEMA),
                             rawText,
                             GraphFactory.createDefaultGraph()));
             var model = ShapesDocumentMetadata.emptyModel();
@@ -131,7 +133,7 @@ class WorkspaceLoadsShapesDocumentsTest {
     void aDatasetWithoutDocumentsLoadsAsBefore() {
         var workspace = new Workspace("loaded", datasetWithSchema());
 
-        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(workspace.listSchemaNames()).containsExactly(SCHEMA);
         assertThat(documentsOf(workspace)).isEmpty();
     }
 
@@ -150,9 +152,9 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         var workspace = new Workspace("loaded", dataset);
 
-        assertThat(workspace.listGraphUris()).isEmpty();
+        assertThat(workspace.listSchemaNames()).isEmpty();
         assertThat(documentsOf(workspace)).containsOnlyKeys(id);
-        assertThat(documentsOf(workspace).get(id).getSchemas()).containsExactly(GRAPH_URI);
+        assertThat(documentsOf(workspace).get(id).getSchemas()).containsExactly(SCHEMA);
     }
 
     @Test
@@ -164,7 +166,7 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         var workspace = new Workspace("loaded", dataset);
 
-        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(workspace.listSchemaNames()).containsExactly(SCHEMA);
     }
 
     @Test
@@ -244,21 +246,19 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         var workspace = new Workspace("loaded", dataset);
 
-        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(workspace.listSchemaNames()).containsExactly(SCHEMA);
         assertThat(documentsOf(workspace)).isEmpty();
     }
 
     @Test
-    void graphsNamedAfterASchemaAreIgnoredAndNeverBecomeSchemas() {
+    void graphsUnderTheReservedPrefixesThatNameNoDocumentNeverBecomeSchemas() {
         var dataset = datasetWithSchema();
-        var owner = "http%3A%2F%2Fexample.org%2FEQ";
-        dataset.addNamedModel(
-                "urn:rdfa:shacl:" + owner + ":" + UUID.randomUUID(), shapeModel("Shape"));
-        dataset.addNamedModel("urn:rdfa:shacl-meta:" + owner, shapeModel("Metadata"));
+        dataset.addNamedModel("urn:rdfa:shacl:EQ:" + UUID.randomUUID(), shapeModel("Shape"));
+        dataset.addNamedModel("urn:rdfa:shacl-meta:EQ", shapeModel("Metadata"));
 
         var workspace = new Workspace("loaded", dataset);
 
-        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(workspace.listSchemaNames()).containsExactly(SCHEMA);
         assertThat(documentsOf(workspace)).isEmpty();
     }
 
@@ -302,7 +302,7 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             var graph = transaction.shapesDocuments().get(id).getGraph();
-            assertThat(graph.getPrefixMapping().getNsPrefixURI("eq")).isEqualTo(GRAPH_URI + "#");
+            assertThat(graph.getPrefixMapping().getNsPrefixURI("eq")).isEqualTo(NS + "#");
             assertThat(graph.isIsomorphicWith(shapeModel("Shape").getGraph())).isTrue();
         }
     }

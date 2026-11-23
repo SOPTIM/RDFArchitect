@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.SHACLFileResponse;
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.api.controller.datasets.shacl.SchemaParameter;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,14 +50,12 @@ import java.util.UUID;
  * can answer, so this one takes the answer.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/export")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/export")
 @RequiredArgsConstructor
 public class SHACLSelectionExportRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLSelectionExportRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
@@ -73,6 +71,7 @@ public class SHACLSelectionExportRESTController {
                 @ApiResponse(
                         responseCode = "200",
                         content = {@Content(mediaType = "text/turtle")}),
+                @ApiResponse(responseCode = "400", description = "A schema name is not valid."),
                 @ApiResponse(
                         responseCode = "404",
                         description =
@@ -92,39 +91,30 @@ public class SHACLSelectionExportRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The constraints documents to include.")
                     @RequestParam(name = "documentId", required = false)
                     List<UUID> documentIds,
-            @Parameter(description = "URIs of the schemas whose generated shapes to merge in.")
+            @Parameter(description = "Names of the schemas whose generated shapes to merge in.")
                     @RequestParam(name = "generatedFor", required = false)
                     List<String> generatedFor) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/shacl/export/file\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/export/file\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var format = SHACLFileResponse.rdfFormat(acceptHeader);
         var outStream =
                 shaclExportUseCase.exportSelectedSHACLGraph(
-                        datasetName,
+                        workspaceName,
                         format,
                         // An empty documentId= arrives as null, and names nothing.
                         documentIds == null
                                 ? List.of()
                                 : documentIds.stream().filter(Objects::nonNull).toList(),
-                        generatedFor == null
-                                ? List.of()
-                                : generatedFor.stream()
-                                        .filter(Objects::nonNull)
-                                        .filter(schema -> !schema.isBlank())
-                                        .map(
-                                                schema ->
-                                                        expandURIUseCase.expandUri(
-                                                                datasetName, schema))
-                                        .toList());
+                        SchemaParameter.names(generatedFor));
 
-        return SHACLFileResponse.ofWorkspace(datasetName, format, outStream);
+        return SHACLFileResponse.ofWorkspace(workspaceName, format, outStream);
     }
 }

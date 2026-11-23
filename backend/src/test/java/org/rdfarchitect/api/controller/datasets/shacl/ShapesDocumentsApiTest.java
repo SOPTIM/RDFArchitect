@@ -19,9 +19,6 @@ package org.rdfarchitect.api.controller.datasets.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -29,7 +26,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,18 +48,17 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -79,9 +74,9 @@ import java.util.stream.IntStream;
  */
 class ShapesDocumentsApiTest {
 
-    private static final String GRAPH_URI = "http://example.org/EQ";
+    private static final String SCHEMA = "EQ";
 
-    private static final String BASE = "/api/datasets/cgmes/shacl";
+    private static final String BASE = "/api/workspaces/cgmes/shacl";
 
     private static final String DOCUMENTS = BASE + "/documents";
 
@@ -104,26 +99,17 @@ class ShapesDocumentsApiTest {
         SessionContext.setSessionId(getClass().getSimpleName());
         databasePort.createWorkspaceIfAbsent("cgmes");
         try (var transaction = databasePort.beginTransaction("cgmes", ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_URI, GraphFactory.createDefaultGraph());
+            transaction.createGraph(SCHEMA, GraphFactory.createDefaultGraph());
             transaction.commit("Created the graph");
         }
         databasePort.enableEditing("cgmes");
         service = new SHACLStoringService(databasePort);
 
-        var expandURIUseCase = mock(ExpandURIUseCase.class);
-        // MockMvc encodes the already-encoded path once more, so the controller receives it
-        // encoded once — which is what the real ExpandURIUseCase decodes.
-        when(expandURIUseCase.expandUri(any(), any()))
-                .thenAnswer(
-                        call ->
-                                URLDecoder.decode(
-                                        call.<String>getArgument(1), StandardCharsets.UTF_8));
-
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new ShapesDocumentsRESTController(expandURIUseCase, service),
-                                new ShapesDocumentRESTController(expandURIUseCase, service),
-                                new SHACLSelectionExportRESTController(expandURIUseCase, service))
+                                new ShapesDocumentsRESTController(service),
+                                new ShapesDocumentRESTController(service),
+                                new SHACLSelectionExportRESTController(service))
                         .setControllerAdvice(new GenericExceptionHandler())
                         .build();
     }
@@ -135,7 +121,7 @@ class ShapesDocumentsApiTest {
 
     private ShapesDocumentInfo givenDocument(String name, String turtle) {
         return service.createShapesDocument(
-                "cgmes", List.of(GRAPH_URI), name, name, turtle, Lang.TURTLE);
+                "cgmes", List.of(SCHEMA), name, name, turtle, Lang.TURTLE);
     }
 
     private String textOf(UUID documentId) {
@@ -592,11 +578,11 @@ class ShapesDocumentsApiTest {
         mockMvc.perform(
                         post(DOCUMENTS)
                                 .param("name", "eq.ttl")
-                                .param("schema", GRAPH_URI)
+                                .param("schema", SCHEMA)
                                 .contentType(MediaType.TEXT_PLAIN)
                                 .content(SHAPES))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.schemas[0]").value(GRAPH_URI));
+                .andExpect(jsonPath("$.schemas[0]").value(SCHEMA));
     }
 
     @Test
@@ -615,10 +601,31 @@ class ShapesDocumentsApiTest {
         mockMvc.perform(
                         post(DOCUMENTS)
                                 .param("name", "eq.ttl")
-                                .param("schema", "http://example.org/nowhere")
+                                .param("schema", "nowhere")
                                 .contentType(MediaType.TEXT_PLAIN)
                                 .content(SHAPES))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aValueThatCannotBeASchemaNameIsABadRequest() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "other.ttl")
+                                .param("schema", "http://example.org/EQ")
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("not a valid schema name")));
+        mockMvc.perform(patch(DOCUMENTS + "/" + document.getId()).param("schema", "a;b"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString())
+                                .param("generatedFor", "a|b"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -636,7 +643,7 @@ class ShapesDocumentsApiTest {
 
         mockMvc.perform(patch(DOCUMENTS + "/" + document.getId()).param("enabled", "false"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.schemas[0]").value(GRAPH_URI));
+                .andExpect(jsonPath("$.schemas[0]").value(SCHEMA));
     }
 
     @Test
@@ -648,6 +655,15 @@ class ShapesDocumentsApiTest {
                                 .param("documentId", document.getId().toString())
                                 .header(HttpHeaders.ACCEPT, "text/turtle"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "cgmes-shacl.ttl"));
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                ContentDisposition.parse(
+                                                                result.getResponse()
+                                                                        .getHeader(
+                                                                                HttpHeaders
+                                                                                        .CONTENT_DISPOSITION))
+                                                        .getFilename())
+                                        .isEqualTo("cgmes-shacl.ttl"));
     }
 }

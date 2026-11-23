@@ -127,19 +127,19 @@ final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, Shape
     }
 
     /**
-     * Points the documents that apply to a schema at the URI it has now.
+     * Points the documents that apply to a schema at the name it has now.
      *
-     * @param oldUri the URI it had
-     * @param newUri the URI it has
+     * @param oldSchemaName the name it had
+     * @param newSchemaName the name it has
      */
-    void renameSchema(String oldUri, String newUri) {
+    void renameSchema(String oldSchemaName, String newSchemaName) {
         documents.values().stream()
-                .filter(document -> document.getSchemas().contains(oldUri))
+                .filter(document -> document.getSchemas().contains(oldSchemaName))
                 .forEach(
                         document -> {
                             var schemas = new HashSet<>(document.getSchemas());
-                            schemas.remove(oldUri);
-                            schemas.add(newUri);
+                            schemas.remove(oldSchemaName);
+                            schemas.add(newSchemaName);
                             document.setSchemas(schemas);
                         });
     }

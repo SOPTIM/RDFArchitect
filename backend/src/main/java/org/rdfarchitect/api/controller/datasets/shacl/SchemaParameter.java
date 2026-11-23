@@ -15,31 +15,32 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.shacl.documents;
+package org.rdfarchitect.api.controller.datasets.shacl;
 
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.database.SchemaNames;
 
 import java.util.List;
 import java.util.Objects;
 
-/** The schemas a request names, which a query parameter may give as prefixed names. */
-final class SchemaParameter {
+/** The schemas a request names in a repeated query parameter, such as {@code ?schema=}. */
+public final class SchemaParameter {
 
     private SchemaParameter() {}
 
     /**
-     * @param schemas the values as sent, or {@code null} when none were
-     * @return their full URIs, leaving out what an empty {@code schema=} arrives as
+     * @param schemaNames the values as sent, or {@code null} when none were
+     * @return the schema names, leaving out what an empty {@code schema=} arrives as
+     * @throws org.rdfarchitect.exception.graph.InvalidSchemaNameException if a value cannot be a
+     *     schema name
      */
-    static List<String> expanded(
-            List<String> schemas, String datasetName, ExpandURIUseCase expandURIUseCase) {
-        if (schemas == null) {
+    public static List<String> names(List<String> schemaNames) {
+        if (schemaNames == null) {
             return List.of();
         }
-        return schemas.stream()
+        return schemaNames.stream()
                 .filter(Objects::nonNull)
-                .filter(schema -> !schema.isBlank())
-                .map(schema -> expandURIUseCase.expandUri(datasetName, schema))
+                .filter(schemaName -> !schemaName.isBlank())
+                .map(SchemaNames::validate)
                 .toList();
     }
 }

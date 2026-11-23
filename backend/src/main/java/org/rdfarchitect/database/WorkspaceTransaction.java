@@ -152,7 +152,7 @@ public interface WorkspaceTransaction extends AutoCloseable {
      *
      * @param name the document's display name
      * @param origin where it came from
-     * @param schemas URIs of the schemas it applies to
+     * @param schemas names of the schemas it applies to
      * @return the new document
      */
     ShapesDocument createShapesDocument(

@@ -54,7 +54,7 @@ import java.util.Map;
  */
 class HttpUpdateCommandReplaceGraphsTest {
 
-    private static final String DATASET = "cgmes";
+    private static final String WORKSPACE = "cgmes";
     private static final String OLD = "urn:rdfa:shacl:http%3A%2F%2Fex.org%2FEQ:old";
     private static final String KEPT = "urn:rdfa:shacl:http%3A%2F%2Fex.org%2FEQ:kept";
     private static final String METADATA = "urn:rdfa:shacl-meta:http%3A%2F%2Fex.org%2FEQ";
@@ -70,7 +70,7 @@ class HttpUpdateCommandReplaceGraphsTest {
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext(
-                "/" + DATASET,
+                "/" + WORKSPACE,
                 exchange -> {
                     received.add(
                             new Received(
@@ -84,11 +84,11 @@ class HttpUpdateCommandReplaceGraphsTest {
                 });
         server.start();
         var admin = mock(DatabaseAdminProtocol.class);
-        when(admin.listDatasets()).thenReturn(List.of(DATASET));
+        when(admin.listDatasets()).thenReturn(List.of(WORKSPACE));
         command =
                 new HttpUpdateCommandImpl(admin)
                         .setEndpoint("http://localhost:" + server.getAddress().getPort())
-                        .setDatasetName(DATASET);
+                        .setWorkspaceName(WORKSPACE);
     }
 
     @AfterEach

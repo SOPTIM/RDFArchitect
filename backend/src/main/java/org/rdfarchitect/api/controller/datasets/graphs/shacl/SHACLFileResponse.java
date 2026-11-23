@@ -18,8 +18,7 @@
 package org.rdfarchitect.api.controller.datasets.graphs.shacl;
 
 import org.apache.jena.riot.RDFFormat;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.springframework.http.HttpHeaders;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -75,44 +74,28 @@ public final class SHACLFileResponse {
                         + ".");
     }
 
-    /**
-     * The download, named after the graph it was exported from.
-     *
-     * <p>{@code Content-Disposition} carries the bare file name rather than {@code attachment;
-     * filename="…"}. That is not what the header means, but every export dialog in the frontend
-     * reads the header's whole value as the name, and the same shape is used by the graph and
-     * documentation exports — so correcting it is a change to all of them at once, not to this.
-     */
+    /** The download, named after the schema it was exported from. */
     public static ResponseEntity<byte[]> of(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
-        return named(
-                "default".equals(extendedGraphURI)
-                        ? "shacl"
-                        : new URI(extendedGraphURI + "-shacl").getSuffix(),
-                format,
-                outStream);
+            String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
+        return named(schemaName + "-shacl", format, outStream);
     }
 
     /** The download, named after the workspace it was exported from. */
     public static ResponseEntity<byte[]> ofWorkspace(
-            String datasetName, RDFFormat format, ByteArrayOutputStream outStream) {
-        return named(datasetName + "-shacl", format, outStream);
+            String workspaceName, RDFFormat format, ByteArrayOutputStream outStream) {
+        return named(workspaceName + "-shacl", format, outStream);
     }
 
     private static ResponseEntity<byte[]> named(
             String stem, RDFFormat format, ByteArrayOutputStream outStream) {
         var fileName = stem + "." + format.getLang().getFileExtensions().getFirst();
-
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         return ResponseEntity.ok()
-                .headers(headers)
+                .headers(DownloadHeaders.attachment(fileName))
                 // Stated, since Spring would otherwise pick from the Accept header on its own and
                 // could label the bytes as a format other than the one they were written in.
                 .contentType(
                         MediaType.parseMediaType(
                                 format.getLang().getContentType().getContentTypeStr()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
                 .body(outStream.toByteArray());
     }
 }

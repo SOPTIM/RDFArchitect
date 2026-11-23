@@ -84,7 +84,7 @@ public final class ShapesDocument {
      * @param sourceFileName file the document was uploaded from, or {@code null}
      * @param enabled whether the shapes take part in validation and combined export
      * @param order position in the workspace's document list, and the merge order for export
-     * @param schemas URIs of the schemas the document applies to
+     * @param schemas names of the schemas the document applies to
      * @param rawText verbatim source text, or {@code null} when only the triples are known; kept
      *     deflated, since every version in the history holds one
      */
@@ -178,7 +178,7 @@ public final class ShapesDocument {
         return metadata.current().order();
     }
 
-    /** URIs of the schemas the document applies to. The workspace need not hold them right now. */
+    /** Names of the schemas the document applies to. The workspace need not hold them right now. */
     public Set<String> getSchemas() {
         return metadata.current().schemas();
     }

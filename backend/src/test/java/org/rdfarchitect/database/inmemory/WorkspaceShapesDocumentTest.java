@@ -44,11 +44,11 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/** A graph's shapes documents taking part in the workspace's transactions and history. */
+/** A workspace's shapes documents taking part in its transactions and history. */
 class WorkspaceShapesDocumentTest {
 
-    private static final String GRAPH = "http://example.org/graph";
-    private static final String OTHER_GRAPH = "http://example.org/other";
+    private static final String GRAPH = "graph";
+    private static final String OTHER_GRAPH = "other";
 
     private Workspace workspace;
 
@@ -67,9 +67,9 @@ class WorkspaceShapesDocumentTest {
         return Triple.create(node, node, node);
     }
 
-    private void write(String graphUri, Consumer<GraphContext> change, String message) {
+    private void write(String schemaName, Consumer<GraphContext> change, String message) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            change.accept(transaction.graph(graphUri));
+            change.accept(transaction.graph(schemaName));
             transaction.commit(message);
         }
     }
@@ -86,9 +86,9 @@ class WorkspaceShapesDocumentTest {
         return read(GRAPH, reader);
     }
 
-    private <T> T read(String graphUri, Function<GraphContext, T> reader) {
+    private <T> T read(String schemaName, Function<GraphContext, T> reader) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return reader.apply(transaction.graph(graphUri));
+            return reader.apply(transaction.graph(schemaName));
         }
     }
 
@@ -130,8 +130,8 @@ class WorkspaceShapesDocumentTest {
         return readDocuments(transaction -> document(transaction, id).getSchemas());
     }
 
-    private boolean schemaHas(String graphUri, Triple triple) {
-        return read(graphUri, context -> context.getRdfGraph().contains(triple));
+    private boolean schemaHas(String schemaName, Triple triple) {
+        return read(schemaName, context -> context.getRdfGraph().contains(triple));
     }
 
     private List<Triple> customShacl() {
@@ -540,13 +540,13 @@ class WorkspaceShapesDocumentTest {
     void anEntryIsFiledUnderEverySchemaTheDocumentAppliesTo() {
         var id = create("both.ttl", GRAPH, OTHER_GRAPH);
 
-        assertThat(newestChange().affectedGraphUris())
+        assertThat(newestChange().affectedSchemaNames())
                 .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
         assertThat(newestChange().affectedKinds()).containsExactly("shacl");
 
         edit(id, "text", triple("a"));
 
-        assertThat(newestChange().affectedGraphUris())
+        assertThat(newestChange().affectedSchemaNames())
                 .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
     }
 
@@ -555,14 +555,14 @@ class WorkspaceShapesDocumentTest {
         create("document.ttl");
 
         assertThat(newestChange().affectsGraph(GRAPH)).isTrue();
-        assertThat(newestChange().restorableGraphUris()).isEmpty();
+        assertThat(newestChange().restorableSchemaNames()).isEmpty();
     }
 
     @Test
     void anEntryOfADocumentApplyingToNoSchemaIsFiledUnderNone() {
         create("none.ttl", new String[0]);
 
-        assertThat(newestChange().affectedGraphUris()).isEmpty();
+        assertThat(newestChange().affectedSchemaNames()).isEmpty();
     }
 
     @Test
@@ -573,7 +573,7 @@ class WorkspaceShapesDocumentTest {
                 transaction -> document(transaction, id).setSchemas(List.of(OTHER_GRAPH)),
                 "Moved it");
 
-        assertThat(newestChange().affectedGraphUris())
+        assertThat(newestChange().affectedSchemaNames())
                 .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
     }
 
@@ -745,7 +745,7 @@ class WorkspaceShapesDocumentTest {
     void renamingASchemaPointsItsDocumentsAtTheNewUri() {
         var id = create("both.ttl", GRAPH, OTHER_GRAPH);
         var elsewhere = create("elsewhere.ttl", OTHER_GRAPH);
-        var renamed = "http://example.org/renamed";
+        var renamed = "renamed";
 
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction.renameGraph(GRAPH, renamed);

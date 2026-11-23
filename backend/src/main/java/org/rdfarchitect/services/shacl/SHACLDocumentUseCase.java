@@ -37,7 +37,7 @@ import java.util.UUID;
 public interface SHACLDocumentUseCase {
 
     /** Lists the workspace's documents in {@code order}, without their content. */
-    List<ShapesDocumentInfo> listShapesDocuments(String datasetName);
+    List<ShapesDocumentInfo> listShapesDocuments(String workspaceName);
 
     /**
      * Adds a document holding {@code content}.
@@ -49,7 +49,7 @@ public interface SHACLDocumentUseCase {
      *     converted to Turtle once on import because that is what the editor works in
      */
     ShapesDocumentInfo createShapesDocument(
-            String datasetName,
+            String workspaceName,
             Collection<String> schemas,
             String name,
             String sourceFileName,
@@ -57,11 +57,11 @@ public interface SHACLDocumentUseCase {
             Lang lang);
 
     /** Returns the document's Turtle source. */
-    String getShapesDocumentText(String datasetName, UUID documentId);
+    String getShapesDocumentText(String workspaceName, UUID documentId);
 
     /** Replaces the document's content with {@code turtle}, keeping the text verbatim. */
-    default void replaceShapesDocumentText(String datasetName, UUID documentId, String turtle) {
-        replaceShapesDocumentText(datasetName, documentId, turtle, null);
+    default void replaceShapesDocumentText(String workspaceName, UUID documentId, String turtle) {
+        replaceShapesDocumentText(workspaceName, documentId, turtle, null);
     }
 
     /**
@@ -74,7 +74,7 @@ public interface SHACLDocumentUseCase {
      *     since — in another tab, or by an undo — and writing would discard that change unseen
      */
     void replaceShapesDocumentText(
-            String datasetName, UUID documentId, String turtle, String expectedRevision);
+            String workspaceName, UUID documentId, String turtle, String expectedRevision);
 
     /**
      * Names one version of a document's text: the lowercase hex SHA-256 of its UTF-8 bytes, as
@@ -95,7 +95,7 @@ public interface SHACLDocumentUseCase {
      * @param order new list position; other documents shift to keep the order dense
      */
     ShapesDocumentInfo updateShapesDocument(
-            String datasetName,
+            String workspaceName,
             UUID documentId,
             String name,
             Boolean enabled,
@@ -106,5 +106,5 @@ public interface SHACLDocumentUseCase {
      * Deletes a document. Which documents exist is versioned with their content, so an undo brings
      * it back.
      */
-    void deleteShapesDocument(String datasetName, UUID documentId);
+    void deleteShapesDocument(String workspaceName, UUID documentId);
 }

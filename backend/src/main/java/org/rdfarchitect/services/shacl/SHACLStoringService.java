@@ -531,8 +531,8 @@ public class SHACLStoringService
     // -------------------------------------------------------------------------
 
     @Override
-    public List<ShapesDocumentInfo> listShapesDocuments(String datasetName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    public List<ShapesDocumentInfo> listShapesDocuments(String workspaceName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             return transaction.shapesDocuments().values().stream()
                     .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                     .map(SHACLStoringService::toInfo)
@@ -542,16 +542,16 @@ public class SHACLStoringService
 
     @Override
     public ShapesDocumentInfo createShapesDocument(
-            String datasetName,
+            String workspaceName,
             Collection<String> schemas,
             String name,
             String sourceFileName,
             String content,
             Lang lang) {
-        assertEditable(datasetName);
+        assertEditable(workspaceName);
         var requestedName = name == null ? null : validName(name);
         var parsed = parse(content, lang);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             assertSchemasExist(transaction, schemas);
             var documentName = requestedName != null ? requestedName : freeDefaultName(transaction);
             assertNameIsFree(transaction, documentName, null);
@@ -569,8 +569,8 @@ public class SHACLStoringService
     }
 
     @Override
-    public String getShapesDocumentText(String datasetName, UUID documentId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    public String getShapesDocumentText(String workspaceName, UUID documentId) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             return textOf(requireDocument(transaction, documentId));
         }
     }
@@ -584,9 +584,9 @@ public class SHACLStoringService
 
     @Override
     public void replaceShapesDocumentText(
-            String datasetName, UUID documentId, String turtle, String expectedRevision) {
-        assertEditable(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            String workspaceName, UUID documentId, String turtle, String expectedRevision) {
+        assertEditable(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var document = requireDocument(transaction, documentId);
             if (expectedRevision != null
                     && !expectedRevision.equalsIgnoreCase(
@@ -608,15 +608,15 @@ public class SHACLStoringService
 
     @Override
     public ShapesDocumentInfo updateShapesDocument(
-            String datasetName,
+            String workspaceName,
             UUID documentId,
             String name,
             Boolean enabled,
             Integer order,
             Collection<String> schemas) {
-        assertEditable(datasetName);
+        assertEditable(workspaceName);
         var newName = name == null ? null : validName(name);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var document = requireDocument(transaction, documentId);
             if (newName != null) {
                 assertNameIsFree(transaction, newName, documentId);
@@ -641,9 +641,9 @@ public class SHACLStoringService
     }
 
     @Override
-    public void deleteShapesDocument(String datasetName, UUID documentId) {
-        assertEditable(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+    public void deleteShapesDocument(String workspaceName, UUID documentId) {
+        assertEditable(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var document = requireDocument(transaction, documentId);
             transaction.removeShapesDocument(documentId);
             transaction.commit(
@@ -666,11 +666,11 @@ public class SHACLStoringService
      */
     @Override
     public ByteArrayOutputStream exportSelectedSHACLGraph(
-            String datasetName,
+            String workspaceName,
             RDFFormat format,
             Collection<UUID> documentIds,
             Collection<String> generatedFor) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
             var requested = ids.stream().map(id -> requireDocument(transaction, id)).toList();
             var contributing =
@@ -690,10 +690,11 @@ public class SHACLStoringService
                 }
             }
             var model = readShapesOf(transaction, ids);
-            for (var schema : generatedFor) {
+            for (var schemaName : generatedFor) {
                 var ontologyModel =
-                        ModelFactory.createModelForGraph(transaction.graph(schema).getRdfGraph());
-                ontologyModel.setNsPrefixes(databasePort.getPrefixMapping(datasetName));
+                        ModelFactory.createModelForGraph(
+                                transaction.graph(schemaName).getRdfGraph());
+                ontologyModel.setNsPrefixes(databasePort.getPrefixMapping(workspaceName));
                 var generated =
                         new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
                 // Documents win over generated shapes for the same resource: the generated ones
@@ -762,21 +763,21 @@ public class SHACLStoringService
      * that has not noticed the switch, a script — would otherwise change a workspace the user has
      * frozen.
      */
-    private void assertEditable(String datasetName) {
-        if (databasePort.isReadOnly(datasetName)) {
+    private void assertEditable(String workspaceName) {
+        if (databasePort.isReadOnly(workspaceName)) {
             throw new ResourceConflictException(
                     "The workspace \"%s\" is read-only. Enable editing to change its constraints."
-                            .formatted(datasetName));
+                            .formatted(workspaceName));
         }
     }
 
     /** A document can only be pointed at schemas that exist now. Later they may go, and return. */
     private static void assertSchemasExist(
             WorkspaceTransaction transaction, Collection<String> schemas) {
-        var held = transaction.graphUris();
-        for (var schema : schemas) {
-            if (!held.contains(schema)) {
-                throw new ResourceNotFoundException("No schema with URI " + schema + ".");
+        var held = transaction.schemaNames();
+        for (var schemaName : schemas) {
+            if (!held.contains(schemaName)) {
+                throw new ResourceNotFoundException("No schema named " + schemaName + ".");
             }
         }
     }

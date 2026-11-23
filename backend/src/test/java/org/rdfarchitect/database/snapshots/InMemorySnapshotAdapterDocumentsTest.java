@@ -43,8 +43,8 @@ import java.util.function.Consumer;
 /** Sharing a workspace in memory carries its shapes documents along. */
 class InMemorySnapshotAdapterDocumentsTest {
 
-    private static final String DATASET = "cgmes";
-    private static final String GRAPH_URI = "http://example.com/EquipmentProfile";
+    private static final String WORKSPACE = "cgmes";
+    private static final String SCHEMA = "EquipmentProfile";
 
     private static final Triple SHAPE =
             Triple.create(
@@ -64,9 +64,9 @@ class InMemorySnapshotAdapterDocumentsTest {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         adapter = new InMemorySnapshotAdapter(databasePort);
         SessionContext.setSessionId("session-a");
-        databasePort.createWorkspaceIfAbsent(DATASET);
-        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_URI, GraphFactory.createDefaultGraph());
+        databasePort.createWorkspaceIfAbsent(WORKSPACE);
+        try (var transaction = databasePort.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
+            transaction.createGraph(SCHEMA, GraphFactory.createDefaultGraph());
             transaction.commit("Created the graph");
         }
     }
@@ -92,13 +92,13 @@ class InMemorySnapshotAdapterDocumentsTest {
     private UUID createImported() {
         var id = new UUID[1];
         write(
-                DATASET,
+                WORKSPACE,
                 transaction -> {
                     var document =
                             transaction.createShapesDocument(
                                     "official.ttl",
                                     ShapesDocument.Origin.IMPORTED,
-                                    List.of(GRAPH_URI));
+                                    List.of(SCHEMA));
                     document.getGraph().add(SHAPE);
                     document.setRawText(SHAPE_TEXT);
                     document.setSourceFileName("official.ttl");
@@ -113,7 +113,7 @@ class InMemorySnapshotAdapterDocumentsTest {
         var imported = createImported();
         var empty = new UUID[1];
         write(
-                DATASET,
+                WORKSPACE,
                 transaction ->
                         empty[0] =
                                 transaction
@@ -122,13 +122,13 @@ class InMemorySnapshotAdapterDocumentsTest {
                                                 ShapesDocument.Origin.AUTHORED,
                                                 List.of())
                                         .getId());
-        var token = adapter.createSnapshot(DATASET);
+        var token = adapter.createSnapshot(WORKSPACE);
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
         read(
-                SnapshotUtils.constructSnapshotName(DATASET, token),
+                SnapshotUtils.constructSnapshotName(WORKSPACE, token),
                 transaction -> {
                     var documents = transaction.shapesDocuments();
                     var document = documents.get(imported);
@@ -136,7 +136,7 @@ class InMemorySnapshotAdapterDocumentsTest {
                     assertThat(document.getOrigin()).isEqualTo(ShapesDocument.Origin.IMPORTED);
                     assertThat(document.getRawText()).isEqualTo(SHAPE_TEXT);
                     assertThat(document.isEnabled()).isFalse();
-                    assertThat(document.getSchemas()).containsExactly(GRAPH_URI);
+                    assertThat(document.getSchemas()).containsExactly(SCHEMA);
                     assertThat(document.getGraph().contains(SHAPE)).isTrue();
                     assertThat(documents.get(empty[0]).getName()).isEqualTo("draft.ttl");
                 });
@@ -145,8 +145,8 @@ class InMemorySnapshotAdapterDocumentsTest {
     @Test
     void eachFetchLoadsItsOwnCopyOfTheDocuments() {
         var id = createImported();
-        var token = adapter.createSnapshot(DATASET);
-        var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
+        var token = adapter.createSnapshot(WORKSPACE);
+        var snapshotName = SnapshotUtils.constructSnapshotName(WORKSPACE, token);
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
@@ -167,14 +167,14 @@ class InMemorySnapshotAdapterDocumentsTest {
     @Test
     void aSnapshotIsNotChangedByLaterEditsToTheWorkspace() {
         var id = createImported();
-        var token = adapter.createSnapshot(DATASET);
-        write(DATASET, transaction -> transaction.shapesDocuments().get(id).setRawText("edited"));
+        var token = adapter.createSnapshot(WORKSPACE);
+        write(WORKSPACE, transaction -> transaction.shapesDocuments().get(id).setRawText("edited"));
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
         read(
-                SnapshotUtils.constructSnapshotName(DATASET, token),
+                SnapshotUtils.constructSnapshotName(WORKSPACE, token),
                 transaction ->
                         assertThat(transaction.shapesDocuments().get(id).getRawText())
                                 .isEqualTo(SHAPE_TEXT));
@@ -183,40 +183,39 @@ class InMemorySnapshotAdapterDocumentsTest {
     @Test
     void aFetchedDocumentLeavesNothingToUndo() {
         createImported();
-        var token = adapter.createSnapshot(DATASET);
+        var token = adapter.createSnapshot(WORKSPACE);
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
-        assertThat(databasePort.canUndo(SnapshotUtils.constructSnapshotName(DATASET, token)))
+        assertThat(databasePort.canUndo(SnapshotUtils.constructSnapshotName(WORKSPACE, token)))
                 .isFalse();
     }
 
     @Test
     void aWorkspaceWithoutDocumentsFetchesWithoutAny() {
-        var token = adapter.createSnapshot(DATASET);
+        var token = adapter.createSnapshot(WORKSPACE);
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
         read(
-                SnapshotUtils.constructSnapshotName(DATASET, token),
+                SnapshotUtils.constructSnapshotName(WORKSPACE, token),
                 transaction -> assertThat(transaction.shapesDocuments()).isEmpty());
     }
 
     @Test
     void customShaclStaysOutOfASnapshotAsBefore() {
-        write(DATASET, transaction -> addTo(transaction.graph(GRAPH_URI).getCustomSHACL()));
-        var token = adapter.createSnapshot(DATASET);
+        write(WORKSPACE, transaction -> addTo(transaction.graph(SCHEMA).getCustomSHACL()));
+        var token = adapter.createSnapshot(WORKSPACE);
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
         read(
-                SnapshotUtils.constructSnapshotName(DATASET, token),
+                SnapshotUtils.constructSnapshotName(WORKSPACE, token),
                 transaction ->
-                        assertThat(transaction.graph(GRAPH_URI).getCustomSHACL().isEmpty())
-                                .isTrue());
+                        assertThat(transaction.graph(SCHEMA).getCustomSHACL().isEmpty()).isTrue());
     }
 
     private static void addTo(Graph graph) {

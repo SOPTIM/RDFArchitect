@@ -66,14 +66,14 @@ public interface SHACLExportUseCase {
      *
      * <p>A document is included because the caller named it, whether or not it is enabled.
      *
-     * @param datasetName The workspace holding the documents.
+     * @param workspaceName The workspace holding the documents.
      * @param format The format to export in.
      * @param documentIds The documents to include.
-     * @param generatedFor URIs of the schemas whose generated shapes to merge in.
+     * @param generatedFor Names of the schemas whose generated shapes to merge in.
      * @return A ByteArrayOutputStream containing the export.
      */
     ByteArrayOutputStream exportSelectedSHACLGraph(
-            String datasetName,
+            String workspaceName,
             RDFFormat format,
             Collection<UUID> documentIds,
             Collection<String> generatedFor);

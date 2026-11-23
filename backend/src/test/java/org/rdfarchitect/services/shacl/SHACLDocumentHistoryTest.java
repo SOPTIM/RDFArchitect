@@ -42,10 +42,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Undo and redo of what the service does to a graph's shapes documents. */
+/** Undo and redo of what the service does to a workspace's shapes documents. */
 class SHACLDocumentHistoryTest {
 
-    private static final GraphIdentifier GRAPH = new GraphIdentifier("cgmes", "http://ex.org/EQ");
+    private static final GraphIdentifier GRAPH = new GraphIdentifier("cgmes", "EQ");
 
     private static final String FIRST =
             """
@@ -71,13 +71,13 @@ class SHACLDocumentHistoryTest {
     void setUp() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         SessionContext.setSessionId(getClass().getSimpleName());
-        databasePort.createWorkspaceIfAbsent(GRAPH.datasetName());
+        databasePort.createWorkspaceIfAbsent(GRAPH.workspaceName());
         try (var transaction =
-                databasePort.beginTransaction(GRAPH.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH.graphUri(), GraphFactory.createDefaultGraph());
+                databasePort.beginTransaction(GRAPH.workspaceName(), ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH.schemaName(), GraphFactory.createDefaultGraph());
             transaction.commit("Created the graph");
         }
-        databasePort.enableEditing(GRAPH.datasetName());
+        databasePort.enableEditing(GRAPH.workspaceName());
         service = new SHACLStoringService(databasePort);
     }
 
@@ -88,8 +88,8 @@ class SHACLDocumentHistoryTest {
 
     private UUID create(String name, String turtle) {
         return service.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        GRAPH.workspaceName(),
+                        List.of(GRAPH.schemaName()),
                         name,
                         name,
                         turtle,
@@ -98,14 +98,14 @@ class SHACLDocumentHistoryTest {
     }
 
     private ShapesDocumentInfo info(UUID id) {
-        return service.listShapesDocuments(GRAPH.datasetName()).stream()
+        return service.listShapesDocuments(GRAPH.workspaceName()).stream()
                 .filter(document -> document.getId().equals(id))
                 .findFirst()
                 .orElseThrow();
     }
 
     private List<UUID> listedIds() {
-        return service.listShapesDocuments(GRAPH.datasetName()).stream()
+        return service.listShapesDocuments(GRAPH.workspaceName()).stream()
                 .map(ShapesDocumentInfo::getId)
                 .toList();
     }
@@ -114,7 +114,7 @@ class SHACLDocumentHistoryTest {
     void theChangelogEntryOfADeleteListsWhatTheDocumentHeld() {
         var id = create("terminal.ttl", FIRST);
 
-        service.deleteShapesDocument(GRAPH.datasetName(), id);
+        service.deleteShapesDocument(GRAPH.workspaceName(), id);
 
         var deleted =
                 history().getFirst().deltas().stream()
@@ -127,42 +127,43 @@ class SHACLDocumentHistoryTest {
     }
 
     private List<WorkspaceChangeLogEntry> history() {
-        return databasePort.listChanges(GRAPH.datasetName());
+        return databasePort.listChanges(GRAPH.workspaceName());
     }
 
     @Test
     void undoingAnEditBringsBackTheTextThatWasSaved() {
         var id = create("eq.ttl", FIRST);
-        service.replaceShapesDocumentText(GRAPH.datasetName(), id, SECOND);
+        service.replaceShapesDocumentText(GRAPH.workspaceName(), id, SECOND);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(FIRST);
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), id)).isEqualTo(FIRST);
 
-        databasePort.redo(GRAPH.datasetName());
+        databasePort.redo(GRAPH.workspaceName());
 
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(SECOND);
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), id)).isEqualTo(SECOND);
     }
 
     @Test
     void restoringAnEarlierVersionBringsBackItsText() {
         var id = create("eq.ttl", FIRST);
         var afterCreation = history().getFirst().changeId();
-        service.replaceShapesDocumentText(GRAPH.datasetName(), id, SECOND);
-        service.replaceShapesDocumentText(GRAPH.datasetName(), id, SECOND + "\n# and a comment\n");
+        service.replaceShapesDocumentText(GRAPH.workspaceName(), id, SECOND);
+        service.replaceShapesDocumentText(
+                GRAPH.workspaceName(), id, SECOND + "\n# and a comment\n");
 
         databasePort.restoreToVersion(
-                GRAPH.datasetName(), afterCreation, RevertScope.everything(), null);
+                GRAPH.workspaceName(), afterCreation, RevertScope.everything(), null);
 
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(FIRST);
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), id)).isEqualTo(FIRST);
     }
 
     @Test
     void undoingARenameRestoresTheName() {
         var id = create("eq.ttl", FIRST);
-        service.updateShapesDocument(GRAPH.datasetName(), id, "renamed.ttl", null, null, null);
+        service.updateShapesDocument(GRAPH.workspaceName(), id, "renamed.ttl", null, null, null);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
         assertThat(info(id).getName()).isEqualTo("eq.ttl");
     }
@@ -170,9 +171,9 @@ class SHACLDocumentHistoryTest {
     @Test
     void undoingADisableSwitchesTheDocumentBackOn() {
         var id = create("eq.ttl", FIRST);
-        service.updateShapesDocument(GRAPH.datasetName(), id, null, false, null, null);
+        service.updateShapesDocument(GRAPH.workspaceName(), id, null, false, null, null);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
         assertThat(info(id).isEnabled()).isTrue();
     }
@@ -181,9 +182,9 @@ class SHACLDocumentHistoryTest {
     void undoingAMoveRestoresEveryPosition() {
         var first = create("first.ttl", FIRST);
         var second = create("second.ttl", SECOND);
-        service.updateShapesDocument(GRAPH.datasetName(), second, null, null, 0, null);
+        service.updateShapesDocument(GRAPH.workspaceName(), second, null, null, 0, null);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
         assertThat(info(first).getOrder()).isLessThan(info(second).getOrder());
     }
@@ -191,20 +192,20 @@ class SHACLDocumentHistoryTest {
     @Test
     void undoingADeleteBringsTheDocumentBack() {
         var id = create("eq.ttl", FIRST);
-        service.deleteShapesDocument(GRAPH.datasetName(), id);
+        service.deleteShapesDocument(GRAPH.workspaceName(), id);
         assertThat(listedIds()).doesNotContain(id);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
         assertThat(listedIds()).contains(id);
-        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(FIRST);
+        assertThat(service.getShapesDocumentText(GRAPH.workspaceName(), id)).isEqualTo(FIRST);
     }
 
     @Test
     void undoingACreationRemovesTheDocument() {
         var id = create("eq.ttl", FIRST);
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(GRAPH.workspaceName());
 
         assertThat(listedIds()).doesNotContain(id);
     }
@@ -214,7 +215,7 @@ class SHACLDocumentHistoryTest {
         var id = create("eq.ttl", FIRST);
         var entries = history().size();
 
-        service.replaceShapesDocumentText(GRAPH.datasetName(), id, FIRST);
+        service.replaceShapesDocumentText(GRAPH.workspaceName(), id, FIRST);
 
         assertThat(history()).hasSize(entries);
     }
@@ -225,7 +226,7 @@ class SHACLDocumentHistoryTest {
         var order = info(id).getOrder();
         var entries = history().size();
 
-        service.updateShapesDocument(GRAPH.datasetName(), id, "eq.ttl", true, order, null);
+        service.updateShapesDocument(GRAPH.workspaceName(), id, "eq.ttl", true, order, null);
 
         assertThat(history()).hasSize(entries);
     }

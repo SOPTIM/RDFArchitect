@@ -138,9 +138,10 @@ public class Workspace {
     }
 
     /**
-     * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its named
-     * graphs, each under the name {@link SchemaIri#toName(String)} gives for its IRI. The default
-     * graph of the dataset is not taken over: every graph of a workspace is a named graph.
+     * Builds a workspace from a Jena dataset, taking over its prefixes, its shapes documents and
+     * every other named graph, each under the name {@link SchemaIri#toName(String)} gives for its
+     * IRI. The default graph of the dataset is not taken over: every graph of a workspace is a
+     * named graph.
      *
      * @param workspaceName the name the workspace is known by
      * @param dataset the dataset to read
@@ -151,8 +152,8 @@ public class Workspace {
             this.prefixes.addAll(dataset.getPrefixMapping());
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphIri = it.next().getURI();
-                // A dataset stores shapes documents in graphs of their own, which are not graphs
-                // of the workspace.
+                // Shapes documents are stored in graphs of their own, which are not schemas and
+                // would otherwise become ones named after the end of their IRI.
                 if (!ShapesGraphNaming.isReserved(graphIri)) {
                     graphs.put(
                             SchemaNames.unique(SchemaIri.toName(graphIri), graphs.uris()),

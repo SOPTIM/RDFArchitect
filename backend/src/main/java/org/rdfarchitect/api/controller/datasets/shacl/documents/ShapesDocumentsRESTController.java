@@ -24,8 +24,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.Lang;
+import org.rdfarchitect.api.controller.datasets.shacl.SchemaParameter;
 import org.rdfarchitect.exception.database.DataAccessException;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
@@ -53,14 +53,12 @@ import java.util.List;
  * enabled document applies and none overrides another.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/documents")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/documents")
 @RequiredArgsConstructor
 public class ShapesDocumentsRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ShapesDocumentsRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLDocumentUseCase shaclDocumentUseCase;
 
@@ -78,14 +76,14 @@ public class ShapesDocumentsRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/shacl/documents\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/documents\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        return shaclDocumentUseCase.listShapesDocuments(datasetName);
+        return shaclDocumentUseCase.listShapesDocuments(workspaceName);
     }
 
     @Operation(
@@ -98,7 +96,8 @@ public class ShapesDocumentsRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "400",
-                        description = "The content is not valid Turtle."),
+                        description =
+                                "The content is not valid Turtle, or a schema name is not valid."),
                 @ApiResponse(responseCode = "404", description = "A named schema does not exist."),
                 @ApiResponse(
                         responseCode = "409",
@@ -117,26 +116,26 @@ public class ShapesDocumentsRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The file containing the SHACL shapes.") @RequestParam("file")
                     MultipartFile file,
-            @Parameter(description = "URIs of the schemas it applies to.")
+            @Parameter(description = "Names of the schemas it applies to.")
                     @RequestParam(name = "schema", required = false)
                     List<String> schemas,
             @Parameter(description = "Display name; defaults to the file name.")
                     @RequestParam(value = "name", required = false)
                     String name) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/shacl/documents/file\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/shacl/documents/file\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var fileName = file.getOriginalFilename();
         var lang = ShapesUpload.languageOf(fileName, file.getContentType());
         return shaclDocumentUseCase.createShapesDocument(
-                datasetName,
-                SchemaParameter.expanded(schemas, datasetName, expandURIUseCase),
+                workspaceName,
+                SchemaParameter.names(schemas),
                 name != null && !name.isBlank() ? name : fileName,
                 fileName,
                 ShapesUpload.toTurtle(readFile(file), lang),
@@ -151,7 +150,8 @@ public class ShapesDocumentsRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "400",
-                        description = "The content is not valid Turtle."),
+                        description =
+                                "The content is not valid Turtle, or a schema name is not valid."),
                 @ApiResponse(responseCode = "404", description = "A named schema does not exist."),
                 @ApiResponse(
                         responseCode = "409",
@@ -169,27 +169,22 @@ public class ShapesDocumentsRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "Display name of the new document.") @RequestParam("name")
                     String name,
-            @Parameter(description = "URIs of the schemas it applies to.")
+            @Parameter(description = "Names of the schemas it applies to.")
                     @RequestParam(name = "schema", required = false)
                     List<String> schemas,
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/shacl/documents\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/shacl/documents\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         return shaclDocumentUseCase.createShapesDocument(
-                datasetName,
-                SchemaParameter.expanded(schemas, datasetName, expandURIUseCase),
-                name,
-                null,
-                turtle,
-                Lang.TURTLE);
+                workspaceName, SchemaParameter.names(schemas), name, null, turtle, Lang.TURTLE);
     }
 
     private static byte[] readFile(MultipartFile file) {

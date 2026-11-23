@@ -76,7 +76,7 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
                         for (var schemaName : databasePort.listSchemaNames(workspaceName)) {
                             transferGraph(conn, new GraphIdentifier(workspaceName, schemaName));
                         }
-                        transferShapesDocuments(conn, datasetName);
+                        transferShapesDocuments(conn, workspaceName);
                     });
         } catch (Exception e) {
             fusekiHttpAdminProtocol.deleteDataset(snapshotName);
@@ -106,8 +106,8 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
         return fusekiHttpAdminProtocol.ping();
     }
 
-    private void transferShapesDocuments(RDFConnection conn, String datasetName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    private void transferShapesDocuments(RDFConnection conn, String workspaceName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             ShapesDocumentGraphs.of(transaction.shapesDocuments().values())
                     .forEach(
                             (name, graph) ->

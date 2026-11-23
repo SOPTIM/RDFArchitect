@@ -71,9 +71,9 @@ public interface DatabaseConnection {
      *
      * @param removed Names of the graphs to remove
      * @param written The graphs to write by name, each replacing a graph of that name
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void replaceGraphs(Collection<String> removed, Map<String, Graph> written, String datasetName)
+    void replaceGraphs(Collection<String> removed, Map<String, Graph> written, String workspaceName)
             throws DataAccessException;
 
     // delete

@@ -233,15 +233,15 @@ public class SessionDataStoreImpl implements SessionDataStore {
      */
     private void writeShapesDocuments(
             DatabaseConnection databaseConnection,
-            String datasetName,
+            String workspaceName,
             WorkspaceTransaction transaction) {
         var stored =
-                listGraphNames(databaseConnection, datasetName).stream()
+                listGraphNames(databaseConnection, workspaceName).stream()
                         .filter(ShapesGraphNaming::isReserved)
                         .toList();
         var current = ShapesDocumentGraphs.of(transaction.shapesDocuments().values());
         if (!stored.isEmpty() || !current.isEmpty()) {
-            databaseConnection.replaceGraphs(stored, current, datasetName);
+            databaseConnection.replaceGraphs(stored, current, workspaceName);
         }
     }
 
@@ -311,7 +311,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     /** Returns the names of the dataset's non-empty named graphs. */
     private static List<String> listGraphNames(
-            DatabaseConnection databaseConnection, String datasetName) {
+            DatabaseConnection databaseConnection, String workspaceName) {
         var graphVar = "?graph";
         var graphQuery =
                 new SelectBuilder()
@@ -319,7 +319,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
                         .setDistinct(true)
                         .addGraph(graphVar, "?s", "?p", "?o")
                         .build();
-        var resultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
+        var resultSet = databaseConnection.sendSelect(graphQuery, workspaceName).asResultSet();
         var names = new ArrayList<String>();
         while (resultSet.hasNext()) {
             names.add(resultSet.next().get(graphVar).asNode().getURI());

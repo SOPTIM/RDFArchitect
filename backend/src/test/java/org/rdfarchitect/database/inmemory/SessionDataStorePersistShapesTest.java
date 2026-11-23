@@ -44,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
@@ -57,11 +58,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-/** Persisting a graph writes its shapes documents too, and fetching brings them back. */
+/**
+ * Persisting a schema writes the workspace's shapes documents too, and fetching brings them back.
+ */
 class SessionDataStorePersistShapesTest {
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier GRAPH = new GraphIdentifier(WORKSPACE, "EQ");
 
     private static final Triple SHAPE =
             Triple.create(
@@ -87,10 +90,10 @@ class SessionDataStorePersistShapesTest {
     @BeforeEach
     void setUp() {
         connection = mock(DatabaseConnection.class);
-        when(connection.listDatasets()).thenReturn(List.of(DATASET));
-        when(connection.getPrefixMapping(DATASET))
+        when(connection.listDatasets()).thenReturn(List.of(WORKSPACE));
+        when(connection.getPrefixMapping(WORKSPACE))
                 .thenReturn(new PrefixMappingReadOnly(PrefixMapping.Factory.create()));
-        when(connection.sendSelect(any(Query.class), eq(DATASET)))
+        when(connection.sendSelect(any(Query.class), eq(WORKSPACE)))
                 .thenAnswer(
                         invocation -> {
                             try (var execution =
@@ -108,7 +111,7 @@ class SessionDataStorePersistShapesTest {
                             return null;
                         })
                 .when(connection)
-                .insertGraph(any(GraphSource.class), eq(DATASET));
+                .insertGraph(any(GraphSource.class), eq(WORKSPACE));
         doAnswer(
                         invocation -> {
                             invocation
@@ -126,17 +129,17 @@ class SessionDataStorePersistShapesTest {
                             return null;
                         })
                 .when(connection)
-                .replaceGraphs(any(), any(), eq(DATASET));
+                .replaceGraphs(any(), any(), eq(WORKSPACE));
         store = new SessionDataStoreImpl();
-        store.createDataset(DATASET);
+        store.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         schema.add(
                 Triple.create(
                         NodeFactory.createURI("http://ex.org/EQ#Terminal"),
                         NodeFactory.createURI("http://www.w3.org/2000/01/rdf-schema#label"),
                         NodeFactory.createLiteralString("Terminal")));
-        try (var transaction = store.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH.graphUri(), schema);
+        try (var transaction = store.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH.schemaName(), schema);
             transaction.commit("Created the graph");
         }
     }
@@ -148,7 +151,7 @@ class SessionDataStorePersistShapesTest {
                             transaction.createShapesDocument(
                                     name,
                                     ShapesDocument.Origin.IMPORTED,
-                                    List.of(GRAPH.graphUri()));
+                                    List.of(GRAPH.schemaName()));
                     document.getGraph().add(SHAPE);
                     document.setRawText(SHAPES);
                     document.setSourceFileName(sourceFile);
@@ -157,7 +160,7 @@ class SessionDataStorePersistShapesTest {
     }
 
     private <T> T write(Function<WorkspaceTransaction, T> change) {
-        try (var transaction = store.beginTransaction(DATASET, ReadWrite.WRITE)) {
+        try (var transaction = store.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
             var result = change.apply(transaction);
             transaction.commit("Changed");
             return result;
@@ -181,7 +184,7 @@ class SessionDataStorePersistShapesTest {
 
         store.writeToDatabase(connection, GRAPH);
 
-        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+        try (var transaction = fetched().beginTransaction(WORKSPACE, ReadWrite.READ)) {
             var document = transaction.shapesDocuments().get(id);
             assertThat(document.getName()).isEqualTo("eq.ttl");
             assertThat(document.getSourceFileName()).isEqualTo("EQ.ttl");
@@ -205,7 +208,7 @@ class SessionDataStorePersistShapesTest {
                 });
         store.writeToDatabase(connection, GRAPH);
 
-        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+        try (var transaction = fetched().beginTransaction(WORKSPACE, ReadWrite.READ)) {
             var documents = transaction.shapesDocuments();
             assertThat(documents).containsOnlyKeys(kept);
             assertThat(documents.get(kept).getName()).isEqualTo("renamed.ttl");
@@ -218,9 +221,9 @@ class SessionDataStorePersistShapesTest {
 
         store.writeToDatabase(connection, GRAPH);
 
-        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+        try (var transaction = fetched().beginTransaction(WORKSPACE, ReadWrite.READ)) {
             assertThat(transaction.shapesDocuments().get(id).getSchemas())
-                    .containsExactly(GRAPH.graphUri());
+                    .containsExactly(GRAPH.schemaName());
         }
     }
 
@@ -238,11 +241,11 @@ class SessionDataStorePersistShapesTest {
                     return null;
                 });
         var refused = new DataAccessException("The store refused the request");
-        doThrow(refused).when(connection).replaceGraphs(any(), any(), eq(DATASET));
+        doThrow(refused).when(connection).replaceGraphs(any(), any(), eq(WORKSPACE));
 
         assertThatThrownBy(() -> store.writeToDatabase(connection, GRAPH)).isSameAs(refused);
 
-        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+        try (var transaction = fetched().beginTransaction(WORKSPACE, ReadWrite.READ)) {
             var documents = transaction.shapesDocuments();
             assertThat(documents).containsOnlyKeys(kept, deleted);
             assertThat(documents.get(kept).getName()).isEqualTo("kept.ttl");
@@ -255,7 +258,7 @@ class SessionDataStorePersistShapesTest {
     void nothingIsSentForAGraphThatHasAndHadNoDocuments() {
         store.writeToDatabase(connection, GRAPH);
 
-        verify(connection, never()).replaceGraphs(any(), any(), eq(DATASET));
+        verify(connection, never()).replaceGraphs(any(), any(), eq(WORKSPACE));
     }
 
     @Test
@@ -264,7 +267,7 @@ class SessionDataStorePersistShapesTest {
 
         store.writeToDatabase(connection, GRAPH);
 
-        assertThat(fetched().listGraphUris(DATASET)).containsExactly(GRAPH.graphUri());
+        assertThat(fetched().listSchemaNames(WORKSPACE)).containsExactly(GRAPH.schemaName());
     }
 
     @Test
@@ -273,6 +276,6 @@ class SessionDataStorePersistShapesTest {
 
         var written = new ArrayList<String>();
         remote.listModelNames().forEachRemaining(resource -> written.add(resource.getURI()));
-        assertThat(written).containsExactly(GRAPH.graphUri());
+        assertThat(written).containsExactly(SchemaIri.of(GRAPH.schemaName()));
     }
 }

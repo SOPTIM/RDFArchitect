@@ -49,7 +49,9 @@ public class ShapesDocumentInfo {
 
     private int order;
 
-    /** URIs of the schemas it applies to. A URI the workspace no longer holds counts as unset. */
+    /**
+     * Names of the schemas it applies to. A name the workspace holds no schema of counts as unset.
+     */
     private Set<String> schemas;
 
     /** Number of triples the document holds, so the UI can show an empty document as empty. */

@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.api.controller.datasets.shacl.SchemaParameter;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
@@ -47,14 +47,12 @@ import java.util.UUID;
 
 /** A single set of SHACL shapes: its Turtle source, its metadata, and its removal. */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/documents/{documentId}")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/documents/{documentId}")
 @RequiredArgsConstructor
 public class ShapesDocumentRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ShapesDocumentRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLDocumentUseCase shaclDocumentUseCase;
 
@@ -77,17 +75,17 @@ public class ShapesDocumentRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                workspaceName,
                 documentId,
                 originURL);
 
-        return shaclDocumentUseCase.getShapesDocumentText(datasetName, documentId);
+        return shaclDocumentUseCase.getShapesDocumentText(workspaceName, documentId);
     }
 
     @Operation(
@@ -118,8 +116,8 @@ public class ShapesDocumentRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId,
             @Parameter(
@@ -132,13 +130,13 @@ public class ShapesDocumentRESTController {
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                workspaceName,
                 documentId,
                 originURL);
 
         shaclDocumentUseCase.replaceShapesDocumentText(
-                datasetName, documentId, turtle, expectedRevision);
+                workspaceName, documentId, turtle, expectedRevision);
         return Response.SUCCESS;
     }
 
@@ -152,6 +150,9 @@ public class ShapesDocumentRESTController {
             tags = {"shacl"},
             responses = {
                 @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "The new name or a schema name is not valid."),
                 @ApiResponse(
                         responseCode = "404",
                         description = "No constraints document with this id in the workspace."),
@@ -169,8 +170,8 @@ public class ShapesDocumentRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId,
             @Parameter(description = "New display name.") @RequestParam(required = false)
@@ -185,25 +186,23 @@ public class ShapesDocumentRESTController {
                     Integer order,
             @Parameter(
                             description =
-                                    "URIs of the schemas it applies to, replacing the ones it has."
+                                    "Names of the schemas it applies to, replacing the ones it has."
                                             + " Given empty, it applies to none.")
                     @RequestParam(name = "schema", required = false)
                     List<String> schemas) {
         logger.info(
-                "Received PATCH request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PATCH request: \"/api/workspaces/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                workspaceName,
                 documentId,
                 originURL);
 
         return shaclDocumentUseCase.updateShapesDocument(
-                datasetName,
+                workspaceName,
                 documentId,
                 name,
                 enabled,
                 order,
-                schemas == null
-                        ? null
-                        : SchemaParameter.expanded(schemas, datasetName, expandURIUseCase));
+                schemas == null ? null : SchemaParameter.names(schemas));
     }
 
     @Operation(
@@ -225,17 +224,17 @@ public class ShapesDocumentRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                workspaceName,
                 documentId,
                 originURL);
 
-        shaclDocumentUseCase.deleteShapesDocument(datasetName, documentId);
+        shaclDocumentUseCase.deleteShapesDocument(workspaceName, documentId);
         return Response.SUCCESS;
     }
 }
