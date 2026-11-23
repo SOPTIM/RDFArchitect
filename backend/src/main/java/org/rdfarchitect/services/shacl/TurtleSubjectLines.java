@@ -17,25 +17,34 @@
 
 package org.rdfarchitect.services.shacl;
 
+import org.apache.jena.irix.IRIs;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RiotException;
+import org.apache.jena.riot.system.ErrorHandlerFactory;
+import org.apache.jena.riot.system.ParserProfile;
+import org.apache.jena.riot.system.RiotLib;
+import org.apache.jena.riot.tokens.Token;
+import org.apache.jena.riot.tokens.TokenType;
+import org.apache.jena.riot.tokens.Tokenizer;
+import org.apache.jena.riot.tokens.TokenizerText;
 import org.apache.jena.shared.PrefixMapping;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Finds the line each subject of a Turtle document is written on.
  *
- * <p>Done by scanning rather than parsing because the position in the source text is exactly what a
- * parse throws away. The scan tracks the three things that can hide a full stop: comments, string
- * literals (including the triple-quoted ones that embedded SPARQL lives in), and bracket nesting.
+ * <p>A parse does not keep positions, so the text is read again with the tokenizer Jena's Turtle
+ * parser is built on, which knows each token's line. A subject is the first token after a full stop
+ * outside brackets. Directives take effect where they stand, as they do in the parser, so a
+ * prefixed name or a relative IRI means here what it means there.
  */
 final class TurtleSubjectLines {
 
-    /** One top-level statement: its subject as written, and the text it covers. */
-    record Statement(String subjectToken, int start, int end) {}
+    private static final Set<String> DIRECTIVES = Set.of("prefix", "base", "version");
 
     private TurtleSubjectLines() {}
 
@@ -43,268 +52,110 @@ final class TurtleSubjectLines {
      * The 1-based line each named subject's statement starts on.
      *
      * <p>The first statement wins where a subject is written more than once: it is where a reader
-     * would start looking.
+     * would start looking. A lexical error ends the scan, as it ends the parse, so a subject after
+     * it has no line.
+     *
+     * @param prefixes prefixes bound before the text starts; the text's own directives override
+     *     them from where they stand
      */
     static Map<String, Integer> linesBySubject(String turtle, PrefixMapping prefixes) {
         if (turtle == null || turtle.isEmpty()) {
             return Map.of();
         }
+        // The base and checks RDFParser uses for Turtle when it is given no base.
+        var profile =
+                RiotLib.profile(
+                        Lang.TURTLE, IRIs.getBaseStr(), ErrorHandlerFactory.errorHandlerNoLogging);
+        profile.getPrefixMap().putAll(prefixes);
+        // Lines are counted as the editor counts them, where a lone \r ends one too. The tokenizer
+        // counts only \n.
+        var text = turtle.replace("\r\n", "\n").replace('\r', '\n');
+        var tokens =
+                TokenizerText.create()
+                        .fromString(text)
+                        .errorHandler(ErrorHandlerFactory.errorHandlerNoLogging)
+                        .build();
         var lines = new HashMap<String, Integer>();
-        // Newlines are counted once from the front rather than per statement: the statements come
-        // back in reading order, so the cursor only ever moves forward.
-        int counted = 0;
-        int line = 1;
-        for (Statement statement : statements(turtle)) {
-            while (counted < statement.start()) {
-                if (turtle.charAt(counted) == '\n') {
-                    line++;
+        try {
+            int depth = 0;
+            boolean atSubject = true;
+            while (tokens.hasNext()) {
+                var token = tokens.next();
+                if (atSubject && isDirective(token)) {
+                    readDirective(token.getImage().toLowerCase(Locale.ROOT), tokens, profile);
+                    continue;
                 }
-                counted++;
+                if (atSubject
+                        && (token.hasType(TokenType.IRI)
+                                || token.hasType(TokenType.PREFIXED_NAME))) {
+                    var subject = profile.create(null, token);
+                    if (subject.isURI()) {
+                        lines.putIfAbsent(subject.getURI(), (int) token.getLine());
+                    }
+                }
+                atSubject = false;
+                switch (token.getType()) {
+                    case LBRACKET, LPAREN, LT2, L_TRIPLE, L_ANN -> depth++;
+                    case RBRACKET, RPAREN, GT2, R_TRIPLE, R_ANN -> depth--;
+                    case DOT -> atSubject = depth <= 0;
+                    default -> {
+                        // Anything else neither nests nor ends a statement.
+                    }
+                }
             }
-            var iri = expand(statement.subjectToken(), prefixes);
-            if (iri != null) {
-                lines.putIfAbsent(iri, line);
-            }
+        } catch (RiotException e) {
+            // The parser stops at the same place, so the graph holds nothing after it either.
         }
         return Map.copyOf(lines);
     }
 
-    /** Every top-level statement in reading order, directives excluded. */
-    static List<Statement> statements(String turtle) {
-        var statements = new ArrayList<Statement>();
-        var text = turtle == null ? "" : turtle;
-        int index = 0;
-        while (index < text.length()) {
-            index = skipIgnorable(text, index);
-            if (index >= text.length()) {
-                break;
-            }
-            int start = index;
-            var subject = tokenAt(text, start);
-            int end = endOfStatement(text, start, subject);
-            if (!isDirective(subject)) {
-                statements.add(new Statement(subject, start, end));
-            }
-            index = end;
-        }
-        return statements;
+    /** {@code @prefix}, {@code @base}, {@code @version}, or one of them in SPARQL's spelling. */
+    private static boolean isDirective(Token token) {
+        return token.hasType(TokenType.DIRECTIVE)
+                || (token.hasType(TokenType.KEYWORD)
+                        && DIRECTIVES.contains(token.getImage().toLowerCase(Locale.ROOT)));
     }
 
-    private static int skipIgnorable(String text, int from) {
-        int index = from;
-        while (index < text.length()) {
-            char c = text.charAt(index);
-            if (Character.isWhitespace(c)) {
-                index++;
-            } else if (c == '#') {
-                while (index < text.length() && text.charAt(index) != '\n') {
-                    index++;
-                }
-            } else {
-                return index;
+    /** Reads a directive's operands and applies it to {@code profile}, as the parser does. */
+    private static void readDirective(String directive, Tokenizer tokens, ParserProfile profile) {
+        switch (directive) {
+            case "prefix" -> {
+                var prefix = expect(tokens, TokenType.PREFIXED_NAME).getImage();
+                var iri = expect(tokens, TokenType.IRI);
+                profile.getPrefixMap()
+                        .add(
+                                prefix,
+                                profile.resolveIRI(iri.getImage(), iri.getLine(), iri.getColumn()));
             }
-        }
-        return index;
-    }
-
-    /** The token at {@code from}: an IRI to its {@code >}, anything else to where a name ends. */
-    private static String tokenAt(String text, int from) {
-        if (from < text.length() && text.charAt(from) == '<') {
-            int close = text.indexOf('>', from);
-            return close < 0 ? text.substring(from) : text.substring(from, close + 1);
-        }
-        int end = from;
-        while (end < text.length()) {
-            char c = text.charAt(end);
-            if (Character.isWhitespace(c) || c == '<' || c == '#') {
-                break;
+            case "base" -> {
+                var iri = expect(tokens, TokenType.IRI);
+                profile.setBaseIRI(
+                        profile.resolveIRI(iri.getImage(), iri.getLine(), iri.getColumn()));
             }
-            // Only an escape can put either of those into a name.
-            end += c == '\\' ? 2 : 1;
-        }
-        return text.substring(from, Math.min(end, text.length()));
-    }
-
-    private static boolean isDirective(String token) {
-        var lower = token.toLowerCase(Locale.ROOT);
-        return lower.equals("@prefix")
-                || lower.equals("@base")
-                || lower.equals("prefix")
-                || lower.equals("base");
-    }
-
-    /**
-     * The index just past the statement starting at {@code start}.
-     *
-     * <p>SPARQL-style {@code PREFIX} and {@code BASE} are terminated by their IRI rather than by a
-     * full stop, which is why the directive's shape has to be known here and not only skipped.
-     */
-    private static int endOfStatement(String text, int start, String subject) {
-        if (subject.equalsIgnoreCase("PREFIX") || subject.equalsIgnoreCase("BASE")) {
-            int close = text.indexOf('>', start);
-            return close < 0 ? text.length() : close + 1;
-        }
-        int depth = 0;
-        int index = start;
-        while (index < text.length()) {
-            char c = text.charAt(index);
-            if (c == '#') {
-                while (index < text.length() && text.charAt(index) != '\n') {
-                    index++;
-                }
-                continue;
-            }
-            if (c == '\\') {
-                // Outside a literal only a local name escapes a character, and `ex:A\.` does not
-                // end the statement.
-                index += 2;
-                continue;
-            }
-            if (c == '"' || c == '\'') {
-                index = endOfLiteral(text, index);
-                continue;
-            }
-            if (c == '<') {
-                int close = text.indexOf('>', index);
-                index = close < 0 ? text.length() : close + 1;
-                continue;
-            }
-            if (c == '[' || c == '(') {
-                depth++;
-            } else if (c == ']' || c == ')') {
-                depth--;
-            } else if (c == '.' && depth <= 0 && terminates(text, index)) {
-                return index + 1;
-            }
-            index++;
-        }
-        return text.length();
-    }
-
-    /**
-     * Whether a {@code .} ends the statement rather than sitting inside a name.
-     *
-     * <p>{@code cim:ACLineSegment.length} is one prefixed name, and so is {@code ex:a.ex:b}, since
-     * a local name may hold a colon. A full stop terminates when what follows can't continue a name
-     * or when what comes before isn't one: an IRI, a literal or a closed group.
-     */
-    private static boolean terminates(String text, int index) {
-        if (index + 1 >= text.length()) {
-            return true;
-        }
-        char next = text.charAt(index + 1);
-        if (Character.isWhitespace(next)
-                || next == '#'
-                || next == '<'
-                || next == '['
-                || next == '(') {
-            return true;
-        }
-        char previous = index > 0 ? text.charAt(index - 1) : ' ';
-        return previous == '>'
-                || previous == '"'
-                || previous == '\''
-                || previous == ']'
-                || previous == ')';
-    }
-
-    /** Just past the literal starting at {@code start}. */
-    private static int endOfLiteral(String text, int start) {
-        char quote = text.charAt(start);
-        var triple = "" + quote + quote + quote;
-        if (text.startsWith(triple, start)) {
-            int index = start + 3;
-            while (index < text.length()) {
-                if (text.charAt(index) == '\\') {
-                    index += 2;
-                } else if (text.startsWith(triple, index)) {
-                    // A long string may end in quotes of its own — `"""say "hi""""` — so the
-                    // delimiter is the last three of the run.
-                    while (index + 3 < text.length() && text.charAt(index + 3) == quote) {
-                        index++;
-                    }
-                    return index + 3;
-                } else {
-                    index++;
+            case "version" -> {
+                var version = next(tokens);
+                // `VERSION "1.2"` with `@prefix` right after it reads as a literal with a
+                // language tag, and the tag is the next directive.
+                if (version.hasType(TokenType.LITERAL_LANG)) {
+                    readDirective(version.getImage2(), tokens, profile);
                 }
             }
-            return text.length();
+            default -> throw new RiotException("Unknown directive @" + directive);
         }
-        int index = start + 1;
-        while (index < text.length()) {
-            char c = text.charAt(index);
-            if (c == '\\') {
-                index += 2;
-                continue;
-            }
-            if (c == quote || c == '\n') {
-                return index + 1;
-            }
-            index++;
-        }
-        return text.length();
     }
 
-    /** The IRI a subject token stands for, or {@code null} when none does. */
-    static String expand(String token, PrefixMapping prefixes) {
-        if (token.startsWith("<") && token.endsWith(">")) {
-            return unescapeIri(token.substring(1, token.length() - 1));
+    private static Token expect(Tokenizer tokens, TokenType type) {
+        var token = next(tokens);
+        if (!token.hasType(type)) {
+            throw new RiotException("Expected " + type + " in a directive, found " + token);
         }
-        int colon = token.indexOf(':');
-        if (colon < 0 || token.startsWith("_:")) {
-            return null;
-        }
-        var namespace = prefixes.getNsPrefixURI(token.substring(0, colon));
-        return namespace == null ? null : namespace + unescapeLocal(token.substring(colon + 1));
+        return token;
     }
 
-    /** A local name as it is meant: {@code ex:A\.} names {@code A.}. */
-    private static String unescapeLocal(String local) {
-        if (local.indexOf('\\') < 0) {
-            return local;
+    private static Token next(Tokenizer tokens) {
+        if (!tokens.hasNext()) {
+            throw new RiotException("A directive ends with the text");
         }
-        var unescaped = new StringBuilder(local.length());
-        for (int index = 0; index < local.length(); index++) {
-            char c = local.charAt(index);
-            if (c == '\\' && index + 1 < local.length()) {
-                c = local.charAt(++index);
-            }
-            unescaped.append(c);
-        }
-        return unescaped.toString();
-    }
-
-    /** An {@code IRIREF} with its numeric escapes, {@code UCHAR} in the grammar, decoded. */
-    private static String unescapeIri(String iri) {
-        if (iri.indexOf('\\') < 0) {
-            return iri;
-        }
-        var unescaped = new StringBuilder(iri.length());
-        int index = 0;
-        while (index < iri.length()) {
-            char c = iri.charAt(index);
-            int digits = c == '\\' && index + 1 < iri.length() ? escapeLength(iri, index + 1) : 0;
-            if (digits > 0 && index + 2 + digits <= iri.length()) {
-                try {
-                    unescaped.appendCodePoint(
-                            Integer.parseInt(iri.substring(index + 2, index + 2 + digits), 16));
-                    index += 2 + digits;
-                    continue;
-                } catch (IllegalArgumentException e) {
-                    // Not an escape after all, so it is kept as written.
-                }
-            }
-            unescaped.append(c);
-            index++;
-        }
-        return unescaped.toString();
-    }
-
-    private static int escapeLength(String iri, int marker) {
-        return switch (iri.charAt(marker)) {
-            case 'u' -> 4;
-            case 'U' -> 8;
-            default -> 0;
-        };
+        return tokens.next();
     }
 }
