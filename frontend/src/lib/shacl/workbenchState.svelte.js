@@ -618,6 +618,7 @@ export class ShapesWorkbench {
      */
     async create(name, text = "", schemas = []) {
         if (await this.refreshReadOnly()) {
+            this.lastError = READ_ONLY;
             return null;
         }
         const { data, error } = await createShapesDocument({
@@ -639,6 +640,7 @@ export class ShapesWorkbench {
 
     async importFile(file, name, schemas = []) {
         if (await this.refreshReadOnly()) {
+            this.lastError = READ_ONLY;
             return null;
         }
         const { data, error } = await createShapesDocumentFromFile({
@@ -730,6 +732,7 @@ export class ShapesWorkbench {
 
     async #update(documentId, query) {
         if (await this.refreshReadOnly()) {
+            this.lastError = READ_ONLY;
             return false;
         }
         const { error } = await updateShapesDocument({

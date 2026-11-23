@@ -492,6 +492,37 @@ describe("a read-only workspace", () => {
         expect(server.requests).toHaveLength(0);
     });
 
+    test("says a refusal is because of it, not what was refused before", async () => {
+        readOnly.mockResolvedValue(false);
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "PATCH"
+                ? new Response(
+                      JSON.stringify({
+                          detail: "Another document is already named x.ttl.",
+                      }),
+                      {
+                          status: 409,
+                          headers: { "content-type": "application/json" },
+                      },
+                  )
+                : answer(entry, url);
+        await workbench.rename(EQ, "x.ttl");
+        expect(workbench.lastError).toContain("already named");
+        readOnly.mockResolvedValue(true);
+
+        for (const refused of [
+            () => workbench.setEnabled(EQ, false),
+            () => workbench.create("new.ttl"),
+            () => workbench.importFile(new Blob(["x"]), "f.ttl"),
+        ]) {
+            workbench.lastError = "something refused before";
+            await refused();
+            expect(workbench.lastError).toContain("read-only");
+        }
+    });
+
     test("still reads, because looking is not changing", async () => {
         await workbench.load();
 
