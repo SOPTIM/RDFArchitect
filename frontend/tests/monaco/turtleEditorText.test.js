@@ -157,4 +157,30 @@ describe("text from outside", () => {
 
         expect(props.value).toBe("two\n");
     });
+
+    test("arriving after its key still opens the document", async () => {
+        const props = await showEditor({ value: "one\n", documentKey: 1 });
+
+        props.documentKey = 2;
+        await settle();
+        props.value = "two\n";
+        await settle();
+        await undo();
+
+        expect(props.value).toBe("two\n");
+        expect(props.onchange).not.toHaveBeenCalled();
+    });
+
+    test("arriving after the user typed under the new key is an edit again", async () => {
+        const props = await showEditor({ value: "one\n", documentKey: 1 });
+
+        props.documentKey = 2;
+        await settle();
+        await type("x");
+        props.value = "two\n";
+        await settle();
+        await undo();
+
+        expect(props.value).toBe("xone\n");
+    });
 });

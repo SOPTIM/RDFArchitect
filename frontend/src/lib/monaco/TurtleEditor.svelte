@@ -18,7 +18,7 @@
 <script>
     import { untrack } from "svelte";
 
-    import { openText, pushExternalText } from "./externalText.js";
+    import { holdsText, openText, pushExternalText } from "./externalText.js";
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
@@ -36,7 +36,9 @@
         onchange = undefined,
         /**
          * Which document `value` belongs to. A change opens the new text with a history of its
-         * own; without one, every new value is an undoable edit to the text before it.
+         * own; without one, every new value is an undoable edit to the text before it. When the key
+         * changes before its text arrives, the text that follows still opens the document, as long
+         * as nothing was typed in between.
          */
         documentKey = undefined,
         /** Shown while the text is empty, to say what the box is for. */
@@ -69,6 +71,13 @@
 
     /** The `documentKey` whose text the editor holds. */
     let shownKey = undefined;
+
+    /**
+     * Set when `documentKey` changed without a new text: the editor shows the previous document's
+     * text under the new key, and the next text from outside opens the document rather than
+     * becoming an edit that undo would take back to the previous document.
+     */
+    let awaitingText = false;
 
     /**
      * The text last put in from outside, and the model version that holds it.
@@ -138,6 +147,7 @@
                     if (applyingExternalChange) {
                         return;
                     }
+                    awaitingText = false;
                     value =
                         created.getModel().getAlternativeVersionId() ===
                         givenText.version
@@ -200,8 +210,13 @@
         try {
             let applied;
             if (key !== shownKey) {
+                awaitingText =
+                    shownKey !== undefined && holdsText(editor, next);
                 applied = openText(editor, next);
                 shownKey = key;
+            } else if (awaitingText && !holdsText(editor, next)) {
+                awaitingText = false;
+                applied = openText(editor, next);
             } else {
                 applied = pushExternalText(editor, next);
             }
