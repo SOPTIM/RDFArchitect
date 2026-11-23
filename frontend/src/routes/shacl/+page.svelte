@@ -46,7 +46,7 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphUri as uriOf } from "$lib/utils/graph-label.js";
+    import { schemaName as nameOf } from "$lib/utils/graph-label.js";
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
@@ -99,7 +99,7 @@
     const workbench = $derived(
         selectedWorkspace
             ? new ShapesWorkbench({
-                  datasetName: selectedWorkspace,
+                  workspaceName: selectedWorkspace,
                   preferredSchema: untrack(() =>
                       editorState.selectedGraph.getValue(),
                   ),
@@ -109,7 +109,7 @@
 
     const generatedSchemaLabel = $derived(
         workbench?.schemas.find(
-            schema => schema.uri === workbench.generatedSchema,
+            schema => schema.name === workbench.generatedSchema,
         )?.label ?? "",
     );
 
@@ -257,15 +257,15 @@
     }
 
     /** What a new document starts with: the prefixes its schema is written in. */
-    async function seedText(schemaUri) {
+    async function seedText(schemaName) {
         const [namespaces, graphs] = await Promise.all([
             workspaceStore.getNamespaces(selectedWorkspace),
             graphStore.getGraphs(selectedWorkspace),
         ]);
         return newDocumentText({
-            graphUri: schemaUri,
+            schemaName,
             namespaces,
-            keyword: (graphs ?? []).find(graph => uriOf(graph) === schemaUri)
+            keyword: (graphs ?? []).find(graph => nameOf(graph) === schemaName)
                 ?.keyword,
         });
     }

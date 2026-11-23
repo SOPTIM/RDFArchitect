@@ -26,8 +26,8 @@ import {
 const EQ = "eq-document-id";
 const CUSTOM = "custom-document-id";
 
-const EQ_SCHEMA = "http://ex.org/EQ";
-const SSH_SCHEMA = "http://ex.org/SSH";
+const EQ_SCHEMA = "EQ";
+const SSH_SCHEMA = "SSH";
 const GENERATED_ID = generatedId(EQ_SCHEMA);
 
 const SHAPES = `@prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -117,12 +117,12 @@ function fakeServer(overrides = {}) {
 }
 
 function graph(keyword) {
-    return { keyword, uri: { prefix: "http://ex.org/", suffix: keyword } };
+    return { name: keyword, keyword };
 }
 
 function workbenchFor(server, preferredSchema = EQ_SCHEMA) {
     return new ShapesWorkbench({
-        datasetName: "cgmes",
+        workspaceName: "cgmes",
         preferredSchema,
         requestOptions: { fetch: server.fetch },
     });
@@ -588,8 +588,8 @@ describe("the workspace's schemas", () => {
         await workbench.load();
 
         expect(workbench.schemas).toEqual([
-            { uri: EQ_SCHEMA, label: "EQ" },
-            { uri: SSH_SCHEMA, label: "SSH" },
+            { name: EQ_SCHEMA, label: "EQ" },
+            { name: SSH_SCHEMA, label: "SSH" },
         ]);
     });
 
@@ -623,8 +623,8 @@ describe("the workspace's schemas", () => {
     test("leave a document naming none of them unassigned", async () => {
         server.documents = [
             document("none", []),
-            document("gone", ["http://ex.org/deleted"]),
-            document("kept", ["http://ex.org/deleted", EQ_SCHEMA]),
+            document("gone", ["Deleted"]),
+            document("kept", ["Deleted", EQ_SCHEMA]),
         ];
         await workbench.load();
 
@@ -641,7 +641,7 @@ describe("the workspace's schemas", () => {
         await workbench.reload();
 
         expect(getGraphs).toHaveBeenLastCalledWith("cgmes", true);
-        expect(workbench.schemas.map(({ uri }) => uri)).toEqual([EQ_SCHEMA]);
+        expect(workbench.schemas.map(({ name }) => name)).toEqual([EQ_SCHEMA]);
     });
 
     test("open the selected schema's first document holding anything", async () => {
@@ -707,10 +707,8 @@ describe("the workspace's schemas", () => {
         expect(workbench.contextSchemas).toEqual([EQ_SCHEMA]);
     });
 
-    test("a URI with no schema behind it is never where a new document goes", async () => {
-        server.documents = [
-            document("gone", ["http://ex.org/deleted"], { tripleCount: 3 }),
-        ];
+    test("a name with no schema behind it is never where a new document goes", async () => {
+        server.documents = [document("gone", ["Deleted"], { tripleCount: 3 })];
         workbench = workbenchFor(server, null);
         await workbench.load();
 
@@ -849,8 +847,8 @@ describe("the generated shapes", () => {
         await workbench.select(generatedId(SSH_SCHEMA));
 
         expect(workbench.generatedSchema).toBe(SSH_SCHEMA);
-        expect(server.requests[0].path).toContain(
-            encodeURIComponent(SSH_SCHEMA),
+        expect(server.requests[0].path).toBe(
+            "/api/workspaces/cgmes/schemas/SSH/shacl/generate/string",
         );
     });
 

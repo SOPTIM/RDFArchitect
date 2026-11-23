@@ -34,22 +34,36 @@ const STANDARD = [
 const PREFIX_NAME = /^[A-Za-z]([\w.-]*[\w-])?$/;
 
 /**
- * Where the document's own shapes live, derived from the schema they constrain.
+ * Where the document's own shapes live, derived from the namespace of the schema they constrain.
  *
- * The official releases name theirs `<profile>/Constraints#`; a graph URI with a fragment keeps
+ * The official releases name theirs `<profile>/Constraints#`; a namespace with a fragment keeps
  * the fragment as a path segment, so two schemas under one base do not share a namespace.
  */
-export function shapesNamespace(graphUri) {
-    const base = (graphUri ?? "").replace("#", "/").replace(/[#/]+$/, "");
+export function shapesNamespace(namespace) {
+    const base = (namespace ?? "").replace("#", "/").replace(/[#/]+$/, "");
     return `${base || "urn:rdfa:shapes"}/Constraints#`;
 }
 
 /**
- * @param graphUri the schema the document constrains
+ * Where the shapes of a schema whose own namespace is unknown live: under the name of the schema,
+ * below the IRI that relative IRIs in a document resolve against.
+ */
+function schemaNamespace(schemaName) {
+    return schemaName
+        ? `urn:rdfa:shapes/${encodeURIComponent(schemaName)}`
+        : null;
+}
+
+/**
+ * @param schemaName the name of the schema the document constrains
  * @param namespaces the workspace's namespaces, as `{ prefix: iri, substitutedPrefix: name }`
  * @param keyword the schema's dcat:keyword, which names the shapes prefix when it can
  */
-export function newDocumentText({ graphUri, namespaces = [], keyword = null }) {
+export function newDocumentText({
+    schemaName = null,
+    namespaces = [],
+    keyword = null,
+}) {
     const bindings = new Map(STANDARD);
     const iris = new Set(bindings.values());
     for (const namespace of namespaces ?? []) {
@@ -66,7 +80,7 @@ export function newDocumentText({ graphUri, namespaces = [], keyword = null }) {
     }
 
     const shapes = shapesNamespace(
-        profileNamespace(namespaces, keyword) ?? graphUri,
+        profileNamespace(namespaces, keyword) ?? schemaNamespace(schemaName),
     );
     if (!iris.has(shapes)) {
         bindings.set(shapesPrefix(keyword, bindings), shapes);
@@ -81,11 +95,8 @@ export function newDocumentText({ graphUri, namespaces = [], keyword = null }) {
 
 /**
  * The namespace the schema's own terms live in, found as the one the workspace binds to its keyword
- * — `eq:` for the CGMES Equipment profile.
- *
- * Preferred over the graph URI, which for an imported file is a name the importer made up
- * (`http://graph#61970_…`): built from that, a new document's shapes lived under `http://graph/…`,
- * where the official file puts them under the profile, `…/CoreEquipment-EU/Constraints#`.
+ * — `eq:` for the CGMES Equipment profile, whose official constraints file puts its shapes under
+ * `…/CoreEquipment-EU/Constraints#`.
  */
 function profileNamespace(namespaces, keyword) {
     const wanted = (keyword ?? "").toLowerCase();

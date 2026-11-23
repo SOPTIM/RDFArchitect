@@ -22,7 +22,6 @@
     import Badge from "$lib/components/Badge.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { extractOutline } from "$lib/shacl/outline.js";
-    import { uriSuffix } from "$lib/utils/iri.js";
 
     import SchemaChecklist from "./SchemaChecklist.svelte";
 
@@ -52,10 +51,10 @@
               );
     });
 
-    /** URIs the document names that no schema of this workspace has. */
+    /** Schema names the document applies to that no schema of this workspace has. */
     const absentSchemas = $derived(
         (document?.schemas ?? []).filter(
-            uri => !workbench.schemas.some(schema => schema.uri === uri),
+            name => !workbench.schemas.some(schema => schema.name === name),
         ),
     );
 
@@ -175,10 +174,10 @@
                 />
                 {#if absentSchemas.length > 0}
                     <ul class="mt-1 flex flex-col gap-1">
-                        {#each absentSchemas as uri (uri)}
-                            <li class="text-text-subtle text-xs" title={uri}>
-                                {uriSuffix(uri)} — not in this workspace; importing
-                                it again brings it back
+                        {#each absentSchemas as name (name)}
+                            <li class="text-text-subtle text-xs">
+                                {name} — not in this workspace; a schema imported
+                                under this name brings it back
                                 {#if !workbench.readOnly}
                                     <button
                                         class="text-blue cursor-pointer underline underline-offset-2"
@@ -186,7 +185,7 @@
                                             setSchemas(
                                                 document.schemas.filter(
                                                     candidate =>
-                                                        candidate !== uri,
+                                                        candidate !== name,
                                                 ),
                                             )}
                                     >

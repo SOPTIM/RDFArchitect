@@ -25,14 +25,14 @@ public final class DatabaseFixtures {
 
     private DatabaseFixtures() {}
 
-    /** Creates the graph, and its workspace if there is none yet, as one commit. */
+    /** Creates the schema, and its workspace if there is none yet, as one commit. */
     public static void createGraph(
             DatabasePort databasePort, GraphIdentifier graphIdentifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(graphIdentifier.datasetName());
+        databasePort.createWorkspaceIfAbsent(graphIdentifier.workspaceName());
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(graphIdentifier.graphUri(), graph);
-            transaction.commit("Created the graph");
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.createGraph(graphIdentifier.schemaName(), graph);
+            transaction.commit("Created the schema");
         }
     }
 }

@@ -20,7 +20,7 @@
  *
  * A document is named after the file it came from, because that is how the CGMES release names its
  * files and how a modeller refers to them — "the DiagramLayout simple constraints" is a file name,
- * not a description someone would invent. Names are unique within a graph, so a second copy has to
+ * not a description someone would invent. Names are unique within a workspace, so a second copy has to
  * be distinguished rather than rejected.
  */
 

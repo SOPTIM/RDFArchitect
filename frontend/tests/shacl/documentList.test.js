@@ -20,12 +20,12 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import DocumentList from "../../src/routes/shacl/workbench/DocumentList.svelte";
 
-const EQ = "http://ex.org/EQ";
-const SSH = "http://ex.org/SSH";
+const EQ = "EQ";
+const SSH = "SSH";
 
 const SCHEMAS = [
-    { uri: EQ, label: "Equipment" },
-    { uri: SSH, label: "Hypothesis" },
+    { name: EQ, label: "Equipment" },
+    { name: SSH, label: "Hypothesis" },
 ];
 
 const DOCUMENTS = [
@@ -59,22 +59,22 @@ function fakeWorkbench(overrides = {}) {
         schemas: SCHEMAS,
         comparedSchema: null,
         contextSchemas: [EQ],
-        documentsOf(uri) {
+        documentsOf(schemaName) {
             return this.documents.filter(document =>
-                document.schemas?.includes(uri),
+                document.schemas?.includes(schemaName),
             );
         },
         get unassigned() {
             return this.documents.filter(
                 document =>
-                    !document.schemas?.some(uri =>
-                        this.schemas.some(schema => schema.uri === uri),
+                    !document.schemas?.some(name =>
+                        this.schemas.some(schema => schema.name === name),
                     ),
             );
         },
-        canMove(documentId, offset, schemaUri) {
-            const peers = schemaUri
-                ? this.documentsOf(schemaUri)
+        canMove(documentId, offset, schemaName) {
+            const peers = schemaName
+                ? this.documentsOf(schemaName)
                 : this.unassigned;
             const from = peers.findIndex(entry => entry.id === documentId);
             return from >= 0 && peers[from + offset] !== undefined;
@@ -327,7 +327,7 @@ describe("DocumentList", () => {
                         name: "gone.ttl",
                         order: 1,
                         enabled: true,
-                        schemas: ["http://ex.org/deleted"],
+                        schemas: ["Deleted"],
                     },
                 ],
                 results: [],

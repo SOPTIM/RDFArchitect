@@ -95,11 +95,11 @@
         }
     }
 
-    function toggleCollapsed(uri) {
-        if (collapsed.has(uri)) {
-            collapsed.delete(uri);
+    function toggleCollapsed(key) {
+        if (collapsed.has(key)) {
+            collapsed.delete(key);
         } else {
-            collapsed.add(uri);
+            collapsed.add(key);
         }
     }
 
@@ -243,7 +243,7 @@
   from a file explorer looks for them first.
 -->
 
-{#snippet documentRow(document, schemaUri)}
+{#snippet documentRow(document, schemaName)}
     {@const selected =
         !workbench.comparedSchema && document.id === workbench.selectedId}
     <li class="py-px">
@@ -325,10 +325,10 @@
                                 disabled={!workbench.canMove(
                                     document.id,
                                     -1,
-                                    schemaUri,
+                                    schemaName,
                                 )}
                                 onclick={() =>
-                                    workbench.move(document.id, -1, schemaUri)}
+                                    workbench.move(document.id, -1, schemaName)}
                             >
                                 <Fa icon={faArrowUp} />
                             </button>
@@ -339,10 +339,10 @@
                                 disabled={!workbench.canMove(
                                     document.id,
                                     1,
-                                    schemaUri,
+                                    schemaName,
                                 )}
                                 onclick={() =>
-                                    workbench.move(document.id, 1, schemaUri)}
+                                    workbench.move(document.id, 1, schemaName)}
                             >
                                 <Fa icon={faArrowDown} />
                             </button>
@@ -403,11 +403,11 @@
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() =>
-                            workbench.move(document.id, -1, schemaUri)}
+                            workbench.move(document.id, -1, schemaName)}
                         disabled={!workbench.canMove(
                             document.id,
                             -1,
-                            schemaUri,
+                            schemaName,
                         )}
                         faIcon={faArrowUp}
                     >
@@ -415,8 +415,12 @@
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() =>
-                            workbench.move(document.id, 1, schemaUri)}
-                        disabled={!workbench.canMove(document.id, 1, schemaUri)}
+                            workbench.move(document.id, 1, schemaName)}
+                        disabled={!workbench.canMove(
+                            document.id,
+                            1,
+                            schemaName,
+                        )}
                         faIcon={faArrowDown}
                     >
                         Move down
@@ -436,7 +440,7 @@
 {/snippet}
 
 {#snippet generatedRow(schema)}
-    {@const id = generatedId(schema.uri)}
+    {@const id = generatedId(schema.name)}
     {@const selected = !workbench.comparedSchema && id === workbench.selectedId}
     <li class="py-px">
         <button
@@ -510,19 +514,19 @@
     </div>
 
     <ul class="min-h-0 flex-1 overflow-y-auto px-1.5 py-1">
-        {#each workbench.schemas as schema (schema.uri)}
-            {@const documents = workbench.documentsOf(schema.uri)}
-            {@const comparing = workbench.comparedSchema === schema.uri}
+        {#each workbench.schemas as schema (schema.name)}
+            {@const documents = workbench.documentsOf(schema.name)}
+            {@const comparing = workbench.comparedSchema === schema.name}
             <li>
                 <div
                     class="group relative flex items-center gap-1 rounded-md border px-1 py-1 {comparing
                         ? 'bg-nav-active-background text-nav-active-text border-border-select'
                         : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
-                    {@render groupToggle(schema.uri, schema.label)}
+                    {@render groupToggle(schema.name, schema.label)}
                     <span
                         class="flex min-w-0 flex-1 items-baseline gap-2"
-                        title={schema.uri}
+                        title={schema.name}
                     >
                         <span class="truncate text-sm font-semibold">
                             {schema.label}
@@ -540,7 +544,7 @@
                                 class={ROW_ACTION}
                                 title="New document for this schema"
                                 aria-label={`New document for ${schema.label}`}
-                                onclick={() => addDocument([schema.uri])}
+                                onclick={() => addDocument([schema.name])}
                             >
                                 <Fa icon={faFileCirclePlus} />
                             </button>
@@ -548,18 +552,18 @@
                                 class={ROW_ACTION}
                                 title="Import a constraints file for this schema"
                                 aria-label={`Import a constraints file for ${schema.label}`}
-                                onclick={() => pickFile([schema.uri])}
+                                onclick={() => pickFile([schema.name])}
                             >
                                 <Fa icon={faFileImport} />
                             </button>
                         {/if}
                     </div>
                 </div>
-                {#if !collapsed.has(schema.uri)}
+                {#if !collapsed.has(schema.name)}
                     <ul class="ml-3 pb-1">
                         {@render generatedRow(schema)}
                         {#each documents as document (document.id)}
-                            {@render documentRow(document, schema.uri)}
+                            {@render documentRow(document, schema.name)}
                         {/each}
                     </ul>
                 {/if}

@@ -19,19 +19,19 @@
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
 
     let {
-        /** The workspace's schemas, as `{ uri, label }`. */
+        /** The workspace's schemas, as `{ name, label }`. */
         schemas = [],
-        /** The URIs ticked. Can hold URIs with no schema behind them, which stay as they are. */
+        /** The names ticked. Can hold names with no schema behind them, which stay as they are. */
         selected = [],
         readonly = false,
         onchange = () => {},
     } = $props();
 
-    function set(uri, ticked) {
+    function set(name, ticked) {
         onchange(
             ticked
-                ? [...selected, uri]
-                : selected.filter(candidate => candidate !== uri),
+                ? [...selected, name]
+                : selected.filter(candidate => candidate !== name),
         );
     }
 </script>
@@ -47,15 +47,15 @@
     </p>
 {:else}
     <ul class="flex flex-col gap-1">
-        {#each schemas as schema (schema.uri)}
-            <li title={schema.uri}>
+        {#each schemas as schema (schema.name)}
+            <li title={schema.name}>
                 <CheckBoxEditControl
                     label={schema.label}
                     labelFirst={false}
-                    value={selected.includes(schema.uri)}
+                    value={selected.includes(schema.name)}
                     {readonly}
-                    callOnInputTrue={() => set(schema.uri, true)}
-                    callOnInputFalse={() => set(schema.uri, false)}
+                    callOnInputTrue={() => set(schema.name, true)}
+                    callOnInputFalse={() => set(schema.name, false)}
                 />
             </li>
         {/each}

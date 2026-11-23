@@ -26,7 +26,7 @@ describe("a new constraints document", () => {
     test("binds the SHACL vocabularies, the workspace's namespaces and its own", () => {
         const prefixes = parsePrefixes(
             newDocumentText({
-                graphUri: "http://example.org/Profile/1.0",
+                schemaName: "PR",
                 namespaces: [
                     { prefix: CIM, substitutedPrefix: "cim:" },
                     {
@@ -45,16 +45,14 @@ describe("a new constraints document", () => {
             xsd: "http://www.w3.org/2001/XMLSchema#",
             cim: CIM,
             eu: "http://example.org/eu#",
-            pr: "http://example.org/Profile/1.0/Constraints#",
+            pr: "urn:rdfa:shapes/PR/Constraints#",
         });
     });
 
     test("puts its shapes under the profile's namespace, as the official files do", () => {
-        // An imported schema's graph URI is one the importer made up; built from that, the
-        // shapes lived under http://graph/…, where the official file has them under the profile.
         const prefixes = parsePrefixes(
             newDocumentText({
-                graphUri: "http://graph#61970_600_2_Equipment_AP_Voc_RDFS2020",
+                schemaName: "61970-600-2_Equipment-AP-Voc-RDFS2020",
                 namespaces: [
                     { prefix: CIM, substitutedPrefix: "cim:" },
                     {
@@ -69,12 +67,22 @@ describe("a new constraints document", () => {
         expect(Object.values(prefixes)).toContain(
             "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/Constraints#",
         );
-        expect(Object.values(prefixes).join(" ")).not.toContain("http://graph");
+        expect(Object.values(prefixes).join(" ")).not.toContain("urn:");
+    });
+
+    test("puts its shapes under the schema's name when the schema's namespace is unknown", () => {
+        const prefixes = parsePrefixes(
+            newDocumentText({ schemaName: "My profile #2", keyword: "MP" }),
+        );
+
+        expect(prefixes.mp).toBe(
+            "urn:rdfa:shapes/My%20profile%20%232/Constraints#",
+        );
     });
 
     test("never rebinds a standard prefix or a namespace twice", () => {
         const text = newDocumentText({
-            graphUri: "http://example.org/P",
+            schemaName: "P",
             namespaces: [
                 { prefix: "http://elsewhere.org/", substitutedPrefix: "sh" },
                 { prefix: CIM, substitutedPrefix: "cim" },
@@ -88,24 +96,24 @@ describe("a new constraints document", () => {
         expect(prefixes.cim).toBe(CIM);
         expect(prefixes).not.toHaveProperty("cim100");
         expect(Object.values(prefixes)).not.toContain("http://x.org/");
-        expect(prefixes.shapes).toBe("http://example.org/P/Constraints#");
+        expect(prefixes.shapes).toBe("urn:rdfa:shapes/P/Constraints#");
     });
 
     test("falls back to a free name when the keyword is taken", () => {
         const prefixes = parsePrefixes(
             newDocumentText({
-                graphUri: "http://example.org/P",
+                schemaName: "P",
                 namespaces: [{ prefix: CIM, substitutedPrefix: "cim" }],
                 keyword: "CIM",
             }),
         );
 
         expect(prefixes.cim).toBe(CIM);
-        expect(prefixes.shapes).toBe("http://example.org/P/Constraints#");
+        expect(prefixes.shapes).toBe("urn:rdfa:shapes/P/Constraints#");
     });
 
     test("is valid Turtle with room to start writing", () => {
-        const text = newDocumentText({ graphUri: "http://example.org/P" });
+        const text = newDocumentText({ schemaName: "P" });
 
         expect(text.endsWith("\n\n")).toBe(true);
         for (const line of text.trim().split("\n")) {
@@ -124,7 +132,7 @@ describe("the shapes namespace", () => {
         );
     });
 
-    test("keeps a graph URI's fragment apart from another's", () => {
+    test("keeps a namespace's fragment apart from another's", () => {
         expect(shapesNamespace("http://graph#EQ")).toBe(
             "http://graph/EQ/Constraints#",
         );

@@ -27,7 +27,7 @@ import {
 } from "$lib/api/generated/index.ts";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
+import { graphLabeller, schemaName as nameOf } from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
 
 /** Said instead of a server error when the workspace is the reason nothing can be written. */
@@ -49,8 +49,8 @@ export const GENERATED_NAME = "Generated shapes";
 
 const UNICODE_SPACE = /[\p{Zs}\u2028\u2029]/u;
 
-export function generatedId(schemaUri) {
-    return `${GENERATED_PREFIX}${schemaUri}`;
+export function generatedId(schemaName) {
+    return `${GENERATED_PREFIX}${schemaName}`;
 }
 
 function isGenerated(id) {
@@ -128,7 +128,7 @@ export function reasonFrom(error) {
 export class ShapesWorkbench {
     /** @type {import("$lib/api/generated").ShapesDocumentInfo[]} */
     documents = $state([]);
-    /** The workspace's schemas, as `{ uri, label }`, in the order the navigation shows them. */
+    /** The workspace's schemas, as `{ name, label }`, in the order the navigation shows them. */
     schemas = $state([]);
     selectedId = $state(null);
     /**
@@ -175,21 +175,25 @@ export class ShapesWorkbench {
     #saveInFlight = null;
     #unwatchReadOnly = null;
 
-    #datasetName;
+    #workspaceName;
     /** The schema selected in the rest of the app, which decides what opens first. */
     #preferredSchema;
     #requestOptions;
     /** Generated Turtle per schema. Cleared when a schema may have changed elsewhere. */
     #generated = new Map();
 
-    constructor({ datasetName, preferredSchema = null, requestOptions = {} }) {
-        this.#datasetName = datasetName;
+    constructor({
+        workspaceName,
+        preferredSchema = null,
+        requestOptions = {},
+    }) {
+        this.#workspaceName = workspaceName;
         this.#preferredSchema = preferredSchema;
         this.#requestOptions = requestOptions;
     }
 
     get path() {
-        return { datasetName: this.#datasetName };
+        return { workspaceName: this.#workspaceName };
     }
 
     get selected() {
@@ -200,9 +204,9 @@ export class ShapesWorkbench {
     }
 
     /** The documents applying to a schema, in reading order. */
-    documentsOf(schemaUri) {
+    documentsOf(schemaName) {
         return this.documents.filter(document =>
-            document.schemas?.includes(schemaUri),
+            document.schemas?.includes(schemaName),
         );
     }
 
@@ -210,12 +214,12 @@ export class ShapesWorkbench {
      * The documents applying to no schema of this workspace.
      *
      * A document can name a schema that is not here: deleting a schema leaves its documents as they
-     * are, and importing that URI again finds them.
+     * are, and a schema imported under that name again finds them.
      */
     get unassigned() {
-        const known = new Set(this.schemas.map(schema => schema.uri));
+        const known = new Set(this.schemas.map(schema => schema.name));
         return this.documents.filter(
-            document => !document.schemas?.some(uri => known.has(uri)),
+            document => !document.schemas?.some(name => known.has(name)),
         );
     }
 
@@ -233,7 +237,7 @@ export class ShapesWorkbench {
 
     /** The schemas of what is being looked at, which is where a new document most likely goes. */
     get contextSchemas() {
-        const known = uri => this.schemas.some(schema => schema.uri === uri);
+        const known = name => this.schemas.some(schema => schema.name === name);
         const inView =
             this.comparedSchema ??
             this.generatedSchema ??
@@ -311,7 +315,7 @@ export class ShapesWorkbench {
     /** Re-reads the workspace's read-only flag. An unknown answer counts as read-only. */
     async refreshReadOnly() {
         this.readOnly =
-            (await workspaceStore.isReadOnly(this.#datasetName)) !== false;
+            (await workspaceStore.isReadOnly(this.#workspaceName)) !== false;
         return this.readOnly;
     }
 
@@ -329,7 +333,7 @@ export class ShapesWorkbench {
                     return;
                 }
                 const workspace = state.data.find(
-                    candidate => candidate.label === this.#datasetName,
+                    candidate => candidate.label === this.#workspaceName,
                 );
                 this.readOnly = workspace?.readOnly !== false;
             }) ?? null;
@@ -371,8 +375,8 @@ export class ShapesWorkbench {
     }
 
     /** Shows how a schema compares with its documents. The open document stays as it is. */
-    compare(schemaUri) {
-        this.comparedSchema = schemaUri;
+    compare(schemaName) {
+        this.comparedSchema = schemaName;
     }
 
     /** Back from a comparison to the open document. */
@@ -540,7 +544,7 @@ export class ShapesWorkbench {
      *
      * @param text what the new document starts with — normally its prefixes, so the first thing
      *     written into it is a shape rather than boilerplate
-     * @param schemas the URIs of the schemas it applies to
+     * @param schemas the names of the schemas it applies to
      */
     async create(name, text = "", schemas = []) {
         if (await this.refreshReadOnly()) {
@@ -601,14 +605,14 @@ export class ShapesWorkbench {
         });
     }
 
-    /** The documents listed next to one another, under `schemaUri` or else under no schema. */
-    #peersIn(schemaUri) {
-        return schemaUri ? this.documentsOf(schemaUri) : this.unassigned;
+    /** The documents listed next to one another, under `schemaName` or else under no schema. */
+    #peersIn(schemaName) {
+        return schemaName ? this.documentsOf(schemaName) : this.unassigned;
     }
 
     /** Whether the document has a neighbour in that direction, where it is listed. */
-    canMove(documentId, offset, schemaUri = null) {
-        const peers = this.#peersIn(schemaUri);
+    canMove(documentId, offset, schemaName = null) {
+        const peers = this.#peersIn(schemaName);
         const from = peers.findIndex(document => document.id === documentId);
         return from >= 0 && peers[from + offset] !== undefined;
     }
@@ -620,8 +624,8 @@ export class ShapesWorkbench {
      * for reading, not for which constraints apply — every enabled document applies, and none
      * overrides another.
      */
-    async move(documentId, offset, schemaUri = null) {
-        const peers = this.#peersIn(schemaUri);
+    async move(documentId, offset, schemaName = null) {
+        const peers = this.#peersIn(schemaName);
         const from = peers.findIndex(document => document.id === documentId);
         const neighbour = from < 0 ? undefined : peers[from + offset];
         if (!neighbour) {
@@ -675,14 +679,14 @@ export class ShapesWorkbench {
 
     async #refreshSchemas(force = false) {
         const graphs =
-            (await graphStore.getGraphs(this.#datasetName, force)) ?? [];
+            (await graphStore.getGraphs(this.#workspaceName, force)) ?? [];
         const labelOf = graphLabeller(graphs);
         this.schemas = graphs
-            .map(graph => ({ uri: graphUri(graph), label: labelOf(graph) }))
+            .map(graph => ({ name: nameOf(graph), label: labelOf(graph) }))
             .sort(compareGraphs);
         if (
             this.comparedSchema &&
-            !this.schemas.some(schema => schema.uri === this.comparedSchema)
+            !this.schemas.some(schema => schema.name === this.comparedSchema)
         ) {
             this.comparedSchema = null;
         }
@@ -703,7 +707,7 @@ export class ShapesWorkbench {
         this.documentsRevision += 1;
         this.error = null;
         const stillThere = this.showingGenerated
-            ? this.schemas.some(schema => schema.uri === this.generatedSchema)
+            ? this.schemas.some(schema => schema.name === this.generatedSchema)
             : this.documents.some(document => document.id === this.selectedId);
         if (!stillThere) {
             this.selectedId = this.#firstToOpen();
@@ -718,20 +722,20 @@ export class ShapesWorkbench {
     #firstToOpen() {
         const holdsSomething = document => (document.tripleCount ?? 0) > 0;
         const preferred = this.schemas.find(
-            schema => schema.uri === this.#preferredSchema,
+            schema => schema.name === this.#preferredSchema,
         );
         if (preferred) {
-            const own = this.documentsOf(preferred.uri);
+            const own = this.documentsOf(preferred.name);
             return (
                 own.find(holdsSomething)?.id ??
                 own[0]?.id ??
-                generatedId(preferred.uri)
+                generatedId(preferred.name)
             );
         }
         return (
             this.documents.find(holdsSomething)?.id ??
             this.documents[0]?.id ??
-            (this.schemas[0] ? generatedId(this.schemas[0].uri) : null)
+            (this.schemas[0] ? generatedId(this.schemas[0].name) : null)
         );
     }
 
@@ -742,17 +746,17 @@ export class ShapesWorkbench {
      * check, and a second implementation in the browser would be a second thing to keep true.
      */
     async #showGenerated(selection) {
-        const schemaUri = this.generatedSchema;
+        const schemaName = this.generatedSchema;
         this.#textReady = true;
-        if (this.#generated.has(schemaUri)) {
-            this.#replaceBuffer(this.#generated.get(schemaUri));
+        if (this.#generated.has(schemaName)) {
+            this.#replaceBuffer(this.#generated.get(schemaName));
             return;
         }
         this.generating = true;
         try {
             const { data, error } = await getGeneratedShaclasString({
                 ...this.#requestOptions,
-                path: { ...this.path, graphURI: schemaUri },
+                path: { ...this.path, schemaName },
             });
             if (selection !== this.#selection) {
                 return;
@@ -762,7 +766,7 @@ export class ShapesWorkbench {
                 this.#replaceBuffer("");
                 return;
             }
-            this.#generated.set(schemaUri, data ?? "");
+            this.#generated.set(schemaName, data ?? "");
             this.#replaceBuffer(data ?? "");
             this.error = null;
         } finally {
