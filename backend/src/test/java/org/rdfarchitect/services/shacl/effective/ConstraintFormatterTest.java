@@ -34,7 +34,7 @@ class ConstraintFormatterTest {
 
     @Test
     void writesTheStandardVocabulariesShortWhenTheWorkspaceDoesNotBindThem() {
-        // A schema binds cim:, rarely sh: or xsd:, and the full IRIs made every summary unreadable.
+        // A schema binds cim:, rarely sh: or xsd:, and full IRIs would make a summary unreadable.
         var prefixes = PrefixMapping.Factory.create().setNsPrefix("cim", CIM);
         var constraint =
                 new EffectiveConstraints.Constraint(

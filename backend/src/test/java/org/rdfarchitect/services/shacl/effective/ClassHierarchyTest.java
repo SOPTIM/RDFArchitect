@@ -70,10 +70,10 @@ class ClassHierarchyTest {
     }
 
     /**
-     * Not an oversight. Official lists name classes the schema doesn't mark concrete on purpose:
-     * CGMES's Header writes {@code sh:in (cim:Statements)} and the geographical location profile
-     * {@code sh:in (cim:StreetAddress)}, and reading those as "admits nothing" would report the
-     * official files as contradicting their own schema.
+     * Official lists name classes the schema doesn't mark concrete on purpose: CGMES's Header
+     * writes {@code sh:in (cim:Statements)} and the geographical location profile {@code sh:in
+     * (cim:StreetAddress)}, and reading those as "admits nothing" would report the official files
+     * as contradicting their own schema.
      */
     @Test
     void aListOfOnlyUnmarkedClassesStillMeansThem() {

@@ -98,11 +98,10 @@ public final class EffectiveConstraints {
     /**
      * What several documents require together, and which of them requires each thing.
      *
-     * <p>A graph's constraints are the conjunction of its enabled documents, so this is the only
+     * <p>A schema's constraints are the conjunction of its enabled documents, so this is the only
      * honest right-hand side for the comparison. Official constraints arrive split across files —
-     * the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the
-     * shared IdentifiedObject file — and reading one of them alone reports its neighbours' coverage
-     * as missing.
+     * the simple and the complex constraints of a CGMES profile are separate files — and reading
+     * one of them alone reports its neighbours' coverage as missing.
      *
      * <p>{@code statedIn} exists so a finding can name the file to open, which a merged view would
      * otherwise have thrown away.
@@ -365,8 +364,7 @@ public final class EffectiveConstraints {
      * <p>A shape has one {@code sh:path}, but generated SHACL names shapes by the property's local
      * name, so two properties spelled alike in different namespaces — {@code CIM100#Equipment
      * .inService} next to the CIM 18 one, in a workspace holding CGMES and NC profiles — end up as
-     * one shape with both paths. Reading only the first gave the other a constraint with nothing in
-     * it; each path gets what the shape says instead.
+     * one shape with both paths. Each path gets what the shape says.
      */
     private static List<String> propertiesOf(Graph shapes, Node property) {
         var properties = new ArrayList<String>();
