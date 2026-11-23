@@ -16,9 +16,9 @@
  */
 
 import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
-import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 import { graphStore } from "$lib/stores/graphStore.ts";
-import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+import { versionControlStore } from "$lib/stores/versionControlStore.ts";
+import { workspaceState } from "$lib/workspaceState.svelte.js";
 
 import { ImportProgress } from "./importProgress.svelte.js";
 
@@ -27,18 +27,21 @@ const MAX_FAILED_POLLS = 3;
 
 const INVALID_WORKSPACE_NAME_CHARACTERS = /[/\\?#]/;
 
-/** Opens the workspace an import wrote into, on its first imported graph. */
+/**
+ * Opens the workspace an import wrote into, on its first imported graph.
+ *
+ * Everything cached under the workspace's name is dropped, since a new workspace can take the name
+ * of one that was renamed or deleted, and the caches are kept by name.
+ */
 export function openImportedWorkspace(workspaceName, importedGraphUris) {
-    editorState.selectedWorkspace.updateValue(workspaceName);
+    versionControlStore.invalidateWorkspace(workspaceName);
+    workspaceState.activate(workspaceName);
+
     editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
     editorState.selectedDiagram.updateValue({ type: null, id: null });
     editorState.selectedClassWorkspace.updateValue(null);
     editorState.selectedClassGraph.updateValue(null);
     editorState.selectedClass.updateValue({ type: null, id: null });
-
-    graphStore.invalidateWorkspace(workspaceName);
-    workspaceStore.invalidate();
-    crossProfileStore.invalidateWorkspace(workspaceName);
     forceReloadTrigger.trigger();
 }
 

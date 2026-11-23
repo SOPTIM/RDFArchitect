@@ -28,8 +28,8 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: { getImportStatus: vi.fn(), cancelImport: vi.fn() },
 }));
 vi.mock("$lib/stores/workspaceStore.ts", () => ({ workspaceStore: {} }));
-vi.mock("$lib/stores/crossProfileStore.ts", () => ({
-    crossProfileStore: {},
+vi.mock("$lib/stores/versionControlStore.ts", () => ({
+    versionControlStore: {},
 }));
 
 describe("newWorkspaceNameError", () => {
