@@ -199,6 +199,58 @@ function holdRequests(matches) {
     return gate;
 }
 
+/** What the text endpoint answers, holding one error with this message. */
+function bufferReportWith(message, line = 4) {
+    return {
+        valid: false,
+        errorCount: 1,
+        warningCount: 0,
+        infoCount: 0,
+        documents: [
+            {
+                documentId: EQ,
+                documentName: "eq.ttl",
+                valid: false,
+                errorCount: 1,
+                warningCount: 0,
+                infoCount: 0,
+                findings: [
+                    {
+                        severity: "ERROR",
+                        source: "SHAPE",
+                        code: "UNKNOWN_CLASS",
+                        message,
+                        line,
+                        column: 1,
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+/** What the stored-documents endpoint answers when it finds nothing. */
+function cleanReport() {
+    return {
+        valid: true,
+        errorCount: 0,
+        warningCount: 0,
+        infoCount: 0,
+        profiles: [],
+        documents: [
+            {
+                documentId: EQ,
+                documentName: "eq.ttl",
+                valid: true,
+                errorCount: 0,
+                warningCount: 0,
+                infoCount: 0,
+                findings: [],
+            },
+        ],
+    };
+}
+
 // $env/dynamic/public has no SvelteKit runtime under vitest, and the generated client reaches it
 // while resolving the backend base url. It has to be absolute, because the client builds a
 // Request and a relative url has no base to resolve against.
@@ -605,7 +657,7 @@ describe("validation", () => {
         expect(post.contentType).toBe("text/plain");
     });
 
-    test("prefers the buffer result for the open document while it is current", async () => {
+    test("shows the buffer's findings for the open document once they arrive", async () => {
         await workbench.load();
         expect(workbench.findings.map(finding => finding.message)).toEqual([
             "stored finding",
@@ -613,13 +665,28 @@ describe("validation", () => {
 
         workbench.text = `${SHAPES}\n`;
         await workbench.validateBuffer();
-        expect(workbench.findings).toEqual([]);
 
-        // Typing again makes the answer stale, so the stored report is shown until the next run.
-        workbench.text = `${SHAPES}\n\n`;
-        expect(workbench.findings.map(finding => finding.message)).toEqual([
-            "stored finding",
-        ]);
+        expect(workbench.findings).toEqual([]);
+    });
+
+    test("keeps the buffer's findings while the text changes, until the next answer", async () => {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `\n${SHAPES}`;
+        await workbench.validateBuffer();
+        const shown = workbench.findings;
+
+        // The stored findings belong to the saved text's lines. The editor moves the markers it
+        // has with the text being typed, so they stay until the next answer replaces them.
+        workbench.text = `\n\n${SHAPES}`;
+        expect(workbench.findings).toBe(shown);
+        workbench.text = SHAPES;
+        expect(workbench.findings).toBe(shown);
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({
+            errorCount: 1,
+        });
     });
 
     test("drops an answer that arrives after the text moved on", async () => {
@@ -709,14 +776,32 @@ describe("the document list", () => {
         ]);
     });
 
-    test("a document with no result yet counts as clean rather than missing", async () => {
+    test("a document validation has not reported on has no result", async () => {
         await workbench.load();
 
-        expect(workbench.resultFor(CUSTOM)).toMatchObject({
-            valid: true,
-            errorCount: 0,
-            findings: [],
-        });
+        // custom.ttl is not in the stored report, as a disabled document is not.
+        expect(workbench.resultFor(CUSTOM)).toBeNull();
+        expect(
+            workbench.results.find(result => result.documentId === CUSTOM),
+        ).toMatchObject({ validated: false });
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({ validated: true, errorCount: 1 });
+    });
+
+    test("no document has a result before the first validation is back", async () => {
+        const gate = holdRequests(entry => entry.path.endsWith("/validate"));
+        const loading = workbench.load();
+        await vi.waitFor(() => expect(workbench.text).toBe(SHAPES));
+
+        expect(workbench.results.map(result => result.validated)).toEqual([
+            false,
+            false,
+        ]);
+        expect(workbench.validated).toBe(false);
+        gate.release();
+        await loading;
+        expect(workbench.validated).toBe(true);
     });
 
     test("does not try to move a document past either end", async () => {
@@ -1024,9 +1109,8 @@ describe("the generated shapes", () => {
         expect(server.requests[0].path).toBe(
             "/api/workspaces/cgmes/schemas/SSH/shacl/generate/string",
         );
-        expect(workbench.resultFor(generatedId(SSH_SCHEMA)).findings).toEqual(
-            [],
-        );
+        expect(workbench.resultFor(generatedId(SSH_SCHEMA))).toBeNull();
+        expect(workbench.findings).toEqual([]);
     });
 
     test("leave when their schema does", async () => {
@@ -1261,6 +1345,163 @@ describe("saving while a save is on its way", () => {
     });
 });
 
+describe("revalidating what has changed elsewhere", () => {
+    /** Types into the open document and has the buffer validated, finding one error. */
+    async function typedWithAnError() {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "buffer finding",
+        ]);
+    }
+
+    /** The schema is fixed elsewhere: from now on the server finds nothing anywhere. */
+    function fixedElsewhere() {
+        server.report = cleanReport();
+        server.bufferReport = {
+            ...cleanReport(),
+            profiles: undefined,
+        };
+    }
+
+    test("Validate all validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.validateAll();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(workbench.text).toBe(`${SHAPES}# typed\n`);
+    });
+
+    test("a reload after an undo elsewhere validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.reload();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+    });
+
+    test("switching another document off validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.setEnabled(CUSTOM, false);
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+    });
+
+    test("once the text is as saved, a newer stored report replaces the buffer's", async () => {
+        await typedWithAnError();
+        workbench.revert();
+        fixedElsewhere();
+        server.requests.length = 0;
+
+        await workbench.validateAll();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(0);
+    });
+
+    test("the last Validate all wins, whichever answer arrives last", async () => {
+        await workbench.load();
+        const gates = [held(), held()];
+        const reports = [server.report, cleanReport()];
+        let run = 0;
+        const answer = server.respond;
+        server.respond = async (entry, url) => {
+            if (entry.path.endsWith("/validate")) {
+                const mine = run++;
+                await gates[mine].promise;
+                return new Response(JSON.stringify(reports[mine]), {
+                    status: 200,
+                    headers: { "content-type": "application/json" },
+                });
+            }
+            return answer(entry, url);
+        };
+
+        const first = workbench.validateAll();
+        const second = workbench.validateAll();
+        await vi.waitFor(() => expect(run).toBe(2));
+        gates[1].release();
+        await second;
+        gates[0].release();
+        await first;
+
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(workbench.report).toEqual(reports[1]);
+    });
+});
+
+describe("a validation that fails", () => {
+    test("says so for the buffer, and keeps the findings it had", async () => {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+
+        workbench.text = `${SHAPES}# typed more\n`;
+        await workbench.validateBuffer();
+
+        expect(workbench.validationError).toContain("could not be validated");
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "buffer finding",
+        ]);
+
+        server.respond = answer;
+        await workbench.validateBuffer();
+        expect(workbench.validationError).toBeNull();
+    });
+
+    test("says a text too large for the server was refused as such", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("<html>413 Request Entity Too Large</html>", {
+                      status: 413,
+                      headers: { "content-type": "text/html" },
+                  })
+                : answer(entry, url);
+
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+
+        expect(workbench.validationError).toContain("too large");
+    });
+
+    test("says so for the stored documents, and leaves the editor usable", async () => {
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate")
+                ? new Response("boom", { status: 500 })
+                : fakeServer().respond(entry, url);
+
+        await workbench.load();
+
+        expect(workbench.error).toBeNull();
+        expect(workbench.text).toBe(SHAPES);
+        expect(workbench.validationError).toContain("could not be validated");
+        expect(workbench.results.every(result => !result.validated)).toBe(true);
+    });
+});
+
 describe("validation in flight", () => {
     test("stays marked as running until the last run is back", async () => {
         await workbench.load();
@@ -1414,6 +1655,29 @@ describe("when the open document is gone from the list", () => {
             return answer(entry, url);
         };
     }
+
+    test("is validated as text of no document, and its findings are listed", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        await workbench.reload();
+        server.bufferReport = bufferReportWith("detached finding");
+        server.requests.length = 0;
+
+        await workbench.validateBuffer();
+
+        const post = server.requests.find(entry =>
+            entry.path.endsWith("/validate/text"),
+        );
+        expect(post.query.has("documentId")).toBe(false);
+        expect(post.query.get("name")).toBe("eq.ttl");
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "detached finding",
+        ]);
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({ documentName: "eq.ttl", errorCount: 1 });
+    });
 
     test("keeps unsaved text, and under no other document", async () => {
         await workbench.load();
