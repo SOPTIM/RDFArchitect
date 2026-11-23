@@ -383,18 +383,21 @@
                         <UnsavedIndicator workspaceName={selectedWorkspace} />
                     {/if}
                     {#if isWorkspaceReadOnly}
-                        <ButtonControl
-                            callOnClick={requestEnableEditing}
-                            height={9}
-                            title="The workspace is read-only. Enable editing"
-                        >
-                            <span class="flex items-center gap-2">
-                                <Fa icon={faLock} />
-                                <span class="max-lg:sr-only">
-                                    Enable Editing
+                        <!-- ButtonControl fills its parent; this one is as wide as the button. -->
+                        <div class="shrink-0">
+                            <ButtonControl
+                                callOnClick={requestEnableEditing}
+                                height={9}
+                                title="The workspace is read-only. Enable editing"
+                            >
+                                <span class="flex items-center gap-2">
+                                    <Fa icon={faLock} />
+                                    <span class="max-lg:sr-only">
+                                        Enable Editing
+                                    </span>
                                 </span>
-                            </span>
-                        </ButtonControl>
+                            </ButtonControl>
+                        </div>
                     {/if}
                 </div>
             </nav>
