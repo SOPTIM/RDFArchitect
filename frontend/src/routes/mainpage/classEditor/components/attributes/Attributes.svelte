@@ -22,9 +22,9 @@
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import InheritedSection from "../InheritedSection.svelte";
     import Attribute from "./Attribute.svelte";
     import AttributeEditorDialog from "./AttributeEditorDialog.svelte";
-    import InheritedSection from "../InheritedSection.svelte";
 
     const {
         attributes,

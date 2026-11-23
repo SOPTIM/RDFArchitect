@@ -17,13 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { loadSlot } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import {
-    type AsyncListSlot,
-    createEmptyListSlot,
-    type Result,
-} from "./storeTypes";
 import {
     listGraphs,
     deleteGraph,
@@ -38,6 +31,13 @@ import {
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { loadSlot } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import {
+    type AsyncListSlot,
+    createEmptyListSlot,
+    type Result,
+} from "./storeTypes";
 
 type WorkspaceState = {
     graphs: Map<string, AsyncListSlot<GraphDto>>;

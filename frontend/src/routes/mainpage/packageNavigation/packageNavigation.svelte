@@ -29,12 +29,12 @@
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import SchemaDropZone from "../SchemaDropZone.svelte";
+    import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
     import { getWorkspaceNavEntry } from "./build-nav-object.js";
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
-    import SchemaDropZone from "../SchemaDropZone.svelte";
-    import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     const localReloadTrigger = new SimpleTrigger();
     const readonlyValue = asyncValue(

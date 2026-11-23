@@ -23,9 +23,9 @@
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import InheritedSection from "../InheritedSection.svelte";
     import EnumEntry from "./EnumEntry.svelte";
     import EnumEntryEditorDialog from "./EnumEntryEditorDialog.svelte";
-    import InheritedSection from "../InheritedSection.svelte";
 
     const { enumEntries, inheritedEnumEntries = [] } = $props();
 

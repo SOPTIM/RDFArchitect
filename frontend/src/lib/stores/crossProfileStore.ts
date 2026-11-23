@@ -17,9 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { loadSlot } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     getCrossProfileRenderingData,
     getCrossProfileDiagram,
@@ -27,6 +24,9 @@ import {
     type CrossProfileDiagramDto,
     type RenderingDataDto,
 } from "../api/generated";
+import { loadSlot } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 
 type StoreState = {
     ids: Map<string, AsyncSlot<string>>;

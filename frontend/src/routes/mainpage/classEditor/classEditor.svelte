@@ -36,14 +36,13 @@
     import { classStore } from "$lib/stores/classStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import {
         createClassEditorContextValue,
         createReactiveClass,
         loadClassEditorContextData,
         openClassEditor,
     } from "./class-editor-context.js";
-    import { getPackages } from "./fetch-class-editor-context.js";
-    import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
     import Attributes from "./components/attributes/Attributes.svelte";
     import ClassEditorButtons from "./components/ClassEditorButtons.svelte";
@@ -54,6 +53,7 @@
     import Package from "./components/Package.svelte";
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
+    import { getPackages } from "./fetch-class-editor-context.js";
 
     const { workspaceName, schemaName, classUuid } = $props();
 
