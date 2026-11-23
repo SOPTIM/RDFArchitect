@@ -36,6 +36,11 @@ public record FormatVersion(int major, int minor) {
                 Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)));
     }
 
+    /** Whether this version is {@code other} or a later one. */
+    public boolean isAtLeast(FormatVersion other) {
+        return major > other.major || (major == other.major && minor >= other.minor);
+    }
+
     @Override
     public String toString() {
         return major + "." + minor;

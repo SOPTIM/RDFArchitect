@@ -102,7 +102,12 @@ public final class WorkspaceArchiveReader {
         }
 
         var schemaNames = readSchemaNames(manifest.schemas());
-        var in = new PartReader(entries, schemaNames, problems);
+        var in =
+                new PartReader(
+                        entries,
+                        FormatVersion.parse(manifest.formatVersion()),
+                        schemaNames,
+                        problems);
         var graphs = new ArrayList<WorkspaceArchive.ArchivedGraph>();
         for (var schemaName : schemaNames) {
             var schemaIn = in.inSchema(schemaName);
@@ -133,7 +138,7 @@ public final class WorkspaceArchiveReader {
                             + " plain zip archives of them are imported as schemas instead.");
             return null;
         }
-        return new PartReader(entries, Set.of(), problems)
+        return new PartReader(entries, FormatVersion.CURRENT, Set.of(), problems)
                 .readJson(WorkspaceArchiveFormat.MANIFEST, new TypeReference<>() {});
     }
 

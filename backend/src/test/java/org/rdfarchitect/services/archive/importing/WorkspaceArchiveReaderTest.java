@@ -142,7 +142,10 @@ class WorkspaceArchiveReaderTest {
         assertThat(problems)
                 .singleElement()
                 .asString()
-                .contains("format " + formatVersion, "RDFArchitect 1.2.3", "reads format 1.0");
+                .contains(
+                        "format " + formatVersion,
+                        "RDFArchitect 1.2.3",
+                        "reads format " + WorkspaceArchiveFormat.FORMAT_VERSION);
     }
 
     @Test
