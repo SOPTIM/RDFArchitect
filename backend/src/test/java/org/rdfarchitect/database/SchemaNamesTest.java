@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.exception.graph.InvalidSchemaNameException;
@@ -87,6 +88,53 @@ class SchemaNamesTest {
         var name = "a".repeat(SchemaNames.MAX_LENGTH);
 
         assertThat(SchemaNames.validate("  " + name + " ")).isEqualTo(name);
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiterString = "->",
+            value = {
+                "EQ -> EQ",
+                "EQ#2 -> EQ#2",
+                "中文 -> 中文",
+                "a:b -> a_b",
+                "what? -> what_",
+                "a;b -> a_b",
+                "'a<b>|c*' -> a_b__c_",
+                "CON -> CON_",
+                "con -> con_",
+                "LPT1.v2 -> LPT1_.v2",
+                "'  EQ ' -> EQ"
+            })
+    void fromFileName_turnsTheFileNameIntoAValidName(String fileName, String expected) {
+        assertThat(SchemaNames.fromFileName(fileName, "graph")).isEqualTo(expected);
+    }
+
+    @Test
+    void fromFileName_controlCharacter_isReplaced() {
+        assertThat(SchemaNames.fromFileName("a\u0001b", "graph")).isEqualTo("a_b");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", ".", ".."})
+    void fromFileName_nothingUsableLeft_takesTheFallback(String fileName) {
+        assertThat(SchemaNames.fromFileName(fileName, "graph")).isEqualTo("graph");
+    }
+
+    @Test
+    void fromFileName_tooLong_isCutToTheMaximum() {
+        var name = SchemaNames.fromFileName("a".repeat(300), "graph");
+
+        assertThat(name).isEqualTo("a".repeat(SchemaNames.MAX_LENGTH));
+    }
+
+    @Test
+    void fromFileName_cutInsideASurrogatePair_dropsTheWholeCharacter() {
+        var name = "a".repeat(SchemaNames.MAX_LENGTH - 1) + "😀";
+
+        assertThat(SchemaNames.fromFileName(name, "graph"))
+                .isEqualTo("a".repeat(SchemaNames.MAX_LENGTH - 1));
     }
 
     @Test

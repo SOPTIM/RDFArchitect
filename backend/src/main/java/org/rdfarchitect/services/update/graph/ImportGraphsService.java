@@ -43,7 +43,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -582,8 +581,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private String buildSchemaNameFromFileName(String fileName) {
         var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        var fileNamePath = Paths.get(name).getFileName();
-        var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
+        // Not Paths.get: a name such as a:b.ttl is no valid path on Windows, but a valid file
+        // name elsewhere, and the zip entry may well come from there.
+        var lastSeparator = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        var lastPathSegment = name.substring(lastSeparator + 1);
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
         var baseName =
                 lastPathSegment.substring(
@@ -591,9 +592,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return baseName.isBlank() ? FALL_BACK_NAME : baseName;
     }
 
+    /**
+     * A name the user asked for has to be valid as it is. One taken from a file name is made valid
+     * instead: the entries of a zip cannot be renamed before they are imported.
+     */
     private String normalizeSchemaName(String requestedName, String fallbackFileName) {
         if (requestedName == null || requestedName.isBlank()) {
-            return SchemaNames.validate(buildSchemaNameFromFileName(fallbackFileName));
+            return SchemaNames.fromFileName(
+                    buildSchemaNameFromFileName(fallbackFileName), FALL_BACK_NAME);
         }
         return SchemaNames.validate(requestedName);
     }

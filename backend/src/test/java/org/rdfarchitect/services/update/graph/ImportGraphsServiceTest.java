@@ -204,6 +204,40 @@ class ImportGraphsServiceTest {
     }
 
     @Test
+    void importGraphs_zipEntriesNamedNoValidSchemaName_areImportedUnderAValidName() {
+        var content = "@prefix ex: <http://example.com/> . ex:a ex:b ex:c .";
+        var entries = new LinkedHashMap<String, String>();
+        entries.put("a:b.ttl", content);
+        entries.put("what?.ttl", content);
+        entries.put("CON.ttl", content);
+        var zip = zipFile("schemas.zip", entries);
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(zip), null, ImportProgressListener.NOOP);
+
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedSchemaNames()).containsExactly("a_b", "what_", "CON_");
+    }
+
+    @Test
+    void importGraphs_fileNamedNoValidSchemaName_isImportedUnderAValidName() {
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "EQ;v2.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+
+        assertThat(result.importedSchemaNames()).containsExactly("EQ_v2");
+    }
+
+    @Test
     void importGraphs_workspaceDoesNotExistYet_hasItCreatedBeforeTheFirstGraphIsWritten() {
         var workspaceName = "ds";
 

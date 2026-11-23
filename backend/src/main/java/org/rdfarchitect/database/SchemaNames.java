@@ -23,6 +23,7 @@ import org.apache.commons.io.FileSystem;
 import org.rdfarchitect.exception.graph.InvalidSchemaNameException;
 
 import java.util.Collection;
+import java.util.Locale;
 
 /**
  * The rules a graph name has to follow. A graph is exported to a file named after it, so its name
@@ -38,6 +39,9 @@ public class SchemaNames {
      * appends a number to make it unique.
      */
     public static final int MAX_LENGTH = 200;
+
+    /** What a character of a file name that a graph name must not hold is replaced by. */
+    private static final char REPLACEMENT = '_';
 
     /**
      * Returns {@code name} without surrounding whitespace, provided that is a valid graph name.
@@ -59,6 +63,58 @@ public class SchemaNames {
             throw new InvalidSchemaNameException(trimmed);
         }
         return trimmed;
+    }
+
+    /**
+     * Turns the name of a file into a valid graph name. A file that is a valid file name on Linux
+     * or macOS may still hold a character a graph name must not, or be a name Windows reserves; it
+     * is imported anyway, under a name with each such character replaced by {@code _} and a {@code
+     * _} appended to a reserved name ({@code CON} becomes {@code CON_}).
+     *
+     * @param fileName the file name without its extension
+     * @param fallback the name to take when nothing usable is left of {@code fileName}
+     * @return a valid graph name
+     */
+    public static String fromFileName(String fileName, String fallback) {
+        if (fileName == null || fileName.isBlank()) {
+            return fallback;
+        }
+        var name =
+                FileSystem.WINDOWS
+                        .toLegalFileName(fileName.strip(), REPLACEMENT)
+                        .replace(';', REPLACEMENT);
+        name = unreserved(name);
+        name = truncated(name).strip();
+        try {
+            return validate(name);
+        } catch (InvalidSchemaNameException _) {
+            return fallback;
+        }
+    }
+
+    /**
+     * Appends {@code _} to the part of a reserved name before its first dot. Windows reserves
+     * {@code CON} however it is cased, and with any extension.
+     */
+    private static String unreserved(String name) {
+        if (!FileSystem.WINDOWS.isReservedFileName(name.toUpperCase(Locale.ROOT))) {
+            return name;
+        }
+        var dot = name.indexOf('.');
+        var end = dot < 0 ? name.length() : dot;
+        return name.substring(0, end) + REPLACEMENT + name.substring(end);
+    }
+
+    /** Cuts {@code name} to {@link #MAX_LENGTH} characters, without splitting a surrogate pair. */
+    private static String truncated(String name) {
+        if (name.length() <= MAX_LENGTH) {
+            return name;
+        }
+        var end = MAX_LENGTH;
+        if (Character.isHighSurrogate(name.charAt(end - 1))) {
+            end--;
+        }
+        return name.substring(0, end);
     }
 
     /**

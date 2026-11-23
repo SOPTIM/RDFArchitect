@@ -26,7 +26,10 @@
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import {
+        isInvalidSchemaName,
+        schemaNameFromFileName,
+    } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -173,7 +176,10 @@
         return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
-    /** The file name without its extension, which the backend names the schema by as well. */
+    /**
+     * The file name without its extension, made a valid schema name, which is how the backend names
+     * the entries of a zip as well.
+     */
     function buildSchemaName(fileName) {
         if (!fileName) {
             return DEFAULT_GRAPH_NAME;
@@ -184,7 +190,7 @@
             lastDotIndex === -1
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
-        return baseName.trim() ? baseName : DEFAULT_GRAPH_NAME;
+        return schemaNameFromFileName(baseName, DEFAULT_GRAPH_NAME);
     }
 
     /**

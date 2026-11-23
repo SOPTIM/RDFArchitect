@@ -30,6 +30,11 @@ import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/in
 /** Matches `SchemaNames.MAX_LENGTH` in the backend. */
 export const SCHEMA_NAME_MAX_LENGTH = 200;
 
+// eslint-disable-next-line no-control-regex -- control characters are what it has to find
+const CHARACTERS_NO_SCHEMA_NAME_HOLDS = /[\u0000-\u001F"*/:<>?\\|;]/gu;
+const NAME_RESERVED_BY_WINDOWS =
+    /^(?:con|prn|aux|nul|conin\$|conout\$|com[\d²³¹]|lpt[\d²³¹])(?= *(?:\..*)?$)/iu;
+
 export function isInvalidUuid(uuid) {
     const violations = [];
     if (validateUuid(uuid)) {
@@ -124,6 +129,33 @@ export function isInvalidSchemaName(name, otherNames) {
         return ["A schema with this name already exists"];
     }
     return [];
+}
+
+/**
+ * Turns the name of a file into a valid schema name, the way the backend names the entries of a
+ * zip: each character a schema name must not hold becomes `_`, a name Windows reserves gets a `_`
+ * appended (`CON` becomes `CON_`), and a name that is too long is cut to the maximum.
+ *
+ * @param {string} fileName the file name without its extension
+ * @param {string} fallback the name to take when nothing usable is left of `fileName`
+ * @returns {string} a valid schema name
+ */
+export function schemaNameFromFileName(fileName, fallback) {
+    let name = (fileName ?? "")
+        .trim()
+        .replace(CHARACTERS_NO_SCHEMA_NAME_HOLDS, "_")
+        .replace(NAME_RESERVED_BY_WINDOWS, reserved => `${reserved}_`);
+    if (name.length > SCHEMA_NAME_MAX_LENGTH) {
+        // not inside a surrogate pair, which would leave half a character behind
+        const lastCodeUnit = name.charCodeAt(SCHEMA_NAME_MAX_LENGTH - 1);
+        const splitsAPair = lastCodeUnit >= 0xd800 && lastCodeUnit <= 0xdbff;
+        name = name.slice(
+            0,
+            splitsAPair ? SCHEMA_NAME_MAX_LENGTH - 1 : SCHEMA_NAME_MAX_LENGTH,
+        );
+    }
+    name = name.trim();
+    return isInvalidSchemaName(name, []).length === 0 ? name : fallback;
 }
 
 export function isInvalidAssociationLabel(association, associations) {
