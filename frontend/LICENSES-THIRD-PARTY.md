@@ -48,21 +48,15 @@
 - **License:** MIT
 - **URL:** [https://heyapi.dev/docs/openapi/typescript/get-started](https://heyapi.dev/docs/openapi/typescript/get-started)
 
-### @sveltejs/adapter-auto
-- **Package:** @sveltejs/adapter-auto
-- **Version:** 7.0.1
-- **License:** MIT
-- **URL:** [https://svelte.dev/docs/kit/adapter-auto](https://svelte.dev/docs/kit/adapter-auto)
-
 ### @sveltejs/adapter-static
 - **Package:** @sveltejs/adapter-static
-- **Version:** 3.0.11
+- **Version:** 4.0.1
 - **License:** MIT
 - **URL:** [https://svelte.dev/docs/kit/adapter-static](https://svelte.dev/docs/kit/adapter-static)
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.70.3
+- **Version:** 3.2.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
