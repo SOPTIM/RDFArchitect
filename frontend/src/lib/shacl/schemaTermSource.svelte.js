@@ -41,6 +41,8 @@ export class SchemaTermSource {
 
     #workspaceName;
     #requestOptions;
+    /** Where a class several schemas hold is opened, first to last. */
+    #preferredSchemas = [];
     #details = new Map();
     #pending = new Map();
     #loading = null;
@@ -62,6 +64,14 @@ export class SchemaTermSource {
      */
     get completionTerms() {
         return [...this.terms, ...STANDARD_TERMS];
+    }
+
+    /**
+     * Says which schemas a class is opened in first when several hold it: those of the document
+     * being edited, so following `cim:Terminal` from Equipment constraints opens Equipment's.
+     */
+    preferSchemas(schemaNames) {
+        this.#preferredSchemas = [...(schemaNames ?? [])];
     }
 
     /** Fetches the term list once. Safe to call from every provider on every keystroke. */
@@ -102,27 +112,31 @@ export class SchemaTermSource {
         if (standard) {
             return standard;
         }
-        if (this.#details.has(iri)) {
-            return this.#details.get(iri);
+        // The class a detail leads to depends on the schemas asked for first, so a detail is
+        // kept per term and preference.
+        const schemas = this.#preferredSchemas;
+        const key = [iri, ...schemas].join("\n");
+        if (this.#details.has(key)) {
+            return this.#details.get(key);
         }
-        if (this.#pending.has(iri)) {
-            return this.#pending.get(iri);
+        if (this.#pending.has(key)) {
+            return this.#pending.get(key);
         }
         const request = describeTerm({
             ...this.#requestOptions,
             path: this.#path,
-            query: { iri },
+            query: schemas.length > 0 ? { iri, schema: schemas } : { iri },
         })
             .then(({ data, error, response }) => {
                 // 204 is the server's "no profile declares this"; the client reads it as `{}`.
                 const detail =
                     error || response?.status === 204 ? null : (data ?? null);
-                this.#details.set(iri, detail);
+                this.#details.set(key, detail);
                 return detail;
             })
             .catch(() => null)
-            .finally(() => this.#pending.delete(iri));
-        this.#pending.set(iri, request);
+            .finally(() => this.#pending.delete(key));
+        this.#pending.set(key, request);
         return request;
     }
 

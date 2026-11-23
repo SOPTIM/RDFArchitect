@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.datasets.shacl.SchemaParameter;
 import org.rdfarchitect.services.shacl.terms.SchemaTermsUseCase;
 import org.rdfarchitect.shacl.dto.SchemaTermDetail;
 import org.rdfarchitect.shacl.dto.SchemaTerms;
@@ -38,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * The CIM terms a constraints editor can complete and explain.
@@ -115,7 +118,13 @@ public class SchemaTermsRESTController {
                     String originURL,
             @Parameter(description = "The name of the workspace.") @PathVariable
                     String workspaceName,
-            @Parameter(description = "The absolute IRI of the term.") @RequestParam String iri) {
+            @Parameter(description = "The absolute IRI of the term.") @RequestParam String iri,
+            @Parameter(
+                            description =
+                                    "Schemas to open the term's class in when several hold it, first"
+                                            + " to last: those the edited document applies to.")
+                    @RequestParam(name = "schema", required = false)
+                    List<String> schemas) {
         logger.debug(
                 "Received GET request: \"/api/workspaces/{{}}/shacl/terms/detail\" for \"{}\" from \"{}\".",
                 workspaceName,
@@ -124,7 +133,8 @@ public class SchemaTermsRESTController {
 
         // Most of what an editor hovers over is not a schema term, so "unknown" is an ordinary
         // answer rather than an error the browser would log for every one of them.
-        var detail = schemaTermsUseCase.detailOf(workspaceName, iri);
+        var detail =
+                schemaTermsUseCase.detailOf(workspaceName, iri, SchemaParameter.names(schemas));
         return detail == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(detail);
     }
 }

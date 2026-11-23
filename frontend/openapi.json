@@ -11379,6 +11379,18 @@
             "schema" : {
               "type" : "string"
             }
+          },
+          {
+            "description" : "Schemas to open the term's class in when several hold it, first to last: those the edited document applies to.",
+            "in" : "query",
+            "name" : "schema",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
           }
         ],
         "responses" : {

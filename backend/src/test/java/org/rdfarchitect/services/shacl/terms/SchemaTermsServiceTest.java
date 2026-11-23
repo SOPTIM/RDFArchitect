@@ -25,6 +25,8 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseFixtures;
@@ -34,6 +36,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
 import org.rdfarchitect.shacl.dto.SchemaTerm;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -248,6 +251,64 @@ class SchemaTermsServiceTest {
         assertThat(onProperty.getClassUUID()).isEqualTo(onClass.getClassUUID());
         assertThat(onProperty.getSchemaName()).isEqualTo(onClass.getSchemaName());
         assertThat(onProperty.getPackageUUID()).isEqualTo(onClass.getPackageUUID());
+    }
+
+    // -------------------------------------------------------------------------
+    // A class several schemas hold
+    // -------------------------------------------------------------------------
+
+    /**
+     * The same two classes in a second profile, as CGMES profiles repeat the classes they share.
+     */
+    private static final String SECOND_PROFILE =
+            """
+            @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            @prefix owl:  <http://www.w3.org/2002/07/owl#> .
+            @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+
+            <http://ex.org/SSH> a owl:Ontology ;
+                owl:versionIRI <http://ex.org/SSH/1.0> .
+
+            cim:ACLineSegment a rdfs:Class .
+
+            cim:ACLineSegment.length a rdf:Property ;
+                rdfs:domain cim:ACLineSegment .
+            """;
+
+    private void addSecondProfile(String schemaName) {
+        var schema = GraphFactory.createDefaultGraph();
+        RDFParser.fromString(SECOND_PROFILE, Lang.TURTLE).parse(schema);
+        DatabaseFixtures.createGraph(
+                databasePort, new GraphIdentifier(WORKSPACE, schemaName), schema);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"EQ", "SSH"})
+    void aClassSeveralSchemasHoldOpensInTheOneAskedForFirst(String preferred) {
+        addSecondProfile("SSH");
+
+        var onClass =
+                service.detailOf(
+                        WORKSPACE, "http://iec.ch/TC57/CIM100#ACLineSegment", List.of(preferred));
+        var onProperty =
+                service.detailOf(
+                        WORKSPACE,
+                        "http://iec.ch/TC57/CIM100#ACLineSegment.length",
+                        List.of("Gone", preferred));
+
+        assertThat(onClass.getSchemaName()).isEqualTo(preferred);
+        assertThat(onProperty.getSchemaName()).isEqualTo(preferred);
+        assertThat(onProperty.getClassUUID()).isEqualTo(onClass.getClassUUID());
+    }
+
+    @Test
+    void aClassSeveralSchemasHoldOpensInTheFirstByNameWhenNoneIsAskedFor() {
+        addSecondProfile("A second profile");
+
+        var detail = service.detailOf(WORKSPACE, "http://iec.ch/TC57/CIM100#ACLineSegment");
+
+        assertThat(detail.getSchemaName()).isEqualTo("A second profile");
     }
 
     @Test

@@ -56,6 +56,7 @@ function fakeServer(overrides = {}) {
         const url = new URL(request.url);
         server.requests.push({
             path: url.pathname,
+            schemas: url.searchParams.getAll("schema"),
             iri: url.searchParams.get("iri"),
         });
         const json = (value, status = 200) =>
@@ -167,6 +168,29 @@ describe("term details", () => {
         expect(
             server.requests.filter(r => r.path.endsWith("/detail")),
         ).toHaveLength(1);
+    });
+
+    test("asks for the class in the schemas it prefers, first to last", async () => {
+        source.preferSchemas(["SSH", "EQ"]);
+
+        await source.detailOf(`${CIM}ACLineSegment`);
+
+        expect(server.requests.at(-1).schemas).toEqual(["SSH", "EQ"]);
+    });
+
+    test("asks again once other schemas are preferred, and remembers both", async () => {
+        source.preferSchemas(["EQ"]);
+        await source.detailOf(`${CIM}ACLineSegment`);
+        source.preferSchemas(["SSH"]);
+        await source.detailOf(`${CIM}ACLineSegment`);
+        source.preferSchemas(["EQ"]);
+        await source.detailOf(`${CIM}ACLineSegment`);
+
+        expect(
+            server.requests
+                .filter(r => r.path.endsWith("/detail"))
+                .map(r => r.schemas),
+        ).toEqual([["EQ"], ["SSH"]]);
     });
 
     test("passes the IRI as a query parameter", async () => {

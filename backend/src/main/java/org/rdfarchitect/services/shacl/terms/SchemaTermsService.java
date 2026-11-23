@@ -39,6 +39,7 @@ import org.rdfarchitect.shacl.dto.SchemaTerms;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -75,7 +76,8 @@ public class SchemaTermsService implements SchemaTermsUseCase {
     }
 
     @Override
-    public SchemaTermDetail detailOf(String workspaceName, String iri) {
+    public SchemaTermDetail detailOf(
+            String workspaceName, String iri, List<String> preferredSchemas) {
         var index = schemaIndexCache.apiFor(workspaceName).schemaIndex();
         var term = NodeFactory.createURI(iri);
 
@@ -88,7 +90,7 @@ public class SchemaTermsService implements SchemaTermsUseCase {
         var domains = isProperty ? index.domainsOf(term, profiles) : Set.<Node>of();
         var ranges = isProperty ? index.rangesOf(term, profiles) : Set.<Node>of();
         var multiplicity = index.multiplicityOf(term, profiles);
-        var location = locate(workspaceName, kind, term, domains);
+        var location = locate(workspaceName, kind, term, domains, preferredSchemas);
 
         return SchemaTermDetail.builder()
                 .kind(kind)
@@ -173,22 +175,33 @@ public class SchemaTermsService implements SchemaTermsUseCase {
      * of which class — so following one is not offered rather than guessed from its name.
      */
     private Optional<ClassLocation> locate(
-            String workspaceName, SchemaTerm.Kind kind, Node term, Set<Node> domains) {
-        return switch (kind) {
-            case CLASS -> locateClass(workspaceName, term);
-            case PROPERTY ->
-                    domains.stream()
-                            .filter(Node::isURI)
-                            .sorted(Comparator.comparing(Node::getURI))
-                            .map(domain -> locateClass(workspaceName, domain))
-                            .flatMap(Optional::stream)
-                            .findFirst();
-            case ENUM_MEMBER -> Optional.empty();
-        };
+            String workspaceName,
+            SchemaTerm.Kind kind,
+            Node term,
+            Set<Node> domains,
+            List<String> preferredSchemas) {
+        var classes =
+                switch (kind) {
+                    case CLASS -> List.of(term);
+                    case PROPERTY ->
+                            domains.stream()
+                                    .filter(Node::isURI)
+                                    .sorted(Comparator.comparing(Node::getURI))
+                                    .toList();
+                    case ENUM_MEMBER -> List.<Node>of();
+                };
+        return classes.isEmpty()
+                ? Optional.empty()
+                : locateClass(workspaceName, classes, preferredSchemas);
     }
 
     /**
-     * The schema and id under which the workspace holds a class, if it holds one.
+     * The schema and id under which the workspace holds one of the classes, if it holds one.
+     *
+     * <p>Most CIM classes are declared in several profiles, so the schemas are searched in an
+     * order: the preferred ones first — those the document being edited applies to — and the others
+     * by name. Opening the copy in whichever schema happens to be stored first would land a user
+     * editing Equipment constraints in the Operation profile.
      *
      * <p>Found by the {@code rdfa:uuid} the in-memory database stamps onto every typed resource on
      * commit, which is the same id the class editor is addressed by. A term that only a read-only
@@ -197,21 +210,36 @@ public class SchemaTermsService implements SchemaTermsUseCase {
      * <p>The package is read in the same pass. It is what tells the caller which diagram to put on
      * screen, and looking it up separately would mean walking every schema a second time.
      */
-    private Optional<ClassLocation> locateClass(String workspaceName, Node classNode) {
+    private Optional<ClassLocation> locateClass(
+            String workspaceName, List<Node> classes, List<String> preferredSchemas) {
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            for (String schemaName : transaction.schemaNames()) {
+            for (String schemaName : searchOrder(transaction.schemaNames(), preferredSchemas)) {
                 var graph = transaction.graph(schemaName).getRdfGraph();
-                var uuid = uuidOf(graph, classNode);
-                if (uuid.isPresent()) {
-                    return Optional.of(
-                            new ClassLocation(
-                                    schemaName,
-                                    uuid.get(),
-                                    packageOf(graph, classNode).orElse(null)));
+                for (Node classNode : classes) {
+                    var uuid = uuidOf(graph, classNode);
+                    if (uuid.isPresent()) {
+                        return Optional.of(
+                                new ClassLocation(
+                                        schemaName,
+                                        uuid.get(),
+                                        packageOf(graph, classNode).orElse(null)));
+                    }
                 }
             }
         }
         return Optional.empty();
+    }
+
+    /** The preferred schemas the workspace holds, in their order, then the rest by name. */
+    private static List<String> searchOrder(
+            Collection<String> schemaNames, List<String> preferredSchemas) {
+        var held = new LinkedHashSet<>(schemaNames);
+        var order = new LinkedHashSet<String>();
+        preferredSchemas.stream().filter(held::contains).forEach(order::add);
+        held.stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER.thenComparing(Comparator.naturalOrder()))
+                .forEach(order::add);
+        return List.copyOf(order);
     }
 
     /** The id of the package the class declares itself part of, if it declares one. */

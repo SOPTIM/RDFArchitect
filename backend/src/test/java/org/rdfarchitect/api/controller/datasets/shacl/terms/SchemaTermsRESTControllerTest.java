@@ -85,7 +85,7 @@ class SchemaTermsRESTControllerTest {
 
     @Test
     void describingATermPassesItsIriThrough() throws Exception {
-        when(schemaTermsUseCase.detailOf(any(), eq(IRI)))
+        when(schemaTermsUseCase.detailOf(any(), eq(IRI), any()))
                 .thenReturn(
                         SchemaTermDetail.builder()
                                 .kind(SchemaTerm.Kind.CLASS)
@@ -99,14 +99,21 @@ class SchemaTermsRESTControllerTest {
                                 assertThat(result.getResponse().getContentAsString())
                                         .contains("\"comment\":\"A wire.\""));
 
-        verify(schemaTermsUseCase).detailOf(eq("cgmes"), eq(IRI));
+        verify(schemaTermsUseCase).detailOf(eq("cgmes"), eq(IRI), eq(List.of()));
+    }
+
+    @Test
+    void describingATermPassesTheSchemasToLookInFirstInOrder() throws Exception {
+        mockMvc.perform(get(URL + "/detail").param("iri", IRI).param("schema", "SSH", " EQ"));
+
+        verify(schemaTermsUseCase).detailOf(eq("cgmes"), eq(IRI), eq(List.of("SSH", "EQ")));
     }
 
     @Test
     void anUndeclaredTermIsNoContentRatherThanAnError() throws Exception {
         // An editor asks about whatever is under the cursor, so "no such term" is a normal answer:
         // distinguishable from a term that says nothing, but not an error the browser logs.
-        when(schemaTermsUseCase.detailOf(any(), any())).thenReturn(null);
+        when(schemaTermsUseCase.detailOf(any(), any(), any())).thenReturn(null);
 
         mockMvc.perform(get(URL + "/detail").param("iri", "http://example.org/Nonsense"))
                 .andExpect(

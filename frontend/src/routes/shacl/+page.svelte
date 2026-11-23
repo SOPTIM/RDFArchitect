@@ -126,6 +126,13 @@
         )?.label ?? "",
     );
 
+    // Following a class several schemas hold opens it in the schemas of what is open.
+    $effect(() => {
+        termSource?.preferSchemas(
+            workbench?.detached?.schemas ?? workbench?.contextSchemas ?? [],
+        );
+    });
+
     $effect(() => {
         editorState.selectedWorkspace.subscribe();
     });

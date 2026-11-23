@@ -20,6 +20,8 @@ package org.rdfarchitect.services.shacl.terms;
 import org.rdfarchitect.shacl.dto.SchemaTermDetail;
 import org.rdfarchitect.shacl.dto.SchemaTerms;
 
+import java.util.List;
+
 /**
  * The CIM terms a workspace's schema declares, for an editor to complete and explain.
  *
@@ -36,7 +38,14 @@ public interface SchemaTermsUseCase {
      * What the schema knows about one term.
      *
      * @param iri the term's absolute IRI
+     * @param preferredSchemas the schemas to open the term's class in when several hold it, first
+     *     to last — those of the document the term is written in
      * @return the detail, or {@code null} when no profile in the workspace declares the term
      */
-    SchemaTermDetail detailOf(String workspaceName, String iri);
+    SchemaTermDetail detailOf(String workspaceName, String iri, List<String> preferredSchemas);
+
+    /** What the schema knows about one term, its class looked for in every schema alike. */
+    default SchemaTermDetail detailOf(String workspaceName, String iri) {
+        return detailOf(workspaceName, iri, List.of());
+    }
 }
