@@ -41,8 +41,8 @@
 
     const edges = useEdges();
 
-    let sourceNode = useInternalNode(source);
-    let targetNode = useInternalNode(target);
+    let sourceNode = useInternalNode(() => ({ id: source }));
+    let targetNode = useInternalNode(() => ({ id: target }));
 
     let edgePoints = $derived(data?.edgePoints ?? []);
     let bendPoints = $derived(getBendPoints(edgePoints));

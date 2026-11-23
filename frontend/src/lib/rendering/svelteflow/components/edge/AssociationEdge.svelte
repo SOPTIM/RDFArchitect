@@ -25,8 +25,8 @@
 
     let { id, source, target, data, selected } = $props();
 
-    let sourceNode = useInternalNode(source);
-    let targetNode = useInternalNode(target);
+    let sourceNode = useInternalNode(() => ({ id: source }));
+    let targetNode = useInternalNode(() => ({ id: target }));
 
     let markerEnd = $derived(
         data.useToAssociation ? "url(#associationTo)" : "",
