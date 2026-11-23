@@ -51,6 +51,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -301,6 +302,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
 
         var positions = new SourcePositions(rawText, shapes.getPrefixMapping());
         var known = KnownNamespaces.of(api.schemaIndex());
+        var writtenMostlyIn = known.writtenMostlyIn(shapes);
         var findings = new LinkedHashSet<ShapesValidationFinding>();
         result.shapeAnnotations()
                 .forEach(
@@ -311,7 +313,15 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                             ShapesValidationFinding.Source.SHAPE,
                                             positions.locate(
                                                     annotation.term(), annotation.locationHint()));
-                            if (isTypeOfAnotherVocabulary(annotation, known)) {
+                            var misspelt =
+                                    isUnknownInUndeclaredNamespace(annotation, known)
+                                            ? known.misspeltAs(annotation.term())
+                                            : Optional.<String>empty();
+                            if (misspelt.isPresent()) {
+                                findings.add(asMisspeltNamespace(finding, misspelt.get()));
+                            } else if (isUnknownInUndeclaredNamespace(annotation, known)
+                                    && !writtenMostlyIn.contains(
+                                            KnownNamespaces.namespaceOf(annotation.term()))) {
                                 findings.add(asTypeOfAnotherVocabulary(finding));
                             } else if (isUnknownPermittedValue(shapes, annotation)) {
                                 findings.add(asPermittedValue(finding));
@@ -363,12 +373,15 @@ public class ShapesValidationService implements ShapesValidationUseCase {
      * <p>Official NC constraints name each type under every CIM namespace in use — {@code cim16},
      * {@code CIM100} and the current one, in {@code sh:targetClass}, {@code sh:class} and {@code
      * sh:in} alike — so the same file validates data of either version. Only one of those can be in
-     * the workspace, and every other spelling came back as an error: 868 of them on the
-     * EquipmentReliability files. The workspace has no way to check a vocabulary it does not hold,
-     * so such a term is reported as information. A misspelt term is still an error, because a
-     * misspelling stays in a namespace the workspace declares.
+     * the workspace, and the workspace has no way to check a vocabulary it does not hold, so such a
+     * term is reported as information.
+     *
+     * <p>Two kinds of undeclared namespace keep their errors: one a few characters away from a
+     * declared namespace, which is a misspelling of it, and one the document writes most of its
+     * terms in, which is what the document is about. A misspelt local name is an error anyway,
+     * because it stays in a namespace the workspace declares.
      */
-    private static boolean isTypeOfAnotherVocabulary(
+    private static boolean isUnknownInUndeclaredNamespace(
             SparqlValidationAnnotation annotation, KnownNamespaces known) {
         var term = annotation.term();
         return annotation.code().name().startsWith("UNKNOWN_")
@@ -376,6 +389,17 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                 && term != null
                 && term.isURI()
                 && !known.declares(term);
+    }
+
+    private static ShapesValidationFinding asMisspeltNamespace(
+            ShapesValidationFinding finding, String declared) {
+        return finding.toBuilder()
+                .message(
+                        finding.getMessage()
+                                + " Its namespace is close to "
+                                + declared
+                                + ", which the workspace's schemas use.")
+                .build();
     }
 
     private static ShapesValidationFinding asTypeOfAnotherVocabulary(

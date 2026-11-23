@@ -25,6 +25,8 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseFixtures;
@@ -213,8 +215,31 @@ class ShapesValidationAgainstEntsoeProfilesTest {
                         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"http://iec.ch/TC57/CIM10#", "http://iec.ch/TC57/CIM100"})
+    void anOfficialFileWithItsCimNamespaceMisspeltIsNotValid(String misspelt) {
+        var text = read(CLEAN_SIMPLE);
+        var bound = "@prefix cim:";
+        var start = text.indexOf(bound);
+        var end = text.indexOf('>', start);
+        var edited = text.substring(0, start) + bound + " <" + misspelt + text.substring(end);
+        assertThat(edited).isNotEqualTo(text);
+
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), CLEAN_SIMPLE, edited, null);
+
+        assertThat(report.isValid()).isFalse();
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getTerm() != null)
+                .filteredOn(finding -> finding.getTerm().startsWith(misspelt))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.ERROR));
+    }
+
     @Test
-    void aTermFromAnotherProfileNoWorkspaceGraphHasIsReportedAsUnknown() {
+    void aTermFromAnotherProfileNoWorkspaceSchemaHasIsReportedAsUnknown() {
         var shapes =
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .

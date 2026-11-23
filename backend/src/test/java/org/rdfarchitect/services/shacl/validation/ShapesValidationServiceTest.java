@@ -26,6 +26,8 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseFixtures;
@@ -265,6 +267,80 @@ class ShapesValidationServiceTest {
                 .filteredOn(finding -> finding.getTerm() != null)
                 .filteredOn(finding -> finding.getTerm().endsWith("ACLineSegmnet"))
                 .anySatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.ERROR));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "http://iec.ch/TC57/CIM10#",
+                "http://iec.ch/TC57/CIM100",
+                "http://iec.ch/TC57/CIM100/",
+                "http://iec.ch/TC57/cim100#"
+            })
+    void aNamespaceCloseToOneOfTheSchemasKeepsItsErrors(String misspelt) {
+        var shapes =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix typo: <%s> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:LineShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [ sh:path cim:ACLineSegment.length ] .
+
+                ex:TerminalShape
+                    a sh:NodeShape ;
+                    sh:targetClass typo:Terminal .
+                """
+                        .formatted(misspelt);
+
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "typo.ttl", shapes, null);
+
+        assertThat(report.isValid()).isFalse();
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getTerm() != null)
+                .filteredOn(finding -> finding.getTerm().startsWith(misspelt))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding -> {
+                            assertThat(finding.getSeverity())
+                                    .isEqualTo(ShapesValidationFinding.Severity.ERROR);
+                            assertThat(finding.getMessage()).contains("http://iec.ch/TC57/CIM100#");
+                        });
+    }
+
+    @Test
+    void theNamespaceADocumentIsWrittenInKeepsItsErrors() {
+        var shapes =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://example.org/my-cim#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:LineShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [ sh:path cim:ACLineSegment.length ] .
+
+                ex:TerminalShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [ sh:path cim:Terminal.sequenceNumber ] .
+                """;
+
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "other.ttl", shapes, null);
+
+        assertThat(report.isValid()).isFalse();
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getTerm() != null)
+                .filteredOn(finding -> finding.getTerm().startsWith("http://example.org/my-cim#"))
+                .hasSizeGreaterThanOrEqualTo(4)
+                .allSatisfy(
                         finding ->
                                 assertThat(finding.getSeverity())
                                         .isEqualTo(ShapesValidationFinding.Severity.ERROR));
