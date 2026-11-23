@@ -33,9 +33,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>The desktop backend holds every workspace in memory only and stops when its last window
  * closes, so a workspace that was changed since it was saved or opened is gone with it. A version
- * is the change a workspace stands on in its history: undoing back to the saved version makes the
- * workspace saved again, and a workspace whose version cannot be read right now, because an import
- * is writing to it, counts as unsaved.
+ * is a {@link WorkspaceRevision}: the change a workspace stands on in its history, and whether
+ * editing is disabled. Undoing back to the saved version makes the workspace saved again, and a
+ * workspace whose version cannot be read right now, because an import is writing to it, counts as
+ * unsaved.
  *
  * <p>A workspace without any schema is never reported: there is nothing in it to lose. Versions are
  * kept per session and workspace name; a renamed workspace has to be saved again under its new
@@ -46,21 +47,35 @@ public class SavedWorkspaces {
     private record Key(String sessionId, String workspaceName) {}
 
     private final DatabasePort databasePort;
-    private final Map<Key, UUID> savedVersions = new ConcurrentHashMap<>();
+    private final Map<Key, WorkspaceRevision> savedRevisions = new ConcurrentHashMap<>();
 
     public SavedWorkspaces(DatabasePort databasePort) {
         this.databasePort = databasePort;
     }
 
     /**
-     * Records that the workspace was saved as it stood at the given version.
+     * Records that the workspace was saved as it stood at the given revision.
      *
      * @param workspaceName the workspace, in the current session
-     * @param version the change it stood on when it was written to the file
+     * @param revision where it stood when it was written to the file
      */
-    public void markSaved(String workspaceName, UUID version) {
-        Objects.requireNonNull(version, "version");
-        savedVersions.put(key(workspaceName), version);
+    public void markSaved(String workspaceName, WorkspaceRevision revision) {
+        Objects.requireNonNull(revision, "revision");
+        savedRevisions.put(key(workspaceName), revision);
+    }
+
+    /**
+     * Records that the workspace was saved at the given change, for a file the browser wrote.
+     * Whether editing is disabled is read now, moments after the browser wrote the file.
+     *
+     * @param workspaceName the workspace, in the current session
+     * @param changeId the change it stood on when it was written to the file
+     */
+    public void markSaved(String workspaceName, UUID changeId) {
+        Objects.requireNonNull(changeId, "changeId");
+        markSaved(
+                workspaceName,
+                new WorkspaceRevision(changeId, databasePort.isReadOnly(workspaceName)));
     }
 
     /**
@@ -71,11 +86,11 @@ public class SavedWorkspaces {
      * @return whether its version could be read; it cannot while the workspace is being written to
      */
     public boolean markSavedNow(String workspaceName) {
-        var version = databasePort.currentChangeId(workspaceName);
-        if (version == null) {
+        var revision = WorkspaceRevision.current(databasePort, workspaceName);
+        if (revision == null) {
             return false;
         }
-        markSaved(workspaceName, version);
+        markSaved(workspaceName, revision);
         return true;
     }
 
@@ -86,11 +101,11 @@ public class SavedWorkspaces {
 
     private boolean isUnsaved(String workspaceName) {
         try {
-            var version = databasePort.currentChangeId(workspaceName);
-            if (version == null) {
+            var revision = WorkspaceRevision.current(databasePort, workspaceName);
+            if (revision == null) {
                 return true;
             }
-            if (version.equals(savedVersions.get(key(workspaceName)))) {
+            if (revision.equals(savedRevisions.get(key(workspaceName)))) {
                 return false;
             }
             return !databasePort.listSchemaNames(workspaceName).isEmpty();

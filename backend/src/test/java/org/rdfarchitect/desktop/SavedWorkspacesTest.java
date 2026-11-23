@@ -99,6 +99,18 @@ class SavedWorkspacesTest {
     }
 
     @Test
+    void disablingEditingIsAChangeTheFileDoesNotHave() {
+        addSchema("a");
+        savedWorkspaces.markSaved(WORKSPACE, databasePort.currentChangeId(WORKSPACE));
+
+        databasePort.disableEditing(WORKSPACE);
+        assertThat(savedWorkspaces.unsavedWorkspaces()).containsExactly(WORKSPACE);
+
+        databasePort.enableEditing(WORKSPACE);
+        assertThat(savedWorkspaces.unsavedWorkspaces()).isEmpty();
+    }
+
+    @Test
     void aSaveCountsInItsOwnSessionOnly() {
         addSchema("a");
         savedWorkspaces.markSavedNow(WORKSPACE);

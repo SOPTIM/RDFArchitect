@@ -149,8 +149,8 @@ public class DesktopRESTController {
                 ContentDisposition.attachment()
                         .filename(file.fileName(), StandardCharsets.UTF_8)
                         .build());
-        if (file.version() != null) {
-            headers.set(WORKSPACE_VERSION_HEADER, file.version().toString());
+        if (file.revision() != null) {
+            headers.set(WORKSPACE_VERSION_HEADER, file.revision().changeId().toString());
         }
         headers.setAccessControlExposeHeaders(
                 List.of(HttpHeaders.CONTENT_DISPOSITION, WORKSPACE_VERSION_HEADER));

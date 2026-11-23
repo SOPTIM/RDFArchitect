@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.UUID;
 
 /** Writes workspaces to workspace files for the desktop app's Save. */
 @Service
@@ -40,9 +39,9 @@ public class DesktopWorkspaceFiles {
      *
      * @param content the workspace file, see {@link WorkspaceArchiveFormat}
      * @param fileName the name to suggest for it
-     * @param version the change the workspace stood on when it was written
+     * @param revision where the workspace stood when it was written
      */
-    public record WorkspaceFile(byte[] content, String fileName, UUID version) {}
+    public record WorkspaceFile(byte[] content, String fileName, WorkspaceRevision revision) {}
 
     private final DatabasePort databasePort;
     private final ExportWorkspaceUseCase exportWorkspaceUseCase;
@@ -60,7 +59,7 @@ public class DesktopWorkspaceFiles {
      * @param path the file to write
      * @return the version the file holds
      */
-    public UUID writeTo(String workspaceName, Path path) throws IOException {
+    public WorkspaceRevision writeTo(String workspaceName, Path path) throws IOException {
         var file = write(workspaceName);
         var temporary = path.resolveSibling(path.getFileName() + ".saving");
         Files.write(temporary, file.content());
@@ -73,7 +72,7 @@ public class DesktopWorkspaceFiles {
         } catch (IOException _) {
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
         }
-        return file.version();
+        return file.revision();
     }
 
     /**
@@ -85,10 +84,10 @@ public class DesktopWorkspaceFiles {
      */
     public WorkspaceFile write(String workspaceName) {
         try (var _ = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            var version = databasePort.currentChangeId(workspaceName);
+            var revision = WorkspaceRevision.current(databasePort, workspaceName);
             var content = exportWorkspaceUseCase.exportWorkspace(workspaceName);
             return new WorkspaceFile(
-                    content, WorkspaceArchiveFormat.fileNameFor(workspaceName), version);
+                    content, WorkspaceArchiveFormat.fileNameFor(workspaceName), revision);
         }
     }
 }

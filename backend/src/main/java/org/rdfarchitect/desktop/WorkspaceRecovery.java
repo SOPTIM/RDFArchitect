@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -79,7 +78,7 @@ public class WorkspaceRecovery {
 
     private record Key(String sessionId, String workspaceName) {}
 
-    private record Copy(Path file, UUID version) {}
+    private record Copy(Path file, WorkspaceRevision revision) {}
 
     private final Path directory;
     private final Path previousRun;
@@ -143,16 +142,16 @@ public class WorkspaceRecovery {
         var unsaved = savedWorkspaces.unsavedWorkspaces();
         for (var workspaceName : unsaved) {
             var key = new Key(sessionId, workspaceName);
-            var version = databasePort.currentChangeId(workspaceName);
+            var revision = WorkspaceRevision.current(databasePort, workspaceName);
             var copy = copies.get(key);
-            if (version == null || (copy != null && version.equals(copy.version()))) {
+            if (revision == null || (copy != null && revision.equals(copy.revision()))) {
                 // Being written to right now, or kept as it stands already.
                 continue;
             }
             try {
                 var file = copy != null ? copy.file() : fileFor(key);
                 writeAtomically(file, exportWorkspaceUseCase.exportWorkspace(workspaceName));
-                copies.put(key, new Copy(file, version));
+                copies.put(key, new Copy(file, revision));
                 logger.info("Kept a copy of unsaved workspace \"{}\".", workspaceName);
             } catch (IOException | ResourceNotFoundException e) {
                 logger.warn("Could not keep a copy of workspace \"{}\".", workspaceName, e);

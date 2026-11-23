@@ -134,6 +134,20 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
+    void writesAgainOnceEditingIsDisabled() throws Exception {
+        var recovery = recovery();
+        addSchema("Draft", "a");
+        writeFromAnotherThread(recovery);
+        var copy = copies().getFirst();
+        Files.writeString(copy, "marker");
+
+        databasePort.disableEditing("Draft");
+        writeFromAnotherThread(recovery);
+
+        assertThat(Files.size(copy)).isGreaterThan(100);
+    }
+
+    @Test
     void dropsTheCopyOnceTheWorkspaceIsSavedOrGone() throws Exception {
         var recovery = recovery();
         addSchema("Draft", "a");
