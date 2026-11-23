@@ -175,6 +175,27 @@ class GraphUtilsNormalizeBlankNodesTest {
     }
 
     /**
+     * Nor when they share their label with a lookalike that splits off: what stays together is
+     * still a duplicate, however long refining takes anywhere else.
+     */
+    @Test
+    void duplicatesKeepTheirLabelWhenALookalikeAmongThemSplitsOff() {
+        var part =
+                PREFIXES
+                        + "ex:S ex:has "
+                        + nested(13, "ex:same")
+                        + " , "
+                        + nested(13, "ex:same")
+                        + " , "
+                        + nested(13, "ex:other")
+                        + " .\n";
+        var alone = blankLabels(normalized(part));
+
+        assertTrue(blankLabels(normalized(part + listsSharing(40))).containsAll(alone));
+        assertTrue(blankLabels(normalized(part + listsSharing(60))).containsAll(alone));
+    }
+
+    /**
      * Refining splits a list of identical values two cells a pass, so a long enough one could take
      * longer than anybody waits. It has to end anyway, and still as a list.
      */
@@ -189,6 +210,25 @@ class GraphUtilsNormalizeBlankNodesTest {
 
         assertEquals(0, forkingCells(result));
         assertEquals(graph.size(), result.size());
+    }
+
+    /** Blank nodes nested {@code depth} deep, the innermost pointing at {@code end}. */
+    private static String nested(int depth, String end) {
+        return "[ ex:next ".repeat(depth) + end + " ]".repeat(depth);
+    }
+
+    /** Two lists that share {@code members} values and differ only in their last one. */
+    private static String listsSharing(int members) {
+        var shared =
+                IntStream.range(0, members)
+                        .mapToObj(i -> "ex:v" + i)
+                        .collect(Collectors.joining(" "));
+        return "ex:A sh:path ex:p ; sh:in ( "
+                + shared
+                + " ex:endA ) .\n"
+                + "ex:B sh:path ex:p ; sh:in ( "
+                + shared
+                + " ex:endB ) .\n";
     }
 
     private static long forkingCells(Graph graph) {

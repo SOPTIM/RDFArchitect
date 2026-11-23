@@ -40,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -208,43 +209,68 @@ public class GraphUtils {
      * identical all the way out. Two long {@code rdf:List}s that differ only after their tenth cell
      * would otherwise share their middle cells.
      *
-     * <p>Nodes sharing a label are refined until no group splits any further. Only groups that
-     * split get new labels; all other nodes, including true duplicates, keep theirs, so an edit
-     * elsewhere in the graph does not change them. If {@link #REFINEMENT_BUDGET} runs out, the
-     * remaining groups are kept apart by {@link #keepApart}.
+     * <p>Nodes sharing a label are refined until no group splits any further. When a group splits,
+     * its largest part keeps the group's label and the other parts take new ones. A label therefore
+     * changes only where a group splits: true duplicates, and every node outside a look-alike
+     * group, keep theirs however long refining takes elsewhere in the graph. If {@link
+     * #REFINEMENT_BUDGET} runs out, the remaining groups are kept apart by {@link #keepApart}.
      */
-    private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> hashes) {
-        var lookalikes = groupsSharingALabel(hashes.keySet(), hashes);
-        var refined = new HashMap<>(hashes);
-        var groups = lookalikes;
+    private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> labels) {
+        var groups = groupsSharingALabel(labels.keySet(), labels);
         var budget = REFINEMENT_BUDGET;
         while (!groups.isEmpty()) {
-            var next = new HashMap<Node, String>();
+            var signatures = new HashMap<Node, String>();
             for (var group : groups) {
                 for (var node : group) {
                     var fingerprint =
-                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), refined);
-                    // The old label goes in as well, so that a group can only ever split further.
-                    next.put(node, sha256prefix(refined.get(node) + "|" + fingerprint));
+                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), labels);
+                    // The label goes in as well, so that a group can only ever split further.
+                    signatures.put(node, sha256prefix(labels.get(node) + "|" + fingerprint));
                 }
             }
-            var split = groupsSharingALabel(next.keySet(), next);
-            if (split.size() == groups.size() && next.size() == nodesIn(split)) {
+            var remaining = new ArrayList<List<Node>>();
+            var split = false;
+            for (var group : groups) {
+                var parts =
+                        List.copyOf(
+                                group.stream()
+                                        .collect(Collectors.groupingBy(signatures::get))
+                                        .values());
+                if (parts.size() > 1) {
+                    split = true;
+                    relabelAllButTheLargest(parts, signatures, labels);
+                }
+                parts.stream().filter(part -> part.size() > 1).forEach(remaining::add);
+            }
+            if (!split) {
                 break;
             }
-            refined.putAll(next);
-            groups = split;
-            budget -= next.size();
+            groups = remaining;
+            budget -= signatures.size();
             if (budget <= 0) {
-                keepApart(groups, refined);
+                keepApart(groups, labels);
                 break;
             }
         }
-        // Only a group that really split takes new labels: true duplicates keep theirs, however
-        // many passes something else elsewhere in the graph needed.
-        for (var group : lookalikes) {
-            if (group.stream().map(refined::get).distinct().count() > 1) {
-                group.forEach(node -> hashes.put(node, refined.get(node)));
+    }
+
+    /**
+     * The parts a group splits into take their signature as label, except the largest, which keeps
+     * the group's label. Of equally large parts, the one with the smallest signature keeps it.
+     */
+    private static void relabelAllButTheLargest(
+            List<List<Node>> parts, Map<Node, String> signatures, Map<Node, String> labels) {
+        Comparator<List<Node>> bySize = Comparator.comparingInt(List::size);
+        var keeper =
+                parts.stream()
+                        .max(
+                                bySize.thenComparing(
+                                        part -> signatures.get(part.getFirst()),
+                                        Comparator.reverseOrder()))
+                        .orElseThrow();
+        for (var part : parts) {
+            if (part != keeper) {
+                part.forEach(node -> labels.put(node, signatures.get(node)));
             }
         }
     }
@@ -255,10 +281,6 @@ public class GraphUtils {
         return nodes.stream().collect(Collectors.groupingBy(labels::get)).values().stream()
                 .filter(group -> group.size() > 1)
                 .toList();
-    }
-
-    private static int nodesIn(List<List<Node>> groups) {
-        return groups.stream().mapToInt(List::size).sum();
     }
 
     /**
