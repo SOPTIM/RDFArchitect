@@ -19,13 +19,14 @@ package org.rdfarchitect.services.shacl.effective;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.vocabulary.RDF;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,56 +119,57 @@ public final class EffectiveConstraints {
         }
     }
 
-    /** One graph's constraints, split by whether they can fail validation. */
-    private record Read(Map<Key, Constraint> enforced, Map<Key, Constraint> advisory) {}
+    /**
+     * What documents require, split by whether it can fail validation, and which documents name the
+     * rules each requirement comes from.
+     */
+    private record Read(
+            Map<Key, Constraint> enforced,
+            Map<Key, Constraint> advisory,
+            Map<Key, Set<Graph>> namedIn) {
+
+        Read() {
+            this(new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
+        }
+    }
 
     private EffectiveConstraints() {}
 
     /**
      * Reads several documents as one set of constraints, remembering where each came from.
      *
-     * <p>Every enabled document applies, so a shape can name a rule another document defines. It
-     * counts as stated by the document naming it, which is the one saying it applies to the class.
+     * <p>Every enabled document applies, so a shape can name a rule another document defines, and a
+     * document can list rules for a shape another document targets. A requirement counts as stated
+     * by the document naming the rule it comes from.
      */
     public static Asserted of(Map<String, Graph> documents) {
-        var enforced = new LinkedHashMap<Key, Constraint>();
-        var advisory = new LinkedHashMap<Key, Constraint>();
+        var read = new Read();
+        documents.values().forEach(document -> readTargets(document, documents.values(), read));
         var statedIn = new LinkedHashMap<Key, List<String>>();
-        documents.forEach(
-                (name, graph) -> {
-                    var read = read(graph, documents.values());
-                    read.enforced()
-                            .forEach(
-                                    (key, constraint) ->
-                                            enforced.merge(
-                                                    key,
-                                                    constraint,
-                                                    EffectiveConstraints::conjunction));
-                    read.advisory()
-                            .forEach(
-                                    (key, constraint) ->
-                                            advisory.merge(
-                                                    key,
-                                                    constraint,
-                                                    EffectiveConstraints::conjunction));
-                    var keys = new LinkedHashSet<>(read.enforced().keySet());
-                    keys.addAll(read.advisory().keySet());
-                    keys.forEach(
-                            key ->
-                                    statedIn.computeIfAbsent(key, ignored -> new ArrayList<>())
-                                            .add(name));
-                });
-        return new Asserted(enforced, advisory, statedIn);
+        read.namedIn()
+                .forEach(
+                        (key, namers) ->
+                                statedIn.put(
+                                        key,
+                                        documents.entrySet().stream()
+                                                .filter(entry -> namers.contains(entry.getValue()))
+                                                .map(Map.Entry::getKey)
+                                                .toList()));
+        return new Asserted(read.enforced(), read.advisory(), statedIn);
     }
 
     /** Reads a shapes graph into one enforced constraint per class and property. */
     public static Map<Key, Constraint> of(Graph shapes) {
-        return read(shapes, List.of()).enforced();
+        var read = new Read();
+        readTargets(shapes, List.of(shapes), read);
+        return read.enforced();
     }
 
-    private static Read read(Graph shapes, Collection<Graph> documents) {
-        var enforced = new LinkedHashMap<Key, Constraint>();
-        var advisory = new LinkedHashMap<Key, Constraint>();
+    /**
+     * Adds what the shapes targeting a class in {@code shapes} require, finding their rules in
+     * {@code documents}.
+     */
+    private static void readTargets(Graph shapes, Collection<Graph> documents, Read into) {
         shapes.stream(Node.ANY, SHACL.targetClass, Node.ANY)
                 .filter(triple -> triple.getObject().isURI())
                 .filter(triple -> !isDeactivated(shapes, triple.getSubject()))
@@ -178,63 +180,76 @@ public final class EffectiveConstraints {
                                         documents,
                                         triple.getSubject(),
                                         triple.getObject().getURI(),
-                                        enforced,
-                                        advisory));
-        enforced.values().removeIf(Constraint::isEmpty);
-        advisory.values().removeIf(Constraint::isEmpty);
-        return new Read(enforced, advisory);
+                                        into));
     }
 
     private static void collect(
-            Graph shapes,
-            Collection<Graph> documents,
-            Node shape,
-            String targetClass,
-            Map<Key, Constraint> enforced,
-            Map<Key, Constraint> advisory) {
-        // A property shape can carry the target itself, with no node shape around it. What it nests
-        // is then about the values of its path, and not about the target class.
-        var properties =
-                definedIn(shape, shapes, documents).contains(shape, SHACL.path, Node.ANY)
-                        ? Stream.of(shape)
-                        : shapes.stream(shape, SHACL.property, Node.ANY).map(Triple::getObject);
-        properties.forEach(
-                property -> {
-                    var definedIn = definedIn(property, shapes, documents);
-                    // Both the document naming a rule and the one defining it can switch it off
-                    // or lower its severity: validation reads them together.
-                    if (isDeactivated(shapes, property) || isDeactivated(definedIn, property)) {
-                        return;
-                    }
-                    // Usually one path. A path expression rather than a property yields
-                    // none: there is nothing to compare it with on the other side.
-                    var paths = propertiesOf(definedIn, property);
-                    if (paths.isEmpty()) {
-                        return;
-                    }
-                    var into =
-                            isAdvisory(shapes, property) || isAdvisory(definedIn, property)
-                                    ? advisory
-                                    : enforced;
-                    var constraint = read(definedIn, property);
-                    paths.forEach(
-                            path ->
-                                    into.merge(
-                                            new Key(targetClass, path),
-                                            constraint,
-                                            EffectiveConstraints::conjunction));
-                });
+            Graph shapes, Collection<Graph> documents, Node shape, String targetClass, Read into) {
+        for (var rule : rulesOf(shape, shapes, documents).toList()) {
+            var property = rule.node();
+            var definedIn = definedIn(property, rule.namedIn(), documents);
+            // Both the document naming a rule and the one defining it can switch it off or lower
+            // its severity: validation reads them together.
+            if (isDeactivated(rule.namedIn(), property) || isDeactivated(definedIn, property)) {
+                continue;
+            }
+            // Usually one path. A path expression rather than a property yields none: there is
+            // nothing to compare it with on the other side.
+            var paths = propertiesOf(definedIn, property);
+            if (paths.isEmpty()) {
+                continue;
+            }
+            var constraint = read(definedIn, property);
+            if (constraint.isEmpty()) {
+                continue;
+            }
+            var merged =
+                    isAdvisory(rule.namedIn(), property) || isAdvisory(definedIn, property)
+                            ? into.advisory()
+                            : into.enforced();
+            for (var path : paths) {
+                var key = new Key(targetClass, path);
+                merged.merge(key, constraint, EffectiveConstraints::conjunction);
+                into.namedIn()
+                        .computeIfAbsent(
+                                key, ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                        .add(rule.namedIn());
+            }
+        }
     }
 
+    /**
+     * The rules a targeted shape applies.
+     *
+     * <p>A property shape can carry the target itself, with no node shape around it. What it nests
+     * is then about the values of its path, and not about the target class. A node shape's rules
+     * can be listed by any document, not only by the one targeting it.
+     */
+    private static Stream<NamedRule> rulesOf(
+            Node shape, Graph shapes, Collection<Graph> documents) {
+        if (definedIn(shape, shapes, documents).contains(shape, SHACL.path, Node.ANY)) {
+            return Stream.of(new NamedRule(shape, shapes));
+        }
+        return documents.stream().flatMap(document -> rulesListedIn(document, shape));
+    }
+
+    private static Stream<NamedRule> rulesListedIn(Graph document, Node shape) {
+        return document.stream(shape, SHACL.property, Node.ANY)
+                .map(triple -> new NamedRule(triple.getObject(), document));
+    }
+
+    /** A rule, and the document listing it as one of a shape's. */
+    private record NamedRule(Node node, Graph namedIn) {}
+
     /** Where a rule is written: the naming document if it says itself, else whichever does. */
-    private static Graph definedIn(Node rule, Graph shapes, Collection<Graph> documents) {
-        if (!rule.isURI() || shapes.contains(rule, SHACL.path, Node.ANY)) {
-            return shapes;
+    private static Graph definedIn(Node rule, Graph namedIn, Collection<Graph> documents) {
+        if (!rule.isURI() || namedIn.contains(rule, SHACL.path, Node.ANY)) {
+            return namedIn;
         }
         return documents.stream()
                 .filter(document -> document.contains(rule, SHACL.path, Node.ANY))
                 .findFirst()
-                .orElse(shapes);
+                .orElse(namedIn);
     }
 
     /**

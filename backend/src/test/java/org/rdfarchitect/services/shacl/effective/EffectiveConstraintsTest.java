@@ -232,6 +232,59 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void aNodeShapeGivenRulesByAnotherDocumentAppliesThemToItsTarget() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "targeting.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:property [ sh:path ex:other ; sh:maxCount 1 ] .
+                        """));
+        documents.put(
+                "extending.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:property [ sh:path ex:value ; sh:minCount 1 ] ,
+                                             [ sh:path ex:value ; sh:maxCount 2 ;
+                                               sh:deactivated true ] .
+                        """));
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
+        assertThat(asserted.constraints().get(THING_VALUE).maxCount()).isNull();
+        assertThat(asserted.constraints().get(new Key(EX + "Thing", EX + "other")).maxCount())
+                .isEqualTo(1);
+        assertThat(asserted.statedIn().get(THING_VALUE)).containsExactly("extending.ttl");
+    }
+
+    @Test
+    void aShapeWrittenInTwoDocumentsCountsEachRuleAsStatedWhereItIsListed() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "first.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                        """));
+        documents.put(
+                "second.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:property [ sh:path ex:other ; sh:maxCount 1 ] .
+                        """));
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.statedIn().get(THING_VALUE)).containsExactly("first.ttl");
+        assertThat(asserted.statedIn().get(new Key(EX + "Thing", EX + "other")))
+                .containsExactly("second.ttl");
+    }
+
+    @Test
     void anIllTypedDeactivationDoesNotFailTheRead() {
         // It parses, and "maybe" is simply not true.
         var shapes =
