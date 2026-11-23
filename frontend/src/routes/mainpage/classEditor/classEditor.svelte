@@ -21,6 +21,7 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import { registerUnappliedEdits } from "$lib/desktop/desktopSession.svelte.js";
     import {
         eventStack,
         EventType,
@@ -124,6 +125,8 @@
 
     let pendingAction = $state(null);
 
+    let stopReportingUnappliedEdits = () => {};
+
     let isEnum = $derived(
         reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
@@ -181,12 +184,16 @@
         eventStack.addEvent(closeClassEditor, EventType.CLASS_EDITOR);
         eventStack.registerActionGuard(withUnsavedChangesCheck);
         openClassEditor.register(editorSource);
+        stopReportingUnappliedEdits = registerUnappliedEdits(
+            () => !!reactiveClass?.isModified,
+        );
     });
 
     onDestroy(() => {
         eventStack.removeEvent(closeClassEditor);
         eventStack.unregisterActionGuard(withUnsavedChangesCheck);
         openClassEditor.unregister(editorSource);
+        stopReportingUnappliedEdits();
     });
 
     function withUnsavedChangesCheck(action) {

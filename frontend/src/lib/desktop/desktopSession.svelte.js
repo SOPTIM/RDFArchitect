@@ -28,6 +28,8 @@ const MISSED_HEARTBEATS_UNTIL_STOPPED = 2;
 /** How long to wait after a change before asking again, so a burst of requests asks once. */
 const REFRESH_DELAY_MS = 200;
 
+const unappliedEditChecks = new Set();
+
 /**
  * What this window of the desktop app knows about its backend.
  *
@@ -53,6 +55,22 @@ let refreshQueued = false;
 let missedHeartbeats = 0;
 let refreshTimer = null;
 let stopListeningToWrites = () => {};
+
+/**
+ * Registers a check for edits this window holds that no request has sent yet, such as those of
+ * an open class editor. Closing the window asks first while one of them answers true.
+ *
+ * @param {() => boolean} check
+ * @returns {() => void} removes the check again
+ */
+export function registerUnappliedEdits(check) {
+    unappliedEditChecks.add(check);
+    return () => unappliedEditChecks.delete(check);
+}
+
+function holdsUnappliedEdits() {
+    return [...unappliedEditChecks].some(check => check());
+}
 
 export function isWorkspaceUnsaved(workspaceName) {
     return desktopSession.unsavedWorkspaces.includes(workspaceName);
@@ -174,7 +192,8 @@ function sayGoodbye() {
 function warnBeforeUnload(event) {
     if (
         desktopSession.stopped ||
-        desktopSession.unsavedWorkspaces.length === 0
+        (desktopSession.unsavedWorkspaces.length === 0 &&
+            !holdsUnappliedEdits())
     ) {
         return;
     }

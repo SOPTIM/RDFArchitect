@@ -22,6 +22,7 @@ import {
     desktopSession,
     isWorkspaceUnsaved,
     refreshDesktopStatus,
+    registerUnappliedEdits,
     startDesktopSession,
     stopDesktopSession,
 } from "$lib/desktop/desktopSession.svelte.js";
@@ -95,6 +96,20 @@ describe("desktopSession", () => {
         });
         await refreshDesktopStatus();
         expect(beforeUnload().defaultPrevented).toBe(true);
+    });
+
+    test("asks before closing a window with edits it has not sent yet", async () => {
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+        let edited = true;
+        const unregister = registerUnappliedEdits(() => edited);
+
+        expect(beforeUnload().defaultPrevented).toBe(true);
+        edited = false;
+        expect(beforeUnload().defaultPrevented).toBe(false);
+        edited = true;
+        unregister();
+        expect(beforeUnload().defaultPrevented).toBe(false);
     });
 
     test("says goodbye when the page goes away", async () => {
