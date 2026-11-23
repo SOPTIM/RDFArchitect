@@ -80,6 +80,9 @@
      */
     let givenText = { version: undefined, text: undefined };
 
+    /** Counts the texts put in from outside; the markers are set again after each. */
+    let givenTexts = $state(0);
+
     /**
      * Where to put the cursor once the editor exists and holds the text being revealed in — a link
      * can ask for a line before Monaco has finished loading.
@@ -207,6 +210,7 @@
                     version: editor.getModel().getAlternativeVersionId(),
                     text: next,
                 };
+                untrack(() => (givenTexts += 1));
             }
         } finally {
             applyingExternalChange = false;
@@ -259,14 +263,14 @@
         monaco?.editor.setTheme(themeName);
     });
 
-    // Also after every change of text, not only of findings. Opening a document empties the editor
-    // and then fills it, while the findings — read from the stored report — stay the same object:
-    // set against the empty text, the markers did not survive the text arriving, and a document
-    // opened with errors showed them in the problems panel but nowhere in the editor.
+    // Set again after every text put in from outside, not only for new findings: a parent may empty
+    // the editor and then fill it while the findings stay the same object, and markers set against
+    // the empty text do not survive the text arriving. Not after typing, though: Monaco moves the
+    // markers with the text being edited, and setting them again would put them back on the lines
+    // the findings were made for.
     $effect(() => {
         const model = editor?.getModel();
-        void value;
-        void documentKey;
+        void givenTexts;
         if (!monaco || !model) {
             return;
         }

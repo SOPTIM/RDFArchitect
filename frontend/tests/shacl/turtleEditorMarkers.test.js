@@ -73,3 +73,35 @@ test("a document opened with findings shows them once its text has arrived", asy
     expect(fake.state.markers).toHaveLength(1);
     expect(fake.state.markers[0].startLineNumber).toBe(3);
 });
+
+test("markers move with the text being typed until new findings arrive", async () => {
+    const props = reactiveProps({
+        value: "@prefix sh: <x#> .\n\nex:A sh:targetClass cim:Nope .\n",
+        documentKey: 1,
+        findings: FINDINGS,
+    });
+    target = document.createElement("div");
+    document.body.appendChild(target);
+    mounted = mount(TurtleEditor, { target, props });
+    await settle();
+
+    fake.state.editor.executeEdits("test", [
+        {
+            range: {
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: 1,
+                endColumn: 1,
+            },
+            text: "# shapes\n",
+        },
+    ]);
+    await settle();
+
+    expect(fake.state.markers[0].startLineNumber).toBe(4);
+
+    props.findings = [{ ...FINDINGS[0], line: 2 }];
+    await settle();
+
+    expect(fake.state.markers[0].startLineNumber).toBe(2);
+});
