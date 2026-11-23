@@ -101,11 +101,11 @@
         if (!file) {
             return;
         }
-        archiveHandle = handle;
         if (!isWorkspaceArchiveFile(file.name)) {
             rejectedFileName = file.name;
             return;
         }
+        archiveHandle = handle;
         rejectedFileName = null;
         archive = file;
         workspaceName = "";
