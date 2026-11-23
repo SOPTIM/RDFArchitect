@@ -46,6 +46,8 @@ export class SchemaTermSource {
     #details = new Map();
     #pending = new Map();
     #loading = null;
+    /** Bumped by `invalidate`, so an answer to a question asked before it is dropped. */
+    #generation = 0;
 
     constructor({ workspaceName, requestOptions = {} }) {
         this.#workspaceName = workspaceName;
@@ -76,11 +78,15 @@ export class SchemaTermSource {
 
     /** Fetches the term list once. Safe to call from every provider on every keystroke. */
     load() {
+        const generation = this.#generation;
         this.#loading ??= listTerms({
             ...this.#requestOptions,
             path: this.#path,
         })
             .then(({ data, error }) => {
+                if (generation !== this.#generation) {
+                    return;
+                }
                 if (error) {
                     // Completion simply stays empty; the editor is still perfectly usable.
                     console.warn("Failed to load the schema terms:", error);
@@ -122,6 +128,7 @@ export class SchemaTermSource {
         if (this.#pending.has(key)) {
             return this.#pending.get(key);
         }
+        const generation = this.#generation;
         const request = describeTerm({
             ...this.#requestOptions,
             path: this.#path,
@@ -131,11 +138,17 @@ export class SchemaTermSource {
                 // 204 is the server's "no profile declares this"; the client reads it as `{}`.
                 const detail =
                     error || response?.status === 204 ? null : (data ?? null);
-                this.#details.set(key, detail);
+                if (generation === this.#generation) {
+                    this.#details.set(key, detail);
+                }
                 return detail;
             })
             .catch(() => null)
-            .finally(() => this.#pending.delete(key));
+            .finally(() => {
+                if (this.#pending.get(key) === request) {
+                    this.#pending.delete(key);
+                }
+            });
         this.#pending.set(key, request);
         return request;
     }
@@ -147,6 +160,7 @@ export class SchemaTermSource {
      * menu bar: the term list and every cached hover would still describe the schema before it.
      */
     invalidate() {
+        this.#generation += 1;
         this.#details.clear();
         this.#pending.clear();
         this.#loading = null;

@@ -256,6 +256,55 @@ describe("the standard vocabulary", () => {
 });
 
 describe("invalidate", () => {
+    /** Holds the answer to the first request `matches` accepts, until the gate is released. */
+    function holdAnswers(matches) {
+        let release;
+        let holding = true;
+        const gate = new Promise(resolve => (release = resolve));
+        const answer = server.fetch;
+        server.fetch = async request => {
+            const hold = holding && matches(new URL(request.url));
+            holding &&= !hold;
+            const response = await answer(request);
+            if (hold) {
+                await gate;
+            }
+            return response;
+        };
+        source = sourceFor(server);
+        return () => release();
+    }
+
+    test("drops a term list asked for before it", async () => {
+        const release = holdAnswers(url => !url.pathname.endsWith("/detail"));
+        const stale = source.load();
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+
+        source.invalidate();
+        server.terms = { profiles: [], terms: [] };
+        await source.load();
+        release();
+        await stale;
+
+        expect(source.terms).toEqual([]);
+        expect(source.loaded).toBe(true);
+    });
+
+    test("drops a detail asked for before it", async () => {
+        const release = holdAnswers(url => url.pathname.endsWith("/detail"));
+        const stale = source.detailOf(`${CIM}ACLineSegment`);
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+
+        source.invalidate();
+        release();
+        await stale;
+        server.detail = { ...DETAIL, comment: "A wire, edited." };
+
+        expect(await source.detailOf(`${CIM}ACLineSegment`)).toMatchObject({
+            comment: "A wire, edited.",
+        });
+    });
+
     test("makes the next question re-read a schema that has changed", async () => {
         await source.load();
         await source.detailOf(`${CIM}ACLineSegment`);
