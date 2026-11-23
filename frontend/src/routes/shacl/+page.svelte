@@ -126,13 +126,13 @@
     /** Compares a schema with the constraints documents applying to it. */
     const conformance = $derived(
         selectedWorkspace
-            ? new ConformanceView({ datasetName: selectedWorkspace })
+            ? new ConformanceView({ workspaceName: selectedWorkspace })
             : null,
     );
 
     const comparedSchema = $derived(
         workbench?.schemas.find(
-            schema => schema.uri === workbench.comparedSchema,
+            schema => schema.name === workbench.comparedSchema,
         ) ?? null,
     );
 
@@ -140,7 +140,7 @@
     const comparedDocuments = $derived(
         comparedSchema
             ? workbench
-                  .documentsOf(comparedSchema.uri)
+                  .documentsOf(comparedSchema.name)
                   .filter(document => document.enabled)
             : [],
     );
@@ -588,7 +588,7 @@
                                 <div class="min-h-0 flex-1">
                                     <ConformanceReportView
                                         {conformance}
-                                        schemaUri={comparedSchema.uri}
+                                        schemaName={comparedSchema.name}
                                         schemaLabel={comparedSchema.label}
                                         documents={comparedDocuments}
                                         dirty={workbench.dirty}

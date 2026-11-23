@@ -17,84 +17,112 @@
 
 package org.rdfarchitect.api.controller.datasets.shacl.conformance;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.sparql.graph.GraphFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.SchemaConfig;
+import org.rdfarchitect.context.SessionContext;
+import org.rdfarchitect.database.DatabaseFixtures;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.shacl.conformance.ConformanceUseCase;
-import org.rdfarchitect.shacl.dto.ConformanceFinding;
-import org.rdfarchitect.shacl.dto.ConformanceReport;
+import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
+import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
+import org.rdfarchitect.services.shacl.SHACLStoringService;
+import org.rdfarchitect.services.shacl.conformance.ConformanceService;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
-/** The HTTP contract of the conformance report. */
+/** The HTTP contract of the conformance report, answered by the real service. */
 class ConformanceRESTControllerTest {
 
-    private static final String URL = "/api/datasets/cgmes/shacl/conformance";
+    private static final String URL = "/api/workspaces/cgmes/shacl/conformance";
 
-    private static final String GRAPH_URI = "http://example.org/EQ";
+    private static final String SCHEMA = "Core Equipment";
 
-    private ConformanceUseCase conformanceUseCase;
+    private static final String SHAPES =
+            """
+            @prefix sh: <http://www.w3.org/ns/shacl#> .
+            @prefix ex: <http://example.org/> .
+
+            ex:LineShape a sh:NodeShape ;
+                sh:targetClass ex:Line ;
+                sh:property [ sh:path ex:Line.length ; sh:minCount 1 ] .
+            """;
+
+    private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
+    private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        var expandURIUseCase = mock(ExpandURIUseCase.class);
-        conformanceUseCase = mock(ConformanceUseCase.class);
-        when(expandURIUseCase.expandUri(any(), any())).thenReturn(GRAPH_URI);
-        when(conformanceUseCase.compare(any()))
-                .thenReturn(
-                        ConformanceReport.builder()
-                                .conforms(false)
-                                .compared(1343)
-                                .agreeing(1341)
-                                .contradictedCount(2)
-                                .findings(
-                                        List.of(
-                                                ConformanceFinding.builder()
-                                                        .kind(ConformanceFinding.Kind.CONTRADICTED)
-                                                        .targetClass("http://ex.org/Season")
-                                                        .path("http://ex.org/Season.endDate")
-                                                        .message("A value cannot be both.")
-                                                        .build()))
-                                .build());
+        SessionContext.setSessionId(getClass().getSimpleName());
+        databasePort.createDataset("cgmes");
+        DatabaseFixtures.createGraph(
+                databasePort,
+                new GraphIdentifier("cgmes", SCHEMA),
+                GraphFactory.createDefaultGraph());
+        new SHACLStoringService(databasePort)
+                .createShapesDocument(
+                        "cgmes", List.of(SCHEMA), "line.ttl", null, SHAPES, Lang.TURTLE);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new ConformanceRESTController(expandURIUseCase, conformanceUseCase))
+                                new ConformanceRESTController(new ConformanceService(databasePort)))
+                        .setControllerAdvice(new GenericExceptionHandler())
                         .build();
     }
 
-    @Test
-    void theReportIsServedAsJsonForTheExpandedSchema() throws Exception {
-        mockMvc.perform(get(URL).param("schema", "eq:"))
-                .andExpect(
-                        result -> {
-                            assertThat(result.getResponse().getContentType())
-                                    .contains(MediaType.APPLICATION_JSON_VALUE);
-                            assertThat(result.getResponse().getContentAsString())
-                                    .contains("\"conforms\":false")
-                                    .contains("\"kind\":\"CONTRADICTED\"")
-                                    .contains("\"agreeing\":1341");
-                        });
+    @AfterEach
+    void tearDown() {
+        database.listDatasets().forEach(database::deleteDataset);
+        SessionContext.clear();
+    }
 
-        verify(conformanceUseCase).compare(eq(new GraphIdentifier("cgmes", GRAPH_URI)));
+    @Test
+    void theReportIsServedAsJsonForTheNamedSchema() throws Exception {
+        mockMvc.perform(get(URL).param("schema", SCHEMA))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.schemaName").value(SCHEMA))
+                .andExpect(jsonPath("$.documents[0].name").value("line.ttl"))
+                .andExpect(jsonPath("$.findings[0].kind").value("NOT_IN_SCHEMA"))
+                .andExpect(jsonPath("$.findings[0].statedIn[0]").value("line.ttl"));
     }
 
     @Test
     void comparingWithoutNamingASchemaIsRefused() throws Exception {
-        mockMvc.perform(get(URL))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isEqualTo(400));
+        mockMvc.perform(get(URL)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aNameNoSchemaCanHaveIsRefused() throws Exception {
+        mockMvc.perform(get(URL).param("schema", "a;b"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("not a valid schema name")));
+    }
+
+    @Test
+    void aSchemaTheWorkspaceDoesNotHaveIsNotFound() throws Exception {
+        mockMvc.perform(get(URL).param("schema", "nowhere"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("No schema named nowhere.")));
+    }
+
+    @Test
+    void aWorkspaceThatDoesNotExistIsNotFound() throws Exception {
+        mockMvc.perform(get("/api/workspaces/elsewhere/shacl/conformance").param("schema", SCHEMA))
+                .andExpect(status().isNotFound());
     }
 }

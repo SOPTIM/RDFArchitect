@@ -45,13 +45,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Coverage is not disagreement, and a graph's constraints are its enabled documents together.
+ * Coverage is not disagreement, and a schema's constraints are its enabled documents together.
  *
  * <p>Both were wrong at once, and the CGMES 3.0 DiagramLayout profile is what showed it: importing
  * one of its constraints files reported "0 of 49 property constraints agree". The profile implies
  * 49 property constraints; the file in question is 55 lines long and carries a single cross-profile
  * rule. It disagreed with nothing — it simply talked about almost nothing, and the report scored
- * silence as disagreement while ignoring whatever the graph's other documents said.
+ * silence as disagreement while ignoring whatever the schema's other documents said.
  */
 class ConformanceAcrossDocumentsTest {
 
@@ -67,9 +67,8 @@ class ConformanceAcrossDocumentsTest {
     private static final String ONE_RULE =
             "SHACL/TTL/61970-600-2_DiagramLayout-AP-Con-Complex-InverseAssociation-SHACL.ttl";
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier(DATASET, "http://ex.org/DiagramLayout");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier GRAPH = new GraphIdentifier(WORKSPACE, "DiagramLayout");
 
     /** How many property constraints the profile implies. Asserted, not assumed, in the tests. */
     private static final int IMPLIED = 49;
@@ -83,7 +82,7 @@ class ConformanceAcrossDocumentsTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
 
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.source(Path.of(BASE + VOCABULARY).toUri().toString()).parse(schema);
@@ -135,7 +134,8 @@ class ConformanceAcrossDocumentsTest {
 
         var report = service.compare(GRAPH);
 
-        // The question is about the graph's constraints, and the neighbouring document states them.
+        // The question is about the schema's constraints, and the neighbouring document states
+        // them.
         assertThat(report.getCompared()).isEqualTo(IMPLIED);
         assertThat(report.getMissingInDocumentCount()).isZero();
         assertThat(report.isConforms()).isTrue();
@@ -150,7 +150,7 @@ class ConformanceAcrossDocumentsTest {
     void aDisabledDocumentDoesNotCount() throws IOException {
         var simple = add("simple.ttl", official(SIMPLE));
         add("one-rule.ttl", official(ONE_RULE));
-        documents.updateShapesDocument(GRAPH.datasetName(), simple, null, false, null, null);
+        documents.updateShapesDocument(GRAPH.workspaceName(), simple, null, false, null, null);
 
         var report = service.compare(GRAPH);
 
@@ -161,7 +161,8 @@ class ConformanceAcrossDocumentsTest {
     @Test
     void aDocumentApplyingToAnotherSchemaIsNotRead() throws IOException {
         var elsewhere = add("elsewhere.ttl", official(SIMPLE));
-        documents.updateShapesDocument(GRAPH.datasetName(), elsewhere, null, null, null, List.of());
+        documents.updateShapesDocument(
+                GRAPH.workspaceName(), elsewhere, null, null, null, List.of());
 
         var report = service.compare(GRAPH);
 
@@ -174,14 +175,13 @@ class ConformanceAcrossDocumentsTest {
         assertThatThrownBy(
                         () ->
                                 service.compare(
-                                        new GraphIdentifier(
-                                                GRAPH.datasetName(), "http://example.org/nowhere")))
+                                        new GraphIdentifier(GRAPH.workspaceName(), "nowhere")))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void aReportNamesTheSchemaItIsAbout() {
-        assertThat(service.compare(GRAPH).getSchemaUri()).isEqualTo(GRAPH.graphUri());
+        assertThat(service.compare(GRAPH).getSchemaName()).isEqualTo(GRAPH.schemaName());
     }
 
     // -------------------------------------------------------------------------
@@ -239,8 +239,8 @@ class ConformanceAcrossDocumentsTest {
     private UUID add(String name, String turtle) {
         return documents
                 .createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        GRAPH.workspaceName(),
+                        List.of(GRAPH.schemaName()),
                         name,
                         null,
                         turtle,

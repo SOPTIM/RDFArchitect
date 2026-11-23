@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.services.shacl.conformance.ConformanceUseCase;
 import org.rdfarchitect.shacl.dto.ConformanceReport;
 import org.slf4j.Logger;
@@ -46,13 +46,11 @@ import org.springframework.web.bind.annotation.RestController;
  * a report worth looking at twice should be a URL.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/conformance")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/conformance")
 @RequiredArgsConstructor
 public class ConformanceRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ConformanceRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ConformanceUseCase conformanceUseCase;
 
@@ -73,7 +71,12 @@ public class ConformanceRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ConformanceReport.class)))
+                                        schema =
+                                                @Schema(implementation = ConformanceReport.class))),
+                @ApiResponse(responseCode = "400", description = "The schema name is not valid."),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "The workspace or the schema does not exist.")
             })
     @GetMapping
     public ConformanceReport compare(
@@ -83,18 +86,17 @@ public class ConformanceRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(description = "The uri of the schema to compare.")
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
+            @Parameter(description = "The name of the schema to compare.")
                     @RequestParam(name = "schema")
-                    String schemaUri) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/shacl/conformance\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/conformance\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         return conformanceUseCase.compare(
-                new GraphIdentifier(
-                        datasetName, expandURIUseCase.expandUri(datasetName, schemaUri)));
+                new GraphIdentifier(workspaceName, SchemaNames.validate(schemaName)));
     }
 }

@@ -20,6 +20,7 @@ package org.rdfarchitect.services.shacl.conformance;
 import org.apache.jena.graph.Node;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
+import org.rdfarchitect.services.shacl.effective.ConstraintFormatter;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
@@ -146,15 +147,15 @@ final class ConformanceComparator {
     private record Context(PrefixMapping prefixes, ClassHierarchy hierarchy) {
 
         String describe(EffectiveConstraints.Constraint constraint) {
-            return EffectiveConstraints.describe(constraint, prefixes, hierarchy);
+            return ConstraintFormatter.describe(constraint, prefixes, hierarchy);
         }
 
         String terms(Set<String> iris) {
-            return EffectiveConstraints.terms(iris, prefixes);
+            return ConstraintFormatter.terms(iris, prefixes);
         }
 
         String classes(Set<String> iris) {
-            return EffectiveConstraints.terms(hierarchy.roots(iris), prefixes);
+            return ConstraintFormatter.terms(hierarchy.roots(iris), prefixes);
         }
 
         /**
@@ -296,7 +297,7 @@ final class ConformanceComparator {
         if (!extra.isEmpty()) {
             reasons.add(
                     "The document allows %s, which the schema does not."
-                            .formatted(EffectiveConstraints.values(extra, context.prefixes())));
+                            .formatted(ConstraintFormatter.values(extra, context.prefixes())));
         }
         if (exceeds(schema.minCount(), document.maxCount())) {
             reasons.add(

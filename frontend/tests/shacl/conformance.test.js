@@ -27,11 +27,11 @@ import ConformanceReportView from "../../src/routes/shacl/workbench/ConformanceR
 
 const CIM = "http://iec.ch/TC57/CIM100#";
 const DOCUMENT = "eq-document-id";
-const SCHEMA = "http://ex.org/EQ";
+const SCHEMA = "EQ";
 const DOCUMENTS = [{ id: DOCUMENT, name: "official.ttl" }];
 
 const REPORT = {
-    schemaUri: SCHEMA,
+    schemaName: SCHEMA,
     documents: DOCUMENTS,
     conforms: false,
     compared: 1343,
@@ -83,7 +83,7 @@ function fakeServer(overrides = {}) {
 
 function viewFor(server) {
     return new ConformanceView({
-        datasetName: "cgmes",
+        workspaceName: "cgmes",
         requestOptions: { fetch: server.fetch },
     });
 }
@@ -144,7 +144,7 @@ describe("ConformanceView", () => {
 
         expect(server.requests[0].schema).toBe(SCHEMA);
         expect(server.requests[0].path).toBe(
-            "/api/datasets/cgmes/shacl/conformance",
+            "/api/workspaces/cgmes/shacl/conformance",
         );
         expect(view.reportFor(SCHEMA)).toEqual(REPORT);
     });
@@ -176,7 +176,7 @@ describe("ConformanceView", () => {
         expect(view.error).toBeNull();
         expect(view.failedOn).toBeNull();
         expect(view.reportFor(SCHEMA)).toEqual(REPORT);
-        expect(view.reportFor("http://ex.org/other")).toBeNull();
+        expect(view.reportFor("other")).toBeNull();
     });
 
     test("forgetting drops every report", async () => {
@@ -198,7 +198,7 @@ describe("ConformanceReportView", () => {
         mounted = mount(ConformanceReportView, {
             target,
             props: {
-                schemaUri: SCHEMA,
+                schemaName: SCHEMA,
                 schemaLabel: "Equipment",
                 documents: DOCUMENTS,
                 ...props,
@@ -408,7 +408,7 @@ describe("ConformanceReportView", () => {
 
     test("shows a schema's own report, not the last one made", () => {
         const view = render({
-            conformance: conformance({ reportedOn: "http://ex.org/other" }),
+            conformance: conformance({ reportedOn: "other" }),
         });
 
         expect(view.textContent).not.toContain("contradict each other");

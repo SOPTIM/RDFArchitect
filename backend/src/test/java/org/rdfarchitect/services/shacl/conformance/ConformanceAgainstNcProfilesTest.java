@@ -53,8 +53,7 @@ class ConformanceAgainstNcProfilesTest {
     private static final String VOCABULARY = "RDFS/EquipmentReliability-AP-Voc-RDFS2020.rdf";
     private static final String CONSTRAINTS = "SHACL/EquipmentReliability-AP-Con-Simple-SHACL.ttl";
 
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier("nc", "http://ex.org/EquipmentReliability");
+    private static final GraphIdentifier GRAPH = new GraphIdentifier("nc", "EquipmentReliability");
 
     private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
     private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
@@ -65,15 +64,15 @@ class ConformanceAgainstNcProfilesTest {
     @BeforeEach
     void setUp() throws IOException {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(GRAPH.datasetName());
+        databasePort.createDataset(GRAPH.workspaceName());
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.source(Path.of(BASE, VOCABULARY).toUri().toString()).parse(schema);
         DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
         documentId =
                 new SHACLStoringService(databasePort)
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                GRAPH.workspaceName(),
+                                List.of(GRAPH.schemaName()),
                                 "er.ttl",
                                 null,
                                 Files.readString(Path.of(BASE, CONSTRAINTS)),

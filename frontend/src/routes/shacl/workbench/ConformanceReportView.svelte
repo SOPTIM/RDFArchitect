@@ -49,7 +49,7 @@
 
     let {
         conformance,
-        schemaUri,
+        schemaName,
         schemaLabel = "",
         /** The enabled documents applying to the schema, which are what gets compared. */
         documents = [],
@@ -108,9 +108,9 @@
     /** How many classes a folded finding is about, once listed in full, then counted. */
     const CLASSES_SHOWN = 3;
 
-    const report = $derived(conformance.reportFor(schemaUri));
+    const report = $derived(conformance.reportFor(schemaName));
     const error = $derived(
-        conformance.failedOn === schemaUri ? conformance.error : null,
+        conformance.failedOn === schemaName ? conformance.error : null,
     );
 
     const verdict = $derived(conformanceVerdict(report));
@@ -166,7 +166,7 @@
     >
         <h2
             class="text-default-text grow truncate text-sm font-semibold"
-            title={schemaUri}
+            title={schemaName}
         >
             Compare {schemaLabel} with its documents
         </h2>
@@ -175,7 +175,7 @@
                 height={7}
                 variant="inline"
                 disabled={conformance.running || documents.length === 0}
-                callOnClick={() => conformance.run(schemaUri)}
+                callOnClick={() => conformance.run(schemaName)}
             >
                 <span class="flex items-center gap-2 text-sm">
                     <Fa icon={faScaleBalanced} />

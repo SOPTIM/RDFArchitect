@@ -54,7 +54,7 @@ class ConformanceAcrossProfilesTest {
     private static final String CGMES = LIBRARY + "CGMES/CurrentRelease/RDFS/61970-600-2_";
     private static final String NC = LIBRARY + "NCP/CurrentRelease/";
 
-    private static final String DATASET = "workspace";
+    private static final String WORKSPACE = "workspace";
 
     private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
     private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
@@ -64,9 +64,9 @@ class ConformanceAcrossProfilesTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
-        load("http://ex.org/EQ", CGMES + "Equipment-AP-Voc-RDFS2020.rdf");
-        load("http://ex.org/SSH", CGMES + "SteadyStateHypothesis-AP-Voc-RDFS2020.rdf");
+        databasePort.createDataset(WORKSPACE);
+        load("EQ", CGMES + "Equipment-AP-Voc-RDFS2020.rdf");
+        load("SSH", CGMES + "SteadyStateHypothesis-AP-Voc-RDFS2020.rdf");
     }
 
     @AfterEach
@@ -79,8 +79,9 @@ class ConformanceAcrossProfilesTest {
     void anNcProfileIsComparedAgainstTheClassesItBuildsOn() {
         var report = compareOfficial("SteadyStateInstruction");
 
-        // Generated from the NC graph alone, every constraint on a CGMES class was "not in the
-        // schema" (379 of them) — with that class declared right next to it.
+        // Generated from the NC schema alone, every constraint on a CGMES class would be "not in
+        // the
+        // schema", with that class declared right next to it.
         assertThat(report.getCompared()).isGreaterThan(600);
         assertThat(report.getContradictedCount()).isZero();
         assertThat(report.getDifferentCount()).isZero();
@@ -97,7 +98,7 @@ class ConformanceAcrossProfilesTest {
     }
 
     @Test
-    void aGraphIsOnlyAskedToCoverWhatItDeclaresItself() {
+    void aSchemaIsOnlyAskedToCoverWhatItDeclaresItself() {
         var report = compareOfficial("SteadyStateInstruction");
 
         assertThat(report.getFindings())
@@ -116,7 +117,7 @@ class ConformanceAcrossProfilesTest {
             files.filter(file -> !file.getFileName().toString().startsWith("AssessedElement"))
                     .filter(file -> file.toString().endsWith(".rdf"))
                     .sorted()
-                    .forEach(file -> load("http://ex.org/" + file.getFileName(), file.toString()));
+                    .forEach(file -> load(schemaNameOf(file), file.toString()));
         }
         var report = compareOfficial("AssessedElement");
 
@@ -130,7 +131,7 @@ class ConformanceAcrossProfilesTest {
 
     @Test
     void askingAgainGivesTheSameAnswer() {
-        var graph = load("http://ex.org/AE", NC + "RDFS/AssessedElement-AP-Voc-RDFS2020.rdf");
+        var graph = load("AE", NC + "RDFS/AssessedElement-AP-Voc-RDFS2020.rdf");
         var documentId = document(graph, "AssessedElement");
 
         var first = service.compare(graph);
@@ -143,12 +144,12 @@ class ConformanceAcrossProfilesTest {
     void aClassIsAbstractOrNotAsTheCheckedProfileSaysNotAsAnotherDoes() {
         // SteadyStateHypothesis marks cim:Equipment concrete; Equipment does not. Taking SSH's word
         // expected the Equipment constraints to state rules on the abstract class itself.
-        var eq = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+        var eq = new GraphIdentifier(WORKSPACE, "EQ");
         var id =
                 documents
                         .createShapesDocument(
-                                eq.datasetName(),
-                                List.of(eq.graphUri()),
+                                eq.workspaceName(),
+                                List.of(eq.schemaName()),
                                 "eq.ttl",
                                 null,
                                 read(
@@ -169,8 +170,7 @@ class ConformanceAcrossProfilesTest {
     }
 
     private ConformanceReport compareOfficial(String profile) {
-        var graph =
-                load("http://ex.org/" + profile, NC + "RDFS/" + profile + "-AP-Voc-RDFS2020.rdf");
+        var graph = load(profile, NC + "RDFS/" + profile + "-AP-Voc-RDFS2020.rdf");
         document(graph, profile);
         return service.compare(graph);
     }
@@ -178,8 +178,8 @@ class ConformanceAcrossProfilesTest {
     private UUID document(GraphIdentifier graph, String profile) {
         return documents
                 .createShapesDocument(
-                        graph.datasetName(),
-                        List.of(graph.graphUri()),
+                        graph.workspaceName(),
+                        List.of(graph.schemaName()),
                         profile + ".ttl",
                         null,
                         read(NC + "SHACL/" + profile + "-AP-Con-Simple-SHACL.ttl"),
@@ -187,10 +187,14 @@ class ConformanceAcrossProfilesTest {
                 .getId();
     }
 
-    private GraphIdentifier load(String graphUri, String file) {
+    private static String schemaNameOf(Path file) {
+        return file.getFileName().toString().replaceFirst("-AP-Voc-RDFS2020\\.rdf$", "");
+    }
+
+    private GraphIdentifier load(String schemaName, String file) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.source(Path.of(file).toUri().toString()).parse(graph);
-        var identifier = new GraphIdentifier(DATASET, graphUri);
+        var identifier = new GraphIdentifier(WORKSPACE, schemaName);
         DatabaseFixtures.createGraph(databasePort, identifier, graph);
         return identifier;
     }

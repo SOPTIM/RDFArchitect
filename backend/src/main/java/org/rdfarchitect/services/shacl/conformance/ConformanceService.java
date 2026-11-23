@@ -65,13 +65,13 @@ import java.util.stream.Collectors;
  * schema's constraints are their conjunction, and official releases split their rules across files
  * on purpose — reading one alone reported its neighbours' coverage as missing.
  *
- * <p>The left-hand side is the <em>workspace's</em> schema, scoped to this graph. Profiles build on
- * each other — an NC profile adds properties to classes the Equipment profile declares, and
- * inherits everything else from it — so generating from one graph alone left NC documents with
- * hundreds of constraints "the schema does not have", with Equipment loaded right next to it. What
- * the graph is asked to cover is still only its own properties; what the documents are compared
- * against is everything the workspace says about the classes they target. Where two graphs declare
- * the same property, the graph being compared speaks for it.
+ * <p>The left-hand side is the <em>workspace's</em> schemas, scoped to this schema. Profiles build
+ * on each other — an NC profile adds properties to classes the Equipment profile declares, and
+ * inherits everything else from it — so generating from one schema alone would leave NC documents
+ * with hundreds of constraints "the schema does not have", with Equipment loaded right next to it.
+ * What the schema is asked to cover is still only its own properties; what the documents are
+ * compared against is everything the workspace says about the classes they target. Where two
+ * schemas declare the same property, the schema being compared speaks for it.
  *
  * <p>Inverse cardinality is left out. RDFArchitect states it as {@code sh:path [ sh:inversePath …
  * ]}, a path expression rather than a property, and there is nothing on the other side to line it
@@ -79,7 +79,7 @@ import java.util.stream.Collectors;
  */
 public class ConformanceService implements ConformanceUseCase {
 
-    /** Generated schemas to keep. A handful: one per graph someone is looking at. */
+    /** Generated schemas to keep. A handful: one per schema someone is looking at. */
     private static final int MAX_CACHED = 8;
 
     private final DatabasePort databasePort;
@@ -88,7 +88,7 @@ public class ConformanceService implements ConformanceUseCase {
      * What the schema implies, per workspace content.
      *
      * <p>Generating shapes takes seconds on a large profile (about ten for CGMES Dynamics), and the
-     * report is asked for again every time the panel opens. The key holds every graph's version,
+     * report is asked for again every time the panel opens. The key holds every schema's version,
      * because the scope is the whole workspace; and the session, because the in-memory database is
      * per session.
      */
@@ -118,15 +118,15 @@ public class ConformanceService implements ConformanceUseCase {
 
     private record CacheKey(
             String sessionId,
-            String datasetName,
-            String graphUri,
-            Map<String, UUID> graphVersions,
+            String workspaceName,
+            String schemaName,
+            Map<String, UUID> schemaVersions,
             Set<String> targetedClasses) {}
 
     /**
-     * @param constraints what the schema implies for the classes that matter to this graph
-     * @param ownClasses the classes this graph declares
-     * @param ownProperties the properties this graph declares; with {@code ownClasses}, what it is
+     * @param constraints what the schema implies for the classes that matter to it
+     * @param ownClasses the classes this schema declares
+     * @param ownProperties the properties this schema declares; with {@code ownClasses}, what it is
      *     asked to cover
      * @param properties every property the workspace declares
      */
@@ -138,9 +138,9 @@ public class ConformanceService implements ConformanceUseCase {
             Set<String> properties) {
 
         /**
-         * Whether this graph is expected to state {@code key} itself. Profiles re-declare the
+         * Whether this schema is expected to state {@code key} itself. Profiles re-declare the
          * classes and properties they share — nearly every one carries {@code
-         * IdentifiedObject.name} — so a property alone would hold each graph to account for every
+         * IdentifiedObject.name} — so a property alone would hold each schema to account for every
          * class in the workspace.
          */
         boolean owns(EffectiveConstraints.Key key) {
@@ -149,22 +149,19 @@ public class ConformanceService implements ConformanceUseCase {
     }
 
     @Override
-    public ConformanceReport compare(GraphIdentifier graphIdentifier) {
-        if (!databasePort
-                .listGraphUris(graphIdentifier.datasetName())
-                .contains(graphIdentifier.graphUri())) {
-            throw new ResourceNotFoundException(
-                    "No schema with URI " + graphIdentifier.graphUri() + ".");
+    public ConformanceReport compare(GraphIdentifier schema) {
+        if (!databasePort.listSchemaNames(schema.workspaceName()).contains(schema.schemaName())) {
+            throw new ResourceNotFoundException("No schema named " + schema.schemaName() + ".");
         }
-        var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var prefixes = databasePort.getPrefixMapping(schema.workspaceName());
 
         var documentShapes = new LinkedHashMap<String, Graph>();
         var documentRefs = new ArrayList<ConformanceDocument>();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(schema.workspaceName(), ReadWrite.READ)) {
             transaction.shapesDocuments().values().stream()
                     .filter(ShapesDocument::isEnabled)
-                    .filter(document -> document.getSchemas().contains(graphIdentifier.graphUri()))
+                    .filter(document -> document.getSchemas().contains(schema.schemaName()))
                     // Reading order, matching the document list and every other merge, so the
                     // report's "read together" line names them the way the workbench shows them.
                     .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
@@ -177,30 +174,30 @@ public class ConformanceService implements ConformanceUseCase {
                             });
         }
 
-        var schema = impliedFor(graphIdentifier, targetedClasses(documentShapes.values()));
+        var implies = impliedFor(schema, targetedClasses(documentShapes.values()));
         var asserted =
                 OtherVocabularies.leaveOut(
                         EffectiveConstraints.of(documentShapes),
-                        schema.hierarchy(),
-                        schema.properties());
+                        implies.hierarchy(),
+                        implies.properties());
         var stated = new HashSet<>(asserted.constraints().keySet());
         stated.addAll(asserted.advisory().keySet());
 
-        // Everything the workspace implies for a stated key is compared; only this graph's own
+        // Everything the workspace implies for a stated key is compared; only this schema's own
         // properties are expected to be covered.
         var implied =
                 new LinkedHashMap<EffectiveConstraints.Key, EffectiveConstraints.Constraint>();
-        schema.constraints()
+        implies.constraints()
                 .forEach(
                         (key, constraint) -> {
-                            if (schema.owns(key) || stated.contains(key)) {
+                            if (implies.owns(key) || stated.contains(key)) {
                                 implied.put(key, constraint);
                             }
                         });
 
         var findings =
                 ConformanceComparator.compare(
-                        implied, asserted, prefixes, schema.hierarchy(), schema.properties());
+                        implied, asserted, prefixes, implies.hierarchy(), implies.properties());
 
         var contradicted = count(findings, ConformanceFinding.Kind.CONTRADICTED);
         var different = count(findings, ConformanceFinding.Kind.DIFFERENT);
@@ -211,7 +208,7 @@ public class ConformanceService implements ConformanceUseCase {
         var compared = overlap(implied.keySet(), stated);
 
         return ConformanceReport.builder()
-                .schemaUri(graphIdentifier.graphUri())
+                .schemaName(schema.schemaName())
                 .documents(List.copyOf(documentRefs))
                 .conforms(contradicted == 0 && different == 0 && notInSchema == 0)
                 .compared(compared)
@@ -227,14 +224,14 @@ public class ConformanceService implements ConformanceUseCase {
                 .build();
     }
 
-    /** The schema's side, from the cache unless some graph of the workspace has changed. */
-    private Implied impliedFor(GraphIdentifier graphIdentifier, Set<String> targetedClasses) {
+    /** The schema's side, from the cache unless some schema of the workspace has changed. */
+    private Implied impliedFor(GraphIdentifier schema, Set<String> targetedClasses) {
         var key =
                 new CacheKey(
                         SessionContext.getSessionId(),
-                        graphIdentifier.datasetName(),
-                        graphIdentifier.graphUri(),
-                        graphVersions(graphIdentifier.datasetName()),
+                        schema.workspaceName(),
+                        schema.schemaName(),
+                        schemaVersions(schema.workspaceName()),
                         targetedClasses);
         synchronized (cache) {
             var cached = cache.get(key);
@@ -242,10 +239,10 @@ public class ConformanceService implements ConformanceUseCase {
                 return cached;
             }
         }
-        var implied = generate(graphIdentifier, targetedClasses);
-        // Generation reads the graphs again; a commit in between means the result describes newer
+        var implied = generate(schema, targetedClasses);
+        // Generation reads the schemas again; a commit in between means the result describes newer
         // content than the key, and filing it under the older versions would outlive an undo.
-        if (key.graphVersions().equals(graphVersions(graphIdentifier.datasetName()))) {
+        if (key.schemaVersions().equals(schemaVersions(schema.workspaceName()))) {
             synchronized (cache) {
                 cache.put(key, implied);
             }
@@ -253,24 +250,24 @@ public class ConformanceService implements ConformanceUseCase {
         return implied;
     }
 
-    private Implied generate(GraphIdentifier graphIdentifier, Set<String> targetedClasses) {
-        var own = readGraph(graphIdentifier);
+    private Implied generate(GraphIdentifier schema, Set<String> targetedClasses) {
+        var own = readGraph(schema);
         var ownProperties = subjectsOf(own, RDFS.domain.asNode());
         var ownClasses = ClassHierarchy.of(own);
 
-        // This graph's own statements, then everything else the workspace says — except about
-        // the properties this graph declares, which it defines for itself, and about whether its
+        // This schema's own statements, then everything else the workspace says — except about
+        // the properties this schema declares, which it defines for itself, and about whether its
         // own classes are abstract. Profiles disagree on that: SteadyStateHypothesis marks
         // cim:Equipment concrete, Equipment does not, and taking SSH's word held the Equipment
         // constraints to account for rules on an abstract class no official file states.
         var ownClassUris = ownClassesOf(own);
         var stereotype = CIMS.stereotype.asNode();
         var union = copyOf(own);
-        for (String graphUri : databasePort.listGraphUris(graphIdentifier.datasetName())) {
-            if (graphUri.equals(graphIdentifier.graphUri())) {
+        for (String schemaName : databasePort.listSchemaNames(schema.workspaceName())) {
+            if (schemaName.equals(schema.schemaName())) {
                 continue;
             }
-            var other = readGraph(new GraphIdentifier(graphIdentifier.datasetName(), graphUri));
+            var other = readGraph(new GraphIdentifier(schema.workspaceName(), schemaName));
             other.find()
                     .forEachRemaining(
                             triple -> {
@@ -288,7 +285,7 @@ public class ConformanceService implements ConformanceUseCase {
         }
 
         var ontology = ModelFactory.createModelForGraph(union);
-        ontology.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+        ontology.setNsPrefixes(databasePort.getPrefixMapping(schema.workspaceName()));
         var shapes =
                 new SHACLFromCIMGenerator(
                                 ontology,
@@ -335,25 +332,21 @@ public class ConformanceService implements ConformanceUseCase {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    /** Committed version id per graph, which together identify the workspace's schema. */
-    private Map<String, UUID> graphVersions(String datasetName) {
+    /** Committed version id per schema, which together identify what the workspace declares. */
+    private Map<String, UUID> schemaVersions(String workspaceName) {
         var versions = new LinkedHashMap<String, UUID>();
-        for (String graphUri : databasePort.listGraphUris(datasetName)) {
-            var identifier = new GraphIdentifier(datasetName, graphUri);
-            try (var transaction =
-                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(identifier.graphUri());
-                versions.put(graphUri, ctx.getRdfGraphVersion());
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
+                versions.put(schemaName, transaction.graph(schemaName).getRdfGraphVersion());
             }
         }
         return versions;
     }
 
-    private Graph readGraph(GraphIdentifier identifier) {
+    private Graph readGraph(GraphIdentifier schema) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(identifier.graphUri());
-            return copyOf(ctx.getRdfGraph());
+                databasePort.beginTransaction(schema.workspaceName(), ReadWrite.READ)) {
+            return copyOf(transaction.graph(schema.schemaName()).getRdfGraph());
         }
     }
 

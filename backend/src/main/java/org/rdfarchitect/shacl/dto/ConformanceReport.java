@@ -32,7 +32,8 @@ import java.util.List;
 @Builder
 public class ConformanceReport {
 
-    private String schemaUri;
+    /** The schema compared. */
+    private String schemaName;
 
     /**
      * True when nothing the two both state disagrees, and the documents state nothing the schema

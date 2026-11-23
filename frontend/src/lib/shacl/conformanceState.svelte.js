@@ -132,36 +132,36 @@ export class ConformanceView {
     /** The schema a failed comparison was about, so its message stays with it. */
     failedOn = $state(null);
 
-    #datasetName;
+    #workspaceName;
     #requestOptions;
 
-    constructor({ datasetName, requestOptions = {} }) {
-        this.#datasetName = datasetName;
+    constructor({ workspaceName, requestOptions = {} }) {
+        this.#workspaceName = workspaceName;
         this.#requestOptions = requestOptions;
     }
 
-    /** The comparison last made for `schemaUri`, or null when there is none. */
-    reportFor(schemaUri) {
-        return schemaUri ? (this.reports[schemaUri] ?? null) : null;
+    /** The comparison last made for `schemaName`, or null when there is none. */
+    reportFor(schemaName) {
+        return schemaName ? (this.reports[schemaName] ?? null) : null;
     }
 
-    async run(schemaUri) {
-        if (!schemaUri || this.running) {
+    async run(schemaName) {
+        if (!schemaName || this.running) {
             return null;
         }
         this.running = true;
         try {
             const { data, error } = await compare({
                 ...this.#requestOptions,
-                path: { datasetName: this.#datasetName },
-                query: { schema: schemaUri },
+                path: { workspaceName: this.#workspaceName },
+                query: { schema: schemaName },
             });
             if (error) {
                 this.error = "The schema could not be compared.";
-                this.failedOn = schemaUri;
+                this.failedOn = schemaName;
                 return null;
             }
-            this.reports = { ...this.reports, [schemaUri]: data };
+            this.reports = { ...this.reports, [schemaName]: data };
             this.error = null;
             this.failedOn = null;
             return data;

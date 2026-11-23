@@ -576,7 +576,7 @@
                             class={ROW_ACTION}
                             title="Compare with the schema"
                             aria-label={`Compare ${schema.label} with its documents`}
-                            onclick={() => workbench.compare(schema.uri)}
+                            onclick={() => workbench.compare(schema.name)}
                         >
                             <Fa icon={faScaleBalanced} />
                         </button>

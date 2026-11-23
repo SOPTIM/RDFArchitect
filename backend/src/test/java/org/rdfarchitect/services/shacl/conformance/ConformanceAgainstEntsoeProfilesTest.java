@@ -55,9 +55,8 @@ class ConformanceAgainstEntsoeProfilesTest {
     private static final String CONSTRAINTS =
             "SHACL/TTL/61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl";
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier(DATASET, "http://ex.org/CoreEquipment");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier GRAPH = new GraphIdentifier(WORKSPACE, "CoreEquipment");
 
     private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
     private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
@@ -68,7 +67,7 @@ class ConformanceAgainstEntsoeProfilesTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
 
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.source(uriOf(VOCABULARY)).parse(schema);
@@ -78,8 +77,8 @@ class ConformanceAgainstEntsoeProfilesTest {
         documentId =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                GRAPH.workspaceName(),
+                                List.of(GRAPH.schemaName()),
                                 "official.ttl",
                                 null,
                                 read(CONSTRAINTS),
@@ -150,8 +149,8 @@ class ConformanceAgainstEntsoeProfilesTest {
                         "http://iec.ch/TC57/CIM100#IdentifiedObject.name");
         try (var transaction =
                 databasePort.beginTransaction(
-                        GRAPH.datasetName(), org.apache.jena.query.ReadWrite.WRITE)) {
-            var graph = transaction.graph(GRAPH.graphUri()).getRdfGraph();
+                        GRAPH.workspaceName(), org.apache.jena.query.ReadWrite.WRITE)) {
+            var graph = transaction.graph(GRAPH.schemaName()).getRdfGraph();
             graph.stream(name, multiplicity, org.apache.jena.graph.Node.ANY)
                     .toList()
                     .forEach(graph::delete);
