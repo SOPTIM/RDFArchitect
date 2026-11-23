@@ -33,6 +33,13 @@ import java.util.Collection;
 public class SchemaNames {
 
     /**
+     * The longest name a graph may have. It stays well below the 255 characters a file name may
+     * have, so the name still fits once an export appends {@code -shacl.jsonld} or an import
+     * appends a number to make it unique.
+     */
+    public static final int MAX_LENGTH = 200;
+
+    /**
      * Returns {@code name} without surrounding whitespace, provided that is a valid graph name.
      *
      * @param name the name as given
@@ -44,7 +51,8 @@ public class SchemaNames {
             throw new InvalidSchemaNameException("");
         }
         var trimmed = name.strip();
-        if (trimmed.contains(";")
+        if (trimmed.length() > MAX_LENGTH
+                || trimmed.contains(";")
                 || trimmed.equals(".")
                 || trimmed.equals("..")
                 || !FileSystem.WINDOWS.isLegalFileName(trimmed)) {

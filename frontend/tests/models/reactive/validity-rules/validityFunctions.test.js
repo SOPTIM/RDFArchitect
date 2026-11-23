@@ -20,6 +20,7 @@ import {
     isInvalidSchemaName,
     isInvalidSuperClass,
     isManuallyEnteredConcreteStereotype,
+    SCHEMA_NAME_MAX_LENGTH,
 } from "../../../../src/lib/models/reactive/validity-rules/validityFunctions.js";
 import { CONCRETE_STEREOTYPE } from "../../../../src/lib/models/stereotype-constants.js";
 
@@ -101,6 +102,29 @@ describe("isInvalidSchemaName", () => {
             );
         },
     );
+
+    it("accepts a name of maximum length", () => {
+        expect(
+            isInvalidSchemaName("a".repeat(SCHEMA_NAME_MAX_LENGTH), []),
+        ).toEqual([]);
+    });
+
+    it("flags a name longer than the maximum", () => {
+        expect(
+            isInvalidSchemaName("a".repeat(SCHEMA_NAME_MAX_LENGTH + 1), []),
+        ).toEqual([
+            `A schema name must not be longer than ${SCHEMA_NAME_MAX_LENGTH} characters`,
+        ]);
+    });
+
+    it("counts the length without surrounding whitespace", () => {
+        expect(
+            isInvalidSchemaName(
+                `  ${"a".repeat(SCHEMA_NAME_MAX_LENGTH)}  `,
+                [],
+            ),
+        ).toEqual([]);
+    });
 
     it("flags a name the file system reserves", () => {
         expect(isInvalidSchemaName("CON", [])).toEqual(FORBIDDEN);

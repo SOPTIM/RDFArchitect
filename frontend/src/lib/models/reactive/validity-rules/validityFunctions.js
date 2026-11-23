@@ -27,6 +27,9 @@ import {
 } from "$lib/models/stereotype-constants.js";
 import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/index.js";
 
+/** Matches `SchemaNames.MAX_LENGTH` in the backend. */
+export const SCHEMA_NAME_MAX_LENGTH = 200;
+
 export function isInvalidUuid(uuid) {
     const violations = [];
     if (validateUuid(uuid)) {
@@ -95,7 +98,8 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
 /**
  * What is wrong with a schema name, after leading and trailing whitespace is cut off. A schema is
  * exported to a file named after it and travels in every API path, so its name has to be a file
- * name on every system and must not hold a `;`. The backend checks the same.
+ * name on every system and must not hold a `;`. Its length is capped well below what a file name
+ * may have, so an export can append a suffix such as `-shacl.jsonld`. The backend checks the same.
  *
  * @param {string} name the name as typed
  * @param {string[]} otherNames the names of the other schemas of the workspace
@@ -105,6 +109,11 @@ export function isInvalidSchemaName(name, otherNames) {
     const trimmed = (name ?? "").trim();
     if (!trimmed) {
         return ["must not be empty"];
+    }
+    if (trimmed.length > SCHEMA_NAME_MAX_LENGTH) {
+        return [
+            `A schema name must not be longer than ${SCHEMA_NAME_MAX_LENGTH} characters`,
+        ];
     }
     if (trimmed.includes(";") || !isValidFilename(trimmed)) {
         return [

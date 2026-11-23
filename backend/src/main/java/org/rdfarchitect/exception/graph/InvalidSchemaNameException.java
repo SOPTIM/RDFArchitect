@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.exception.graph;
 
+import org.rdfarchitect.database.SchemaNames;
 import org.springframework.http.HttpStatus;
 
 /** Exception is thrown when a graph is to be given a name it cannot have. */
@@ -28,7 +29,9 @@ public class InvalidSchemaNameException extends GraphException {
                 "'"
                         + name
                         + "' is not a valid schema name. A schema name must not be empty, must not"
-                        + " contain any of \\ / : * ? \" < > | ; or control characters and must"
-                        + " not be a name reserved by the file system.");
+                        + " be longer than "
+                        + SchemaNames.MAX_LENGTH
+                        + " characters, must not contain any of \\ / : * ? \" < > | ; or control"
+                        + " characters and must not be a name reserved by the file system.");
     }
 }

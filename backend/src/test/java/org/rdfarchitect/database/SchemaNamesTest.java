@@ -68,11 +68,25 @@ class SchemaNamesTest {
     }
 
     @Test
-    void validate_nameLongerThanAFileNameMayBe_isRejected() {
-        var name = "a".repeat(256);
+    void validate_nameOfMaximumLength_returnsIt() {
+        var name = "a".repeat(SchemaNames.MAX_LENGTH);
+
+        assertThat(SchemaNames.validate(name)).isEqualTo(name);
+    }
+
+    @Test
+    void validate_nameLongerThanTheMaximum_isRejected() {
+        var name = "a".repeat(SchemaNames.MAX_LENGTH + 1);
 
         assertThatExceptionOfType(InvalidSchemaNameException.class)
                 .isThrownBy(() -> SchemaNames.validate(name));
+    }
+
+    @Test
+    void validate_maximumLengthIsCountedAfterStripping_isAccepted() {
+        var name = "a".repeat(SchemaNames.MAX_LENGTH);
+
+        assertThat(SchemaNames.validate("  " + name + " ")).isEqualTo(name);
     }
 
     @Test
