@@ -36,7 +36,6 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.DL;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
@@ -63,7 +62,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var diagramUUID = createWorkspaceDiagram();
 
         service.addClassesToCustomDatasetDiagram(
-                graphIdentifier.datasetName(), diagramUUID, List.of(classAInDiagram()));
+                graphIdentifier.workspaceName(), diagramUUID, List.of(classAInDiagram()));
 
         var model = workspaceLayoutModel();
         assertThat(
@@ -78,13 +77,13 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void removeClassesFromCustomDatasetDiagram_mergedNodeUuid_removesTheClassBehindIt() {
-        var datasetName = graphIdentifier.datasetName();
+        var workspaceName = graphIdentifier.workspaceName();
         var diagramUUID = createWorkspaceDiagram();
         service.addClassesToCustomDatasetDiagram(
-                datasetName, diagramUUID, List.of(classAInDiagram()));
+                workspaceName, diagramUUID, List.of(classAInDiagram()));
 
         service.removeClassesFromCustomDatasetDiagram(
-                datasetName, diagramUUID, List.of(CrossProfileUtils.mergedUuid(CLASS_A_URI)));
+                workspaceName, diagramUUID, List.of(CrossProfileUtils.mergedUuid(CLASS_A_URI)));
 
         assertThat(workspaceDiagrams().get(diagramUUID).getClasses()).isEmpty();
         assertThat(
@@ -100,8 +99,8 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("package_and_class.ttl");
         var diagramUUID = UUID.randomUUID();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             ctx.getCustomDiagrams()
                     .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
             transaction.commit("created custom diagram");
@@ -117,15 +116,15 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     private static ClassInDiagram classAInDiagram() {
-        return new ClassInDiagram(CLASS_A_UUID, new URI(GRAPH_URI));
+        return new ClassInDiagram(CLASS_A_UUID, GRAPH_URI);
     }
 
     @AfterEach
     void cleanUpDatasetDiagrams() {
-        var datasetName = graphIdentifier.datasetName();
+        var workspaceName = graphIdentifier.workspaceName();
         withWorkspaceDiagrams(Map::clear);
         withWorkspaceLayoutModel(Model::removeAll);
-        deleteGraph(databasePort, new GraphIdentifier(datasetName, GRAPH_URI));
+        deleteGraph(databasePort, new GraphIdentifier(workspaceName, GRAPH_URI));
     }
 
     private static UUID createWorkspaceDiagram() {

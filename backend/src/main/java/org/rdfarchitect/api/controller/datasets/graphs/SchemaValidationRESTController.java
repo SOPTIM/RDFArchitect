@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +39,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/validate/{cgmesVersion}")
 @RequiredArgsConstructor
 public class SchemaValidationRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SchemaValidationRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SchemaValidationUseCase schemaValidationUseCase;
 
     @Operation(
@@ -75,28 +73,23 @@ public class SchemaValidationRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @PathVariable CGMESVersion cgmesVersion) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/validation\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var report =
                 schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI), cgmesVersion);
+                        new GraphIdentifier(workspaceName, schemaName), cgmesVersion);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/validation\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return report;
     }

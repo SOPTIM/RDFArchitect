@@ -39,22 +39,22 @@ public class UpdateDatasetService
     private final DatabasePort databasePort;
 
     @Override
-    public void createDataset(String datasetName) {
-        databasePort.createDataset(datasetName);
+    public void createDataset(String workspaceName) {
+        databasePort.createDataset(workspaceName);
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
-        databasePort.deleteDataset(datasetName);
+    public void deleteDataset(String workspaceName) {
+        databasePort.deleteDataset(workspaceName);
     }
 
     @Override
-    public void renameDataset(String oldDatasetName, String newDatasetName) {
-        databasePort.renameDataset(oldDatasetName, newDatasetName);
+    public void renameDataset(String oldWorkspaceName, String newWorkspaceName) {
+        databasePort.renameDataset(oldWorkspaceName, newWorkspaceName);
     }
 
     @Override
-    public void replaceNamespaces(String datasetName, List<CIMPrefixPair> namespaces) {
+    public void replaceNamespaces(String workspaceName, List<CIMPrefixPair> namespaces) {
         var prefixMapping = new PrefixMappingImpl();
         for (var namespace : namespaces) {
             var substitutedPrefix = RDFUtils.withoutColon(namespace.getSubstitutedPrefix());
@@ -64,7 +64,7 @@ public class UpdateDatasetService
             }
             prefixMapping.setNsPrefix(substitutedPrefix, namespace.getPrefix());
         }
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             transaction.setPrefixes(prefixMapping);
             transaction.commit("Changed the namespace prefixes");
         }

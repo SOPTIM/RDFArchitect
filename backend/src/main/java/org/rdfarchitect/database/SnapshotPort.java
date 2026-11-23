@@ -23,10 +23,10 @@ public interface SnapshotPort {
     /**
      * Creates a snapshot of the current state of the specified dataset
      *
-     * @param datasetName Name of the dataset to be snapshot
+     * @param workspaceName Name of the dataset to be snapshot
      * @return The Base64 token under which the snapshot has been persisted in the database
      */
-    String createSnapshot(String datasetName);
+    String createSnapshot(String workspaceName);
 
     /**
      * Fetches a snapshot from the database using the given Base64 token

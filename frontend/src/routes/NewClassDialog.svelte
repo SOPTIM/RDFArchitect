@@ -43,7 +43,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedSchemaName,
         lockedPackage,
         classLayoutPosition = null,
         onClassCreated = () => {},
@@ -52,7 +52,7 @@
     const uuid = uuidv4();
     const domIds = {
         workspaceName: "workspaceNameNewClass" + uuid,
-        graphURI: "graphUriNewClass" + uuid,
+        schemaName: "schemaNameNewClass" + uuid,
         classPackage: "classPackageNewClass" + uuid,
         classURINamespace: "classURINamespaceNewClass" + uuid,
         className: "classNameNewClass" + uuid,
@@ -65,7 +65,7 @@
     });
 
     let workspaceName = $state(null);
-    let graphURI = $state(null);
+    let schemaName = $state(null);
 
     let classPackage = $state(null);
     let classURINamespace = $state(null);
@@ -78,7 +78,7 @@
 
     let disableSubmit = $derived(
         !workspaceName ||
-            !graphURI ||
+            !schemaName ||
             !classPackage ||
             !classURINamespace?.value ||
             !className?.value ||
@@ -90,7 +90,7 @@
 
     $effect(async () => {
         const ds = workspaceName;
-        const graph = graphURI;
+        const graph = schemaName;
 
         await untrack(() => onWorkspaceOrGraphChanged(ds, graph));
     });
@@ -136,20 +136,20 @@
     async function onOpen() {
         workspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        schemaName = lockedSchemaName ?? editorState.selectedGraph.getValue();
 
         classURINamespace = new ReactiveValueWrapper(null);
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
 
-        if (!workspaceName || !graphURI) {
+        if (!workspaceName || !schemaName) {
             return;
         }
         namespaces = await workspaceStore.getNamespaces(workspaceName);
 
-        await getPackages(workspaceName, graphURI);
-        compareClasses = await getClasses(workspaceName, graphURI, false);
+        await getPackages(workspaceName, schemaName);
+        compareClasses = await getClasses(workspaceName, schemaName, false);
 
         classPackage = packageSelectionLocked
             ? applyLockedPackage()
@@ -176,20 +176,20 @@
     function clearOnWorkspaceChange() {
         namespaces = [];
         classURINamespace = null;
-        graphURI = null;
+        schemaName = null;
         packages = [];
         classPackage = null;
     }
 
-    async function getPackages(workspaceName, graphURI) {
-        if (!workspaceName || !graphURI) {
+    async function getPackages(workspaceName, schemaName) {
+        if (!workspaceName || !schemaName) {
             packages = [];
             return;
         }
 
         const result = (await packageStore.getPackages(
             workspaceName,
-            graphURI,
+            schemaName,
         )) ?? { internal: [], external: [] };
         packages = [...result.internal, ...result.external];
     }
@@ -197,7 +197,7 @@
     function snapshotFormState() {
         return {
             workspaceName,
-            graphURI,
+            schemaName,
             className: className?.value,
             classURIPrefix: classURINamespace?.value,
             packageDTO: classPackage?.uuid == null ? null : classPackage,
@@ -217,20 +217,20 @@
 
         return classStore.addClass(
             form.workspaceName,
-            form.graphURI,
+            form.schemaName,
             requestBody,
         );
     }
 
     function updateEditorSelection(form, classUUID) {
         editorState.selectedWorkspace.updateValue(form.workspaceName);
-        editorState.selectedGraph.updateValue(form.graphURI);
+        editorState.selectedGraph.updateValue(form.schemaName);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: form.packageUUID,
         });
         editorState.selectedClassWorkspace.updateValue(form.workspaceName);
-        editorState.selectedClassGraph.updateValue(form.graphURI);
+        editorState.selectedClassGraph.updateValue(form.schemaName);
         editorState.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,
             id: classUUID,
@@ -241,7 +241,7 @@
         onClassCreated({
             classUUID,
             workspaceName: form.workspaceName,
-            graphURI: form.graphURI,
+            schemaName: form.schemaName,
             packageUUID: form.packageUUID,
             className: form.className,
         });
@@ -272,9 +272,9 @@
     <div class="mx-2 flex h-full flex-col">
         <WorkspaceAndGraphSelection
             bind:workspace={workspaceName}
-            bind:graph={graphURI}
+            bind:graph={schemaName}
             {lockedWorkspaceName}
-            {lockedGraphUri}
+            {lockedSchemaName}
             allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
@@ -285,8 +285,8 @@
             id={domIds.classPackage}
             bind:value={classPackage}
             options={packages}
-            disabled={packageSelectionLocked || !workspaceName || !graphURI}
-            placeholder={workspaceName && graphURI
+            disabled={packageSelectionLocked || !workspaceName || !schemaName}
+            placeholder={workspaceName && schemaName
                 ? "Select package"
                 : "Select a schema first"}
             getOptionLabel={pkg => getPackageDisplayLabel(pkg.label)}

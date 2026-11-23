@@ -17,6 +17,7 @@
 
 import { includeIgnoreFile } from "@eslint/compat";
 import js from "@eslint/js";
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import * as typescriptParser from "@typescript-eslint/parser";
 import prettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import-x";
@@ -29,7 +30,8 @@ import ts from "typescript-eslint";
 
 import rdfaOrder from "./eslint-rules/index.js";
 import plainTextParser from "./eslint-rules/parsers/plaintext.js";
-import svelteConfig from "./svelte.config.js";
+
+const svelteConfig = { preprocess: vitePreprocess() };
 
 const gitignorePath = fileURLToPath(new URL("./.gitignore", import.meta.url));
 

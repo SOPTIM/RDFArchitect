@@ -23,7 +23,7 @@ import java.util.List;
 
 public interface ListPrefixesUseCase {
 
-    List<CIMPrefixPair> listPrefixes(String datasetName);
+    List<CIMPrefixPair> listPrefixes(String workspaceName);
 
-    String listFormattedPrefixes(String datasetName, String format);
+    String listFormattedPrefixes(String workspaceName, String format);
 }

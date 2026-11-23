@@ -112,8 +112,8 @@
         } else if (workspace && graph) {
             response = await validateSchema({
                 path: {
-                    datasetName: workspace,
-                    graphURI: graph,
+                    workspaceName: workspace,
+                    schemaName: graph,
                     cgmesVersion: cgmesVersion,
                 },
             });

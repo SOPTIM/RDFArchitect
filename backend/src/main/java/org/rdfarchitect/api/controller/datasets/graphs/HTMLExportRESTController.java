@@ -24,13 +24,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphHTMLUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -41,16 +39,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/htmlexport/{fileEnding}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/htmlexport/{fileEnding}")
 @RequiredArgsConstructor
 public class HTMLExportRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(HTMLExportRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ExportGraphHTMLUseCase exportGraphHTMLUseCase;
 
     @Operation(
@@ -73,12 +68,8 @@ public class HTMLExportRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -87,38 +78,26 @@ public class HTMLExportRESTController {
                     @RequestParam(defaultValue = "false")
                     boolean embedDiagrams) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/htmlexport\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/htmlexport\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var output =
                 exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
-                        fileEnding,
-                        embedDiagrams);
+                        new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
-        var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
-        }
+        var fileName = schemaName;
         fileName += ".html";
 
-        var headers = new HttpHeaders();
-        var contentDisposition = ContentDisposition.attachment().filename(fileName).build();
-        headers.setContentDisposition(contentDisposition);
+        var headers = DownloadHeaders.attachment(fileName);
         headers.setContentType(MediaType.TEXT_HTML);
-        // without this the browser hides the header from the frontend, which would then have to
-        // fall back to a generic file name
-        headers.setAccessControlExposeHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/htmlexport\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/htmlexport\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return body;
     }

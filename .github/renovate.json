@@ -7,5 +7,6 @@
   "dependencyDashboard": true,
   "labels": ["dependencies"],
   "minimumReleaseAge": "7 days",
+  "lockFileMaintenance": { "enabled": true },
   "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"]
 }

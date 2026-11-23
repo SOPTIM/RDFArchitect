@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/changes")
+@RequestMapping("api/workspaces/{workspaceName}/changes")
 @RequiredArgsConstructor
 public class ChangelogRESTController {
 
@@ -75,17 +75,17 @@ public class ChangelogRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/changes\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/changes\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var changes = changelogUseCase.listChanges(datasetName);
+        var changes = changelogUseCase.listChanges(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/changes\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/changes\" to \"{}\".",
+                workspaceName,
                 originURL);
         return changes;
     }

@@ -17,8 +17,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    isInvalidSchemaName,
     isInvalidSuperClass,
     isManuallyEnteredConcreteStereotype,
+    SCHEMA_NAME_MAX_LENGTH,
+    schemaNameFromFileName,
 } from "../../../../src/lib/models/reactive/validity-rules/validityFunctions.js";
 import { CONCRETE_STEREOTYPE } from "../../../../src/lib/models/stereotype-constants.js";
 
@@ -59,5 +62,127 @@ describe("isInvalidSuperClass", () => {
 
     it("flags anything that is neither a uuid nor a uri", () => {
         expect(isInvalidSuperClass("LimitSet")).toHaveLength(1);
+    });
+});
+
+describe("isInvalidSchemaName", () => {
+    const FORBIDDEN = [
+        'A schema name must not contain any of \\ / : * ? " < > | ; and must not be a name reserved by the file system',
+    ];
+
+    it.each(["my-profile", "Equipment Core", "a%b#c&d+e"])(
+        "accepts %j",
+        name => {
+            expect(isInvalidSchemaName(name, [])).toEqual([]);
+        },
+    );
+
+    it("ignores whitespace around the name", () => {
+        expect(isInvalidSchemaName("  Equipment  ", [])).toEqual([]);
+    });
+
+    it("flags an empty name", () => {
+        expect(isInvalidSchemaName("", [])).toEqual(["must not be empty"]);
+    });
+
+    it("flags a name of whitespace only", () => {
+        expect(isInvalidSchemaName("   ", [])).toEqual(["must not be empty"]);
+    });
+
+    it("flags a missing name", () => {
+        expect(isInvalidSchemaName(undefined, [])).toEqual([
+            "must not be empty",
+        ]);
+    });
+
+    it.each(["\\", "/", ":", "*", "?", '"', "<", ">", "|", ";"])(
+        "flags a name containing %j",
+        character => {
+            expect(isInvalidSchemaName(`a${character}b`, [])).toEqual(
+                FORBIDDEN,
+            );
+        },
+    );
+
+    it("accepts a name of maximum length", () => {
+        expect(
+            isInvalidSchemaName("a".repeat(SCHEMA_NAME_MAX_LENGTH), []),
+        ).toEqual([]);
+    });
+
+    it("flags a name longer than the maximum", () => {
+        expect(
+            isInvalidSchemaName("a".repeat(SCHEMA_NAME_MAX_LENGTH + 1), []),
+        ).toEqual([
+            `A schema name must not be longer than ${SCHEMA_NAME_MAX_LENGTH} characters`,
+        ]);
+    });
+
+    it("counts the length without surrounding whitespace", () => {
+        expect(
+            isInvalidSchemaName(
+                `  ${"a".repeat(SCHEMA_NAME_MAX_LENGTH)}  `,
+                [],
+            ),
+        ).toEqual([]);
+    });
+
+    it("flags a name the file system reserves", () => {
+        expect(isInvalidSchemaName("CON", [])).toEqual(FORBIDDEN);
+    });
+
+    it("flags a name another schema of the workspace already has", () => {
+        expect(isInvalidSchemaName("Equipment", ["Equipment"])).toEqual([
+            "A schema with this name already exists",
+        ]);
+    });
+
+    it("compares the trimmed name against the other schemas", () => {
+        expect(isInvalidSchemaName(" Equipment ", ["Equipment"])).toEqual([
+            "A schema with this name already exists",
+        ]);
+    });
+
+    it("accepts a name when there are no other schemas to compare against", () => {
+        expect(isInvalidSchemaName("Equipment", undefined)).toEqual([]);
+    });
+});
+
+describe("schemaNameFromFileName", () => {
+    it.each([
+        ["EQ", "EQ"],
+        ["EQ#2", "EQ#2"],
+        ["中文", "中文"],
+        ["a:b", "a_b"],
+        ["what?", "what_"],
+        ["a;b", "a_b"],
+        ["a<b>|c*", "a_b__c_"],
+        ["a\u0001b", "a_b"],
+        ["CON", "CON_"],
+        ["con", "con_"],
+        ["LPT1.v2", "LPT1_.v2"],
+        ["  EQ ", "EQ"],
+    ])("turns %j into %j", (fileName, expected) => {
+        expect(schemaNameFromFileName(fileName, "graph")).toBe(expected);
+    });
+
+    it.each(["", "   ", ".", "..", undefined])(
+        "takes the fallback for %j",
+        fileName => {
+            expect(schemaNameFromFileName(fileName, "graph")).toBe("graph");
+        },
+    );
+
+    it("cuts a name that is too long to the maximum", () => {
+        expect(schemaNameFromFileName("a".repeat(300), "graph")).toBe(
+            "a".repeat(SCHEMA_NAME_MAX_LENGTH),
+        );
+    });
+
+    it("does not cut a character in half", () => {
+        const name = `${"a".repeat(SCHEMA_NAME_MAX_LENGTH - 1)}😀`;
+        expect(schemaNameFromFileName(name, "graph")).toBe(
+            "a".repeat(SCHEMA_NAME_MAX_LENGTH - 1),
+        );
     });
 });

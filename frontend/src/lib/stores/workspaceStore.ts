@@ -17,9 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { loadSlot } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 import {
     listDatasets,
     deleteDataset,
@@ -31,6 +28,9 @@ import {
     renameDataset,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { loadSlot } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 
 export type WorkspaceInfo = {
     label: string;
@@ -100,7 +100,7 @@ function createWorkspaceStore() {
         console.log(`${LOG_PREFIX} Creating workspace "${workspaceName}"`);
 
         const { error } = await createDataset({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
         });
 
         if (error) {
@@ -140,8 +140,8 @@ function createWorkspaceStore() {
         console.log(`${LOG_PREFIX} Renaming workspace "${workspaceName}"`);
 
         const { error } = await renameDataset({
-            path: { datasetName: workspaceName },
-            query: { newDatasetName: newWorkspaceName },
+            path: { workspaceName: workspaceName },
+            query: { newWorkspaceName: newWorkspaceName },
         });
 
         if (error) {
@@ -180,7 +180,7 @@ function createWorkspaceStore() {
         console.log(`${LOG_PREFIX} Deleting workspace "${workspaceName}"`);
 
         const { error } = await deleteDataset({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
         });
 
         if (error) {
@@ -219,7 +219,7 @@ function createWorkspaceStore() {
         );
 
         const { error } = await replaceNamespaces({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
             body: namespaces,
         });
 
@@ -264,8 +264,8 @@ function createWorkspaceStore() {
         );
 
         const { error } = readOnly
-            ? await disableEditing({ path: { datasetName: workspaceName } })
-            : await enableEditing({ path: { datasetName: workspaceName } });
+            ? await disableEditing({ path: { workspaceName: workspaceName } })
+            : await enableEditing({ path: { workspaceName: workspaceName } });
 
         if (error) {
             const msg = await describeError(error);

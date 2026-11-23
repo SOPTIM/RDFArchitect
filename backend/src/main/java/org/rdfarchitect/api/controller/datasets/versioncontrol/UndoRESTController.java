@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/undo")
+@RequestMapping("api/workspaces/{workspaceName}/undo")
 @RequiredArgsConstructor
 public class UndoRESTController {
 
@@ -75,7 +75,7 @@ public class UndoRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The change the caller means to undo, as read from the undo"
@@ -83,18 +83,18 @@ public class UndoRESTController {
                     @RequestParam(required = false)
                     UUID expectedChangeId) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/undo\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/undo\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var entry =
                 expectedChangeId == null
-                        ? undoUseCase.undo(datasetName)
-                        : undoUseCase.undoIfLatest(datasetName, expectedChangeId);
+                        ? undoUseCase.undo(workspaceName)
+                        : undoUseCase.undoIfLatest(workspaceName, expectedChangeId);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/undo\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/undo\" to \"{}\".",
+                workspaceName,
                 originURL);
         return entry;
     }

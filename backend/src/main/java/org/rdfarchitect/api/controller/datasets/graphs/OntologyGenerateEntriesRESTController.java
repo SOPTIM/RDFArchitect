@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ontology.GenerateOntologyEntriesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +41,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/ontology/generate")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/ontology/generate")
 @RequiredArgsConstructor
 public class OntologyGenerateEntriesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(OntologyGenerateEntriesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GenerateOntologyEntriesUseCase generateOntologyEntriesUseCase;
 
     @Operation(
@@ -79,28 +77,23 @@ public class OntologyGenerateEntriesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology/generate\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var ontologyEntries =
                 generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology/generate\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return ontologyEntries;
     }

@@ -30,7 +30,7 @@ function file(overrides) {
         fileName: "graph.ttl",
         sizeBytes: 100,
         state: FileState.PENDING,
-        graphUri: null,
+        schemaName: null,
         ...overrides,
     };
 }
@@ -38,10 +38,10 @@ function file(overrides) {
 function running(status) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedGraphUris: [],
+        importedSchemaNames: [],
         failedImports: [],
         warnings: [],
         ...status,
@@ -135,7 +135,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedGraphUris: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
             }),
         );
 
@@ -150,7 +150,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedGraphUris: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
                 failedImports: ["broken.ttl"],
             }),
         );
@@ -164,7 +164,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedGraphUris: [
+                importedSchemaNames: [
                     "http://graph#first",
                     "http://graph#second",
                 ],
@@ -181,7 +181,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedGraphUris: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
             }),
         );
 
@@ -341,5 +341,33 @@ describe("ImportProgress", () => {
         expect(progress.finished).toBe(true);
         expect(progress.jobState).toBe(JobState.FAILED);
         expect(progress.errorMessage).toBe("Another import is still running.");
+    });
+
+    test("takes over the problems and notices of a workspace import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.FAILED,
+                errorMessage: "The workspace file cannot be imported.",
+                problems: ["manifest.json is missing."],
+                notices: ["Written by a newer version."],
+            }),
+        );
+
+        expect(progress.problems).toEqual(["manifest.json is missing."]);
+        expect(progress.notices).toEqual(["Written by a newer version."]);
+        expect(progress.errorMessage).toBe(
+            "The workspace file cannot be imported.",
+        );
+    });
+
+    test("has neither problems nor notices for a schema import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(running({ state: JobState.COMPLETED }));
+
+        expect(progress.problems).toEqual([]);
+        expect(progress.notices).toEqual([]);
     });
 });

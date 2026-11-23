@@ -81,7 +81,7 @@ public class SchemaComparisonFromFilesRESTController {
             @Parameter(description = "The second graph file.") @RequestParam("fileB")
                     MultipartFile fileB) {
         logger.info(
-                "Received POST request: \"/api/datasets/graphs/compare/files\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/schemas/compare/files\" from \"{}\".",
                 originURL);
 
         var changes = schemaComparisonUseCase.compareSchemas(fileA, fileB);

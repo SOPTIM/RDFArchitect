@@ -18,10 +18,12 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphUri } from "$lib/utils/graph-label.js";
+    import { schemaName } from "$lib/utils/graph-label.js";
 
     import {
         DiagramType,
@@ -32,17 +34,15 @@
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const uniqueId = uuidv4();
-    const defaultGraphUriPrefix = "http://graph#";
-    const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
     const workspaceInputId = `workspaceNameNewGraph-${uniqueId}`;
     const workspaceListId = `workspaceNamesNewGraph-${uniqueId}`;
-    const graphInputId = `graphUriNewGraph-${uniqueId}`;
+    const graphInputId = `schemaNameNewGraph-${uniqueId}`;
 
     let workspaceNameUserInput = $state("");
-    let graphUriUserInput = $state("");
+    let schemaNameUserInput = $state("");
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
-    let graphNames = $state([]);
+    let existingGraphs = $state([]);
 
     const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
     const workspaceIsReadOnly = $derived(
@@ -50,35 +50,25 @@
             readOnlyWorkspaces.includes(workspaceNameUserInput),
     );
 
-    const resolvedGraphUri = $derived(resolveGraphUri(graphUriUserInput));
-    const graphExists = $derived(
-        !!resolvedGraphUri &&
-            graphNames.some(graph => graphUri(graph) === resolvedGraphUri),
+    const resolvedSchemaName = $derived(schemaNameUserInput.trim());
+    const schemaNameViolations = $derived(
+        isInvalidSchemaName(
+            schemaNameUserInput,
+            existingGraphs.map(graph => schemaName(graph)),
+        ),
     );
     const disableSubmit = $derived(
         !workspaceNameUserInput ||
-            !resolvedGraphUri ||
             workspaceIsReadOnly ||
-            graphExists,
+            schemaNameViolations.length > 0,
     );
-
-    function resolveGraphUri(graphInput) {
-        const trimmedInput = graphInput.trim();
-        if (!trimmedInput) {
-            return "";
-        }
-        if (uriSchemePattern.test(trimmedInput)) {
-            return trimmedInput;
-        }
-        return defaultGraphUriPrefix + trimmedInput;
-    }
 
     async function onOpen() {
         workspaceNameUserInput =
             lockedWorkspaceName ??
             editorState.selectedWorkspace.getValue() ??
             "";
-        graphUriUserInput = "";
+        schemaNameUserInput = "";
 
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         readOnlyWorkspaces = [];
@@ -90,41 +80,42 @@
                 modifiableWorkspaces.push(workspace.label);
             }
         }
-        await refreshGraphNames();
+        await refreshExistingGraphs();
     }
 
     function onClose() {
         workspaceNameUserInput = "";
-        graphUriUserInput = "";
-        graphNames = [];
+        schemaNameUserInput = "";
+        existingGraphs = [];
     }
 
-    async function refreshGraphNames() {
+    async function refreshExistingGraphs() {
         if (!workspaceNameUserInput) {
-            graphNames = [];
+            existingGraphs = [];
             return;
         }
 
         if (!modifiableWorkspaces.includes(workspaceNameUserInput)) {
-            graphNames = [];
+            existingGraphs = [];
             return;
         }
 
-        graphNames = (await graphStore.getGraphs(workspaceNameUserInput)) ?? [];
+        existingGraphs =
+            (await graphStore.getGraphs(workspaceNameUserInput)) ?? [];
     }
 
     async function addGraph() {
         const workspaceNameLocal = workspaceNameUserInput;
-        const graphURILocal = resolvedGraphUri;
+        const schemaNameLocal = resolvedSchemaName;
 
         const { error } = await graphStore.addEmptyGraph(
             workspaceNameLocal,
-            graphURILocal,
+            schemaNameLocal,
         );
         if (error) return;
 
         editorState.selectedWorkspace.updateValue(workspaceNameLocal);
-        editorState.selectedGraph.updateValue(graphURILocal);
+        editorState.selectedGraph.updateValue(schemaNameLocal);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: "default",
@@ -156,7 +147,7 @@
                 list={workspaceListId}
                 placeholder="Workspace name"
                 bind:value={workspaceNameUserInput}
-                onchange={() => refreshGraphNames()}
+                onchange={() => refreshExistingGraphs()}
             />
             <datalist id={workspaceListId}>
                 {#each modifiableWorkspaces as workspaceName}
@@ -176,13 +167,13 @@
             class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
             id={graphInputId}
-            placeholder={defaultGraphUriPrefix}
+            placeholder="Schema name"
             autocomplete="off"
-            bind:value={graphUriUserInput}
+            bind:value={schemaNameUserInput}
         />
 
-        {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
+        {#if schemaNameUserInput}
+            <ViolationMessages violations={schemaNameViolations} />
         {/if}
     </div>
 </ActionDialog>

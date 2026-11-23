@@ -39,16 +39,16 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import NewClassDialog from "../../NewClassDialog.svelte";
+    import PackageEditorDialog from "../packageEditorDialog.svelte";
     import ClassEntry from "./ClassEntry.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import {
         isSelectedPackage,
         packageHighlight,
     } from "./packageNavigationUtils.svelte.js";
-    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import NewClassDialog from "../../NewClassDialog.svelte";
-    import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import { startPaste } from "./paste-flow.svelte.js";
     import PasteMenuItems from "./PasteMenuItems.svelte";
 
@@ -121,8 +121,8 @@
 
     function copyWorkspaceUrl() {
         const params = new URLSearchParams({
-            dataset: workspaceNavEntry.id,
-            graph: graphNavEntry.id,
+            workspace: workspaceNavEntry.id,
+            schema: graphNavEntry.id,
             package: packageNavEntry.id,
         });
         const url = `${window.location.origin}/mainpage?${params}`;
@@ -263,7 +263,7 @@
     <NewClassDialog
         bind:showDialog={showNewClassDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphUri={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         lockedPackage={packageNavEntry.data}
     />
 {/if}
@@ -272,7 +272,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphUri={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
@@ -281,7 +281,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddToWorkspaceDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphUri={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
@@ -290,7 +290,7 @@
     <PackageEditorDialog
         bind:showDialog={showPackageEditorDialog}
         workspaceName={workspaceNavEntry.id}
-        graphUri={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         pack={packageNavEntry.data}
         {readonly}
     />
@@ -300,7 +300,7 @@
     <DeleteDependenciesDialog
         bind:showDialog={showDeleteDependenciesDialog}
         workspaceName={workspaceNavEntry.id}
-        graphUri={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         resourceUuid={packageNavEntry.data.uuid}
     />
 {/if}

@@ -39,7 +39,7 @@ import java.util.List;
 public class CIMUMLObjectFactory {
 
     /**
-     * Creates a {@link CIMClassUMLAdapted} from a given graph, prefixMapping, graphURI and
+     * Creates a {@link CIMClassUMLAdapted} from a given graph, prefixMapping, schemaName and
      * classURI.
      *
      * @param graph {@link Graph}
@@ -48,8 +48,8 @@ public class CIMUMLObjectFactory {
      * @return {@link CIMClassUMLAdapted}
      */
     public static CIMClassUMLAdapted createCIMClassUMLAdapted(
-            Graph graph, String graphUri, PrefixMapping prefixMapping, String classUUID) {
-        var objectFetcher = new CIMObjectFetcher(graph, graphUri, prefixMapping);
+            Graph graph, String schemaName, PrefixMapping prefixMapping, String classUUID) {
+        var objectFetcher = new CIMObjectFetcher(graph, schemaName, prefixMapping);
         // fetch class
         CIMClass cimClass = objectFetcher.fetchCIMClass(classUUID);
         if (cimClass == null) {
@@ -62,20 +62,20 @@ public class CIMUMLObjectFactory {
                 .getStereotypes()
                 .contains(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"))) {
             var enumEntriesQuery =
-                    CIMQueries.getEnumEntriesQuery(prefixMapping, graphUri, classUUID).build();
+                    CIMQueries.getEnumEntriesQuery(prefixMapping, schemaName, classUUID).build();
             var enumEntries = objectFetcher.fetchCIMEnumEntryList(enumEntriesQuery);
             classObject.setEnumEntries(enumEntries);
         }
 
         // fetch attributes
         var attributeQuery =
-                CIMQueries.getAttributesQuery(prefixMapping, classUUID, graphUri).build();
+                CIMQueries.getAttributesQuery(prefixMapping, classUUID, schemaName).build();
         var attributes = objectFetcher.fetchCIMAttributeList(attributeQuery);
         classObject.setAttributes(attributes);
 
         // fetch associations
         var associationPairsQuery =
-                CIMQueries.getAssociationPairsQuery(prefixMapping, classUUID, graphUri).build();
+                CIMQueries.getAssociationPairsQuery(prefixMapping, classUUID, schemaName).build();
         var associationPairs = objectFetcher.fetchCIMAssociationPairsList(associationPairsQuery);
         classObject.setAssociationPairs(associationPairs);
         return classObject;

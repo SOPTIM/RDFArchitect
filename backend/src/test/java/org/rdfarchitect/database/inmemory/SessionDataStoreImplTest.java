@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.rdf.TestRDFUtils;
@@ -42,10 +43,9 @@ import java.util.Map;
 
 class SessionDataStoreImplTest {
 
-    private static final String DEFAULT_GRAPH_NAME = "default";
+    private static final String GRAPH_NAME = "schema";
     private static final String NAME = "a";
-    private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier(NAME, DEFAULT_GRAPH_NAME);
+    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier(NAME, GRAPH_NAME);
 
     private List<Graph> exampleGraphs;
 
@@ -78,45 +78,40 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void wrapGraph_defaultGraph_datasetWithDefaultGraphInDataset() {
+    void wrapGraph_unnamedGraph_datasetWithDefaultGraphInDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
 
         // Act
-        var dataset =
-                SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), DEFAULT_GRAPH_NAME);
-        var datasetNullName = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), null);
+        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), null);
 
         // Assert
         assertThat(dataset.getDefaultModel().getGraph()).isEqualTo(exampleGraphs.getFirst());
-        assertThat(datasetNullName.getDefaultModel().getGraph())
-                .isEqualTo(exampleGraphs.getFirst());
     }
 
     @Test
     void wrapGraph_NamedGraph_datasetWithNamedGraphInDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphName = "http://example.com/graph";
+        var schemaName = "my-profile";
 
         // Act
-        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), graphName);
+        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), schemaName);
 
         // Assert
-        assertThat(dataset.getNamedModel(graphName).getGraph()).isEqualTo(exampleGraphs.getFirst());
+        assertThat(dataset.getNamedModel(SchemaIri.of(schemaName)).getGraph())
+                .isEqualTo(exampleGraphs.getFirst());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"a", "anyValid", DEFAULT_GRAPH_NAME})
-    void create_validDatasetNameNames_createsEmptyCollections(String name) {
+    @ValueSource(strings = {"a", "anyValid", GRAPH_NAME})
+    void create_validWorkspaceNameNames_createsEmptyCollections(String name) {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
         // Act
         TestWorkspaces.createGraph(
-                inMemoryDatabase,
-                new GraphIdentifier(name, DEFAULT_GRAPH_NAME),
-                exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier(name, GRAPH_NAME), exampleGraphs.getFirst());
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).contains(name);
@@ -140,9 +135,7 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         TestWorkspaces.createGraph(
-                inMemoryDatabase,
-                new GraphIdentifier("any", DEFAULT_GRAPH_NAME),
-                exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier("any", GRAPH_NAME), exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.deleteDataset("other");
@@ -155,9 +148,9 @@ class SessionDataStoreImplTest {
     void renameDataset_existingName_keepsGraphsUnderNewName() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphUri = "http://example.org/graph1";
+        var schemaName = "http://example.org/graph1";
         TestWorkspaces.createGraph(
-                inMemoryDatabase, new GraphIdentifier(NAME, graphUri), exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier(NAME, schemaName), exampleGraphs.getFirst());
         inMemoryDatabase.disableEditing(NAME);
 
         // Act
@@ -165,7 +158,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly("b");
-        assertThat(inMemoryDatabase.listGraphUris("b")).containsExactly(graphUri);
+        assertThat(inMemoryDatabase.listSchemaNames("b")).containsExactly(schemaName);
         assertThat(inMemoryDatabase.isReadOnly("b")).isTrue();
     }
 
@@ -198,7 +191,7 @@ class SessionDataStoreImplTest {
         renameGraph(graphIdentifier, "http://example.org/graph2");
 
         // Assert
-        assertThat(inMemoryDatabase.listGraphUris(NAME))
+        assertThat(inMemoryDatabase.listSchemaNames(NAME))
                 .containsExactly("http://example.org/graph2");
     }
 
@@ -231,9 +224,7 @@ class SessionDataStoreImplTest {
                 List.of(GraphFactory.createDefaultGraph(), GraphFactory.createDefaultGraph());
         TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         TestWorkspaces.createGraph(
-                inMemoryDatabase,
-                new GraphIdentifier("b", DEFAULT_GRAPH_NAME),
-                exampleGraphs.get(1));
+                inMemoryDatabase, new GraphIdentifier("b", GRAPH_NAME), exampleGraphs.get(1));
 
         // Act
         var datasets = inMemoryDatabase.listDatasets();
@@ -250,8 +241,9 @@ class SessionDataStoreImplTest {
 
         // Act/Assert
         try (var transaction =
-                inMemoryDatabase.beginTransaction(GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ)) {
-            assertThat(transaction.graph(GRAPH_IDENTIFIER.graphUri())).isNotNull();
+                inMemoryDatabase.beginTransaction(
+                        GRAPH_IDENTIFIER.workspaceName(), ReadWrite.READ)) {
+            assertThat(transaction.graph(GRAPH_IDENTIFIER.schemaName())).isNotNull();
         }
     }
 
@@ -261,7 +253,7 @@ class SessionDataStoreImplTest {
                 .isThrownBy(
                         () ->
                                 inMemoryDatabase.beginTransaction(
-                                        GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ));
+                                        GRAPH_IDENTIFIER.workspaceName(), ReadWrite.READ));
     }
 
     @Test
@@ -271,8 +263,9 @@ class SessionDataStoreImplTest {
 
         deleteGraph(GRAPH_IDENTIFIER);
 
-        assertThat(inMemoryDatabase.listDatasets()).containsExactly(GRAPH_IDENTIFIER.datasetName());
-        assertThat(inMemoryDatabase.listGraphUris(GRAPH_IDENTIFIER.datasetName())).isEmpty();
+        assertThat(inMemoryDatabase.listDatasets())
+                .containsExactly(GRAPH_IDENTIFIER.workspaceName());
+        assertThat(inMemoryDatabase.listSchemaNames(GRAPH_IDENTIFIER.workspaceName())).isEmpty();
     }
 
     @Test
@@ -280,7 +273,7 @@ class SessionDataStoreImplTest {
         inMemoryDatabase.createDataset("empty");
 
         assertThat(inMemoryDatabase.listDatasets()).contains("empty");
-        assertThat(inMemoryDatabase.listGraphUris("empty")).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames("empty")).isEmpty();
     }
 
     @Test
@@ -302,7 +295,7 @@ class SessionDataStoreImplTest {
         TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> deleteGraph(new GraphIdentifier("b", DEFAULT_GRAPH_NAME)));
+                .isThrownBy(() -> deleteGraph(new GraphIdentifier("b", GRAPH_NAME)));
     }
 
     @Test
@@ -329,7 +322,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
-        assertThat(inMemoryDatabase.listGraphUris(NAME)).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames(NAME)).isEmpty();
     }
 
     @Test
@@ -341,7 +334,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
-        assertThat(inMemoryDatabase.listGraphUris(NAME)).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames(NAME)).isEmpty();
     }
 
     @Test
@@ -371,7 +364,7 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void listGraphUris_nonEmptyDataset_returnsAllGraphUris() {
+    void listSchemaNames_nonEmptyDataset_returnsAllSchemaNames() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
@@ -382,18 +375,18 @@ class SessionDataStoreImplTest {
                 exampleGraphs.get(1));
 
         // Act
-        var graphUris = inMemoryDatabase.listGraphUris(NAME);
+        var schemaNames = inMemoryDatabase.listSchemaNames(NAME);
 
         // Assert
-        assertThat(graphUris).contains(DEFAULT_GRAPH_NAME, "http://example.com/graph");
+        assertThat(schemaNames).contains(GRAPH_NAME, "http://example.com/graph");
     }
 
     @Test
-    void listGraphUris_nonExistingDataset_throwsException() {
+    void listSchemaNames_nonExistingDataset_throwsException() {
         // Arrange
 
         // Act
-        assertThatThrownBy(() -> inMemoryDatabase.listGraphUris("a"))
+        assertThatThrownBy(() -> inMemoryDatabase.listSchemaNames("a"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -544,17 +537,17 @@ class SessionDataStoreImplTest {
 
     private void deleteGraph(GraphIdentifier id) {
         try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(id.graphUri());
-            transaction.commit("deleted graph %s".formatted(id.graphUri()));
+                inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(id.schemaName());
+            transaction.commit("deleted graph %s".formatted(id.schemaName()));
         }
     }
 
-    private void renameGraph(GraphIdentifier id, String newGraphUri) {
+    private void renameGraph(GraphIdentifier id, String newSchemaName) {
         try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.renameGraph(id.graphUri(), newGraphUri);
-            transaction.commit("renamed graph %s".formatted(id.graphUri()));
+                inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
+            transaction.renameGraph(id.schemaName(), newSchemaName);
+            transaction.commit("renamed graph %s".formatted(id.schemaName()));
         }
     }
 }

@@ -40,9 +40,9 @@ public interface UpdateEdgeLayoutUseCase {
      * Stores the points of the given edges of a merged diagram of a dataset, see {@link
      * UpdateEdgeLayoutDataService#applyEdgeLayouts}.
      *
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      * @param diagramUUID the UUID of the cross-profile or custom diagram of the dataset
      * @param edges the full, ordered list of points of every edge to store
      */
-    void updateEdgeLayouts(String datasetName, UUID diagramUUID, List<EdgeLayoutDTO> edges);
+    void updateEdgeLayouts(String workspaceName, UUID diagramUUID, List<EdgeLayoutDTO> edges);
 }

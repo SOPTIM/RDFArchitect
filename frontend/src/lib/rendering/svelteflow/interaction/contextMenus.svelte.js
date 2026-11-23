@@ -160,7 +160,7 @@ export class ContextMenuController {
         this.#consumeEvent(event);
         const isInSelection = multiSelectState.isSelected(
             editorState.selectedWorkspace.getValue(),
-            node.data?.graphUri,
+            node.data?.schemaName,
             node.id,
         );
         if (!isInSelection && multiSelectState.count > 0) {
@@ -169,7 +169,7 @@ export class ContextMenuController {
         this.#contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
-            graphUri: node.data?.graphUri ?? null,
+            schemaName: node.data?.schemaName ?? null,
         };
         this.#classRequest = {
             x: event.clientX,

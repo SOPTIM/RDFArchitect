@@ -25,10 +25,10 @@ public interface WorkspaceValidationUseCase {
     /**
      * Validates that the schemas of a workspace are compatible with each other.
      *
-     * @param datasetName the workspace to validate
+     * @param workspaceName the workspace to validate
      * @return Validation report with the found issues
      */
-    ValidationReportDTO validateWorkspace(String datasetName);
+    ValidationReportDTO validateWorkspace(String workspaceName);
 
     /**
      * Validates a single schema against the other schemas of its workspace.

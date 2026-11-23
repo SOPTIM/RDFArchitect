@@ -19,10 +19,16 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.datasets.ImportJobRESTController.ImportJobCreatedResponse;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
 import org.slf4j.Logger;
@@ -47,7 +53,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/content/imports")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/content/imports")
 @RequiredArgsConstructor
 public class GraphBulkContentRESTController {
 
@@ -56,14 +62,18 @@ public class GraphBulkContentRESTController {
 
     private final ImportJobUseCase importJobUseCase;
 
-    /** Response to starting an import, identifying the job to poll for its progress. */
-    public record ImportJobCreatedResponse(UUID jobId) {}
-
     @Operation(
             summary = "Start importing multiple graphs",
             description =
-                    "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+                    "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress at /api/workspaces/{workspaceName}/imports/{jobId}.",
             tags = {"graph"},
+            parameters =
+                    @Parameter(
+                            name = "schemaNames",
+                            in = ParameterIn.QUERY,
+                            description =
+                                    "Optional schema names, one per file. Defaults to the file names without extension.",
+                            array = @ArraySchema(schema = @Schema(type = "string"))),
             responses = {
                 @ApiResponse(responseCode = "202", description = "Import started"),
                 @ApiResponse(
@@ -79,31 +89,36 @@ public class GraphBulkContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
-            @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestParam(value = "graphUris", required = false)
-                    List<String> graphUris) {
+            @Parameter(hidden = true) HttpServletRequest request) {
+        // read the raw values: Spring splits a single value bound to a List at its commas, which a
+        // schema name may hold
+        var values = request.getParameterValues("schemaNames");
+        var schemaNames = values == null ? null : List.of(values);
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/content/imports\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/content/imports\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var jobId = importJobUseCase.startImport(datasetName, files, graphUris);
+        var jobId = importJobUseCase.startImport(workspaceName, files, schemaNames);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports\" to \"{}\": job {}.",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/content/imports\" to \"{}\": job {}.",
+                workspaceName,
                 originURL,
                 jobId);
         return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));
     }
 
+    @Deprecated
     @Operation(
+            operationId = "getImportStatusOfGraphImport",
+            deprecated = true,
             summary = "Get the progress of an import",
             description =
-                    "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+                    "Deprecated, use the same request below /api/workspaces/{workspaceName}/imports instead. Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
@@ -112,18 +127,21 @@ public class GraphBulkContentRESTController {
     @GetMapping("/{jobId}")
     public ResponseEntity<ImportJobUseCase.ImportJobStatus> getImportStatus(
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         return importJobUseCase
-                .getStatus(datasetName, jobId)
+                .getStatus(workspaceName, jobId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @Deprecated
     @Operation(
+            operationId = "resolvePrefixConflictsOfGraphImport",
+            deprecated = true,
             summary = "Resolve the namespace prefix conflicts of an import",
             description =
-                    "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+                    "Deprecated, use the same request below /api/workspaces/{workspaceName}/imports instead. Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Import continues"),
@@ -142,22 +160,22 @@ public class GraphBulkContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId,
             @Parameter(description = "What to do with each contested namespace binding.")
                     @RequestBody
                     List<PrefixResolutionDTO> resolutions) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
 
-        var resolved = importJobUseCase.resolvePrefixConflicts(datasetName, jobId, resolutions);
+        var resolved = importJobUseCase.resolvePrefixConflicts(workspaceName, jobId, resolutions);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}/prefix-resolutions\" to \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
         return resolved
@@ -165,10 +183,13 @@ public class GraphBulkContentRESTController {
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
+    @Deprecated
     @Operation(
+            operationId = "cancelGraphImport",
+            deprecated = true,
             summary = "Cancel an import",
             description =
-                    "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+                    "Deprecated, use the same request below /api/workspaces/{workspaceName}/imports instead. Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Cancellation requested"),
@@ -183,15 +204,15 @@ public class GraphBulkContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/content/imports/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}\" from \"{}\".",
+                workspaceName,
                 jobId,
                 originURL);
 
-        return importJobUseCase.cancel(datasetName, jobId)
+        return importJobUseCase.cancel(workspaceName, jobId)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }

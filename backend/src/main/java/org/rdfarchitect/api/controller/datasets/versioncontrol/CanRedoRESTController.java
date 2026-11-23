@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/canRedo")
+@RequestMapping("api/workspaces/{workspaceName}/canRedo")
 @RequiredArgsConstructor
 public class CanRedoRESTController {
 
@@ -54,17 +54,17 @@ public class CanRedoRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/canRedo\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/canRedo\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        boolean canRedo = canRedoUseCase.canRedo(datasetName);
+        boolean canRedo = canRedoUseCase.canRedo(workspaceName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/canRedo\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/canRedo\" to \"{}\".",
+                workspaceName,
                 originURL);
         return canRedo;
     }

@@ -15,8 +15,8 @@
  *
  */
 
-import { LABEL_NODE_TYPE } from "./labelNodes.js";
 import { isSelfLoop } from "../interaction/edgePointOperations.js";
+import { LABEL_NODE_TYPE } from "./labelNodes.js";
 
 /** Edges are drawn below every class. */
 export const EDGE_Z_INDEX = -1;

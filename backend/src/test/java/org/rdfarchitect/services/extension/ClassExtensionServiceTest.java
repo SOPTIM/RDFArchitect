@@ -76,7 +76,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -84,14 +84,14 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.workspaceName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
@@ -210,7 +210,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -220,7 +220,7 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
@@ -229,8 +229,8 @@ class ClassExtensionServiceTest {
 
         String existingBaseUuidBefore;
         try (var transaction =
-                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+                databasePort.beginTransaction(targetGraphId.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.schemaName());
             var targetModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             existingBaseUuidBefore =
                     targetModel
@@ -243,14 +243,14 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.workspaceName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
 
         try (var transaction =
-                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+                databasePort.beginTransaction(targetGraphId.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.schemaName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
             // class got added
@@ -303,7 +303,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -311,14 +311,14 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.workspaceName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
@@ -328,8 +328,8 @@ class ClassExtensionServiceTest {
                 "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory";
 
         try (var transaction =
-                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+                databasePort.beginTransaction(targetGraphId.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.schemaName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -366,7 +366,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, false);
+                        sourceGraphId.workspaceName(), List.of(classUuid), targetGraphId, false);
 
         // assert
         var ex = "http://example.org#";
@@ -379,8 +379,8 @@ class ClassExtensionServiceTest {
         assertThat(result.created()).isTrue();
 
         try (var transaction =
-                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+                databasePort.beginTransaction(targetGraphId.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.schemaName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -444,7 +444,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId.datasetName(), List.of(baseUuid), targetGraphId, false);
+                        sourceGraphId.workspaceName(), List.of(baseUuid), targetGraphId, false);
 
         // assert
         assertThat(results).hasSize(1);
@@ -463,18 +463,18 @@ class ClassExtensionServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     private Model copyOf(GraphIdentifier identifier) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
             return ModelFactory.createDefaultModel()
                     .add(
                             ModelFactory.createModelForGraph(
-                                    transaction.graph(identifier.graphUri()).getRdfGraph()));
+                                    transaction.graph(identifier.schemaName()).getRdfGraph()));
         }
     }
 }

@@ -37,6 +37,25 @@ export const sparqlMediaType: MediaType = {
     fileExtension: ".sparql",
 };
 
+// A zip, but not named one: the schema import unpacks every `.zip`.
+export const workspaceArchiveMediaType: MediaType = {
+    mimeType: "application/zip",
+    name: "Workspace file",
+    fileExtension: ".rdfa",
+};
+
+export function isWorkspaceArchiveFile(fileName: string): boolean {
+    const lowered = (fileName ?? "").toLowerCase();
+    return (
+        lowered.endsWith(workspaceArchiveMediaType.fileExtension) ||
+        isZipFile(lowered)
+    );
+}
+
+export function workspaceNameOfArchiveFile(fileName: string): string {
+    return (fileName ?? "").replace(/\.zip$/i, "").replace(/\.rdfa$/i, "");
+}
+
 /** Whether the file is a ZIP archive, which the import unpacks on its own. */
 export function isZipFile(fileName: string): boolean {
     return (fileName ?? "").toLowerCase().endsWith(".zip");
@@ -53,6 +72,42 @@ export function isSupportedGraphFile(fileName: string): boolean {
 /** Whether the import takes the file at all, be it as a graph or as an archive of graphs. */
 export function isImportableFile(fileName: string): boolean {
     return isZipFile(fileName) || isSupportedGraphFile(fileName);
+}
+
+/**
+ * The file name a `Content-Disposition` header suggests. The backend writes the name UTF-8 encoded
+ * into `filename*`, so that a schema name may hold any character; `filename` is read only when
+ * that is missing.
+ *
+ * @param header the value of the header, as the response has it
+ * @returns the suggested file name, or `null` when the header suggests none
+ */
+export function filenameFromContentDisposition(
+    header: string | null | undefined,
+): string | null {
+    if (!header) {
+        return null;
+    }
+    const extended = /(?:^|;)\s*filename\*\s*=\s*[^']*'[^']*'([^;\s]+)/iu.exec(
+        header,
+    );
+    if (extended) {
+        try {
+            return decodeURIComponent(extended[1]);
+        } catch {
+            // malformed: fall back to the plain name
+        }
+    }
+    const plain =
+        /(?:^|;)\s*filename\s*=\s*(?:"((?:\\.|[^"\\])*)"|([^;\s]+))/iu.exec(
+            header,
+        );
+    if (!plain) {
+        return null;
+    }
+    return plain[1] === undefined
+        ? plain[2]
+        : plain[1].replaceAll(/\\(.)/gu, "$1");
 }
 
 export function saveFile(

@@ -23,6 +23,7 @@ import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -203,17 +204,17 @@ public class SearchService implements SearchUseCase {
         List<SearchResult> internalSearchResults = new ArrayList<>();
         List<SearchResult> externalSearchResults = new ArrayList<>();
 
-        if (filter.getDatasetName() != null) {
+        if (filter.getWorkspaceName() != null) {
             searchDataset(
-                    filter.getDatasetName(),
+                    filter.getWorkspaceName(),
                     query,
                     filter,
                     internalSearchResults,
                     externalSearchResults);
         } else {
-            for (var datasetName : databasePort.listDatasets()) {
+            for (var workspaceName : databasePort.listDatasets()) {
                 searchDataset(
-                        datasetName, query, filter, internalSearchResults, externalSearchResults);
+                        workspaceName, query, filter, internalSearchResults, externalSearchResults);
             }
         }
 
@@ -221,14 +222,14 @@ public class SearchService implements SearchUseCase {
     }
 
     public void searchDataset(
-            String datasetName,
+            String workspaceName,
             String query,
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
-        if (filter.getGraphUri() != null) {
+        if (filter.getSchemaName() != null) {
             searchGraph(
-                    new GraphIdentifier(datasetName, filter.getGraphUri()),
+                    new GraphIdentifier(workspaceName, filter.getSchemaName()),
                     query,
                     filter,
                     searchResults,
@@ -236,10 +237,10 @@ public class SearchService implements SearchUseCase {
             return;
         }
 
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (String graphUri : transaction.graphUris()) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
                 searchGraph(
-                        new GraphIdentifier(datasetName, graphUri),
+                        new GraphIdentifier(workspaceName, schemaName),
                         query,
                         filter,
                         searchResults,
@@ -254,19 +255,9 @@ public class SearchService implements SearchUseCase {
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
-        String specificInternalQuery;
-        String specificExternalQuery;
-        if (Objects.equals(graphIdentifier.graphUri(), "default")) {
-            specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, "");
-            specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, "");
-        } else {
-            specificInternalQuery =
-                    SPARQL_INTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
-            specificExternalQuery =
-                    SPARQL_EXTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
-        }
+        var from = "FROM <" + SchemaIri.of(graphIdentifier.schemaName()) + ">";
+        var specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, from);
+        var specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, from);
         specificInternalQuery = specificInternalQuery.replace("searchQuery", query);
         specificExternalQuery = specificExternalQuery.replace("searchQuery", query);
         var internalQueryWithPackageConstraint =
@@ -280,13 +271,13 @@ public class SearchService implements SearchUseCase {
                         databasePort,
                         graphIdentifier,
                         internalQueryObject,
-                        graphIdentifier.graphUri());
+                        graphIdentifier.schemaName());
         var externalResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort,
                         graphIdentifier,
                         externalQueryObject,
-                        graphIdentifier.graphUri());
+                        graphIdentifier.schemaName());
 
         searchResults.addAll(
                 SearchResultObjectFactory.createSearchResultObjectList(

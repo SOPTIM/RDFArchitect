@@ -51,7 +51,7 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
 
     private String endpoint;
     private String url;
-    private String datasetName;
+    private String workspaceName;
     private Query query;
     private final DatabaseAdminProtocol databaseAdminProtocol;
 
@@ -62,7 +62,7 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
     public HttpSelectCommandImpl(DatabaseAdminProtocol databaseAdminProtocol) {
         this.endpoint = null;
         this.url = null;
-        this.datasetName = null;
+        this.workspaceName = null;
         this.query = null;
         this.databaseAdminProtocol = databaseAdminProtocol;
     }
@@ -70,14 +70,14 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
     @Override
     public HttpSelectCommandImpl setEndpoint(String endpoint) {
         this.url = endpoint;
-        this.endpoint = this.url + "/" + this.datasetName;
+        this.endpoint = this.url + "/" + this.workspaceName;
         return this;
     }
 
     @Override
-    public HttpSelectCommandImpl setDatasetName(String datasetName) {
-        this.datasetName = datasetName;
-        this.endpoint = this.url + "/" + datasetName;
+    public HttpSelectCommandImpl setWorkspaceName(String workspaceName) {
+        this.workspaceName = workspaceName;
+        this.endpoint = this.url + "/" + workspaceName;
         return this;
     }
 

@@ -28,7 +28,7 @@ public interface ClassExtensionUseCase {
      * enables extension of classes by creating an abstract stub of each of them in another graph of
      * the dataset. Classes that are already defined in the new graph are left untouched.
      *
-     * @param datasetName the dataset the classes belong to
+     * @param workspaceName the dataset the classes belong to
      * @param classUUIDs the uuids of the classes to be extended, either the ones they carry in a
      *     graph or the ones of their merged classes
      * @param newGraph the identifier of the new graph, where the classes are to be extended
@@ -37,7 +37,7 @@ public interface ClassExtensionUseCase {
      * @return one result per requested class, in the order they were requested
      */
     List<ClassExtensionResultDTO> extendClasses(
-            String datasetName,
+            String workspaceName,
             List<String> classUUIDs,
             GraphIdentifier newGraph,
             boolean withInheritance);
