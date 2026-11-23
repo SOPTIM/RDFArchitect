@@ -360,8 +360,8 @@
 
     function diagramTarget() {
         return {
-            datasetName: editorState.selectedWorkspace.getValue(),
-            graphURI: editorState.selectedGraph.getValue(),
+            workspaceName: editorState.selectedWorkspace.getValue(),
+            schemaName: editorState.selectedGraph.getValue(),
             diagramUUID: editorState.selectedDiagram.getProperty("id"),
         };
     }
@@ -900,11 +900,11 @@
         request={contextMenus.paneRequest}
         disabled={isWorkspaceReadOnly}
         lockedWorkspaceName={editorState.selectedWorkspace.getValue()}
-        lockedGraphUri={editorState.selectedGraph.getValue()}
+        lockedSchemaName={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
         classes={classNodes.map(node => ({
             id: node.id,
-            graphUri: node.data?.graphUri,
+            schemaName: node.data?.schemaName,
         }))}
         onClose={() => contextMenus.close()}
     />
@@ -914,7 +914,7 @@
         readOnly={isWorkspaceReadOnly}
         contextMenuClass={contextMenus.contextMenuClass}
         workspaceName={editorState.selectedWorkspace.getValue()}
-        graphUri={editorState.selectedGraph.getValue()}
+        schemaName={editorState.selectedGraph.getValue()}
         nodeOrder={nodeOrderCtrl.nodeOrder}
         nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}

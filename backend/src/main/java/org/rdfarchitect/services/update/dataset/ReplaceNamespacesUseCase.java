@@ -26,8 +26,8 @@ public interface ReplaceNamespacesUseCase {
     /**
      * Replaces all namespaces in the given dataset with the provided list of namespaces.
      *
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      * @param namespaces the list of namespaces to set
      */
-    void replaceNamespaces(String datasetName, List<CIMPrefixPair> namespaces);
+    void replaceNamespaces(String workspaceName, List<CIMPrefixPair> namespaces);
 }

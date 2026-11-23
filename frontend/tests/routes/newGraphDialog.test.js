@@ -24,7 +24,7 @@ import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 import NewGraphDialog from "../../src/routes/NewGraphDialog.svelte";
 
 const EQUIPMENT = {
-    uri: { prefix: "http://graph#", suffix: "Equipment" },
+    name: "Equipment",
     keyword: "EQ",
 };
 
@@ -42,7 +42,7 @@ async function open() {
 }
 
 function nameInput() {
-    return document.querySelector('input[placeholder="http://graph#"]');
+    return document.querySelector('input[placeholder="Schema name"]');
 }
 
 function button(label) {
@@ -89,15 +89,17 @@ afterEach(() => {
 
 describe("NewGraphDialog", () => {
     /**
-     * The workspace lists its schemas as GraphDtos, and reading one as if it were a URI made
-     * every comparison match the empty string — so no name was ever reported as taken.
+     * The workspace lists its schemas as GraphDtos, and reading one as if it were a plain name
+     * made every comparison miss — so no name was ever reported as taken.
      */
     test("refuses a name a schema of the workspace already has", async () => {
         await open();
 
         await type(nameInput(), "Equipment");
 
-        expect(document.body.textContent).toContain("Schema already exists");
+        expect(document.body.textContent).toContain(
+            "A schema with this name already exists",
+        );
         expect(button("Create Schema").disabled).toBe(true);
     });
 
@@ -107,8 +109,33 @@ describe("NewGraphDialog", () => {
         await type(nameInput(), "Topology");
 
         expect(document.body.textContent).not.toContain(
-            "Schema already exists",
+            "A schema with this name already exists",
         );
         expect(button("Create Schema").disabled).toBe(false);
+    });
+
+    test("refuses a name a file cannot carry and says which characters are forbidden", async () => {
+        await open();
+
+        await type(nameInput(), "a:b");
+
+        expect(document.body.textContent).toContain(
+            "A schema name must not contain any of",
+        );
+        expect(button("Create Schema").disabled).toBe(true);
+    });
+
+    test("creates the schema under the trimmed name", async () => {
+        await open();
+
+        await type(nameInput(), "  my profile ");
+        button("Create Schema").click();
+
+        await vi.waitFor(() =>
+            expect(graphStore.addEmptyGraph).toHaveBeenCalledWith(
+                "cgmes",
+                "my profile",
+            ),
+        );
     });
 });

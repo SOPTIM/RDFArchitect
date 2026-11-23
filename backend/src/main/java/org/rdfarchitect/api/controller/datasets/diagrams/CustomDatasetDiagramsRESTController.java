@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}")
+@RequestMapping("/api/workspaces/{workspaceName}/diagrams/{diagramId}")
 @RequiredArgsConstructor
 public class CustomDatasetDiagramsRESTController {
 
@@ -64,19 +64,19 @@ public class CustomDatasetDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
 
-        var result = renderer.renderCustomDatasetDiagram(datasetName, UUID.fromString(diagramId));
+        var result = renderer.renderCustomDatasetDiagram(workspaceName, UUID.fromString(diagramId));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
         return result;
@@ -91,21 +91,21 @@ public class CustomDatasetDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
                     CustomDiagramDTO diagram) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
 
-        replaceCustomDiagramUseCase.replaceCustomDatasetDiagram(datasetName, diagramId, diagram);
+        replaceCustomDiagramUseCase.replaceCustomDatasetDiagram(workspaceName, diagramId, diagram);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -120,19 +120,19 @@ public class CustomDatasetDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
 
-        deleteCustomDiagramUseCase.deleteCustomDatasetDiagram(datasetName, diagramId);
+        deleteCustomDiagramUseCase.deleteCustomDatasetDiagram(workspaceName, diagramId);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

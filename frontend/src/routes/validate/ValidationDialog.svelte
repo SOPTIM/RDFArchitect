@@ -35,7 +35,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedSchemaName,
     } = $props();
 
     const ValidationMode = Object.freeze({
@@ -59,7 +59,7 @@
         {
             value: ValidationMode.FILE,
             label: "Uploaded schema",
-            disabled: !!lockedWorkspaceName || !!lockedGraphUri,
+            disabled: !!lockedWorkspaceName || !!lockedSchemaName,
         },
     ]);
 
@@ -85,7 +85,7 @@
     function onOpen() {
         workspace =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graph = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        graph = lockedSchemaName ?? editorState.selectedGraph.getValue();
         file = null;
         cgmesVersion = CGMESVersion.V3_0;
     }
@@ -115,8 +115,8 @@
             case ValidationMode.STORED:
                 response = await validateSchema({
                     path: {
-                        datasetName: workspace,
-                        graphURI: graph,
+                        workspaceName: workspace,
+                        schemaName: graph,
                         cgmesVersion: cgmesVersion,
                     },
                 });
@@ -197,7 +197,7 @@
                         bind:workspace
                         bind:graph
                         {lockedWorkspaceName}
-                        {lockedGraphUri}
+                        {lockedSchemaName}
                     />
                 </div>
             {/if}

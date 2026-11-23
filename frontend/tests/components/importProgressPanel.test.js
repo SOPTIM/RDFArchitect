@@ -38,12 +38,12 @@ function render(progress) {
 function statusOf(files, state) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state,
         files,
-        importedGraphUris: files
+        importedSchemaNames: files
             .filter(file => file.state === FileState.IMPORTED)
-            .map(file => file.graphUri),
+            .map(file => file.schemaName),
         failedImports: files
             .filter(file => file.state === FileState.FAILED)
             .map(file => file.fileName),
@@ -57,8 +57,7 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        graphUri:
-            state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
+        schemaName: state === FileState.IMPORTED ? fileName : null,
         ...extra,
     };
 }

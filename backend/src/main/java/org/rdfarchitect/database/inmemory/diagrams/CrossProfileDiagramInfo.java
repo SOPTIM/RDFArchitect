@@ -46,51 +46,51 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     /**
      * Returns the colour of a graph.
      *
-     * @param graphUri the graph URI
+     * @param schemaName the schema name
      * @return the colour, or {@code null} if the graph has none
      */
     @Override
-    public String getColor(String graphUri) {
-        return colors.getOrDefault(graphUri, null);
+    public String getColor(String schemaName) {
+        return colors.getOrDefault(schemaName, null);
     }
 
     /**
      * Sets the colour of a graph.
      *
-     * @param graphUri the graph URI
+     * @param schemaName the schema name
      * @param color the colour to use
      */
     @Override
-    public void setColor(String graphUri, String color) {
+    public void setColor(String schemaName, String color) {
         beginChange();
-        colors.put(graphUri, color);
+        colors.put(schemaName, color);
     }
 
     /**
      * Drops the colour of a graph that is deleted, so that it does not linger for a graph that
      * later takes over the URI.
      *
-     * @param graphUri the URI of the deleted graph
+     * @param schemaName the URI of the deleted graph
      */
-    public void removeColor(String graphUri) {
-        if (!colors.containsKey(graphUri)) {
+    public void removeColor(String schemaName) {
+        if (!colors.containsKey(schemaName)) {
             return;
         }
         beginChange();
-        colors.remove(graphUri);
+        colors.remove(schemaName);
     }
 
     /**
      * Moves the colour of a graph to its new URI.
      *
-     * @param oldGraphUri the URI the graph had
-     * @param newGraphUri the URI the graph now has
+     * @param oldSchemaName the URI the graph had
+     * @param newSchemaName the URI the graph now has
      */
-    public void renameGraph(String oldGraphUri, String newGraphUri) {
+    public void renameGraph(String oldSchemaName, String newSchemaName) {
         beginChange();
-        var color = colors.remove(oldGraphUri);
+        var color = colors.remove(oldSchemaName);
         if (color != null) {
-            colors.put(newGraphUri, color);
+            colors.put(newSchemaName, color);
         }
     }
 

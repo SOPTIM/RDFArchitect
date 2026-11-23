@@ -97,7 +97,7 @@
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.schemaName,
             classUuid,
             apiAttribute,
             isNewAttribute,

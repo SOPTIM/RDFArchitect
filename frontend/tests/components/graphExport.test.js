@@ -47,7 +47,7 @@ function graphOf(name) {
     return `http://graph#${name}`;
 }
 
-async function open(graphUri) {
+async function open(schemaName) {
     target = document.createElement("div");
     document.body.appendChild(target);
     mounted = mount(GraphExport, {
@@ -55,7 +55,7 @@ async function open(graphUri) {
         props: {
             showDialog: true,
             lockedWorkspaceName: WORKSPACE,
-            lockedGraphUri: graphUri,
+            lockedSchemaName: schemaName,
             generateOntologyEntries: true,
         },
     });
@@ -67,7 +67,7 @@ async function open(graphUri) {
 }
 
 const route = (workspace, graph) =>
-    `http://backend/api/datasets/${workspace}/graphs/${graph}`;
+    `http://backend/api/workspaces/${workspace}/schemas/${graph}`;
 
 vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
 
@@ -135,8 +135,8 @@ afterEach(() => {
 
 describe("GraphExport", () => {
     test("saves the generated entries into the header the schema has", async () => {
-        const graphUri = graphOf("Equipment");
-        const component = await open(graphUri);
+        const schemaName = graphOf("Equipment");
+        const component = await open(schemaName);
         await vi.waitFor(() =>
             expect(api.getOntologyEntries).toHaveBeenCalled(),
         );
@@ -158,14 +158,14 @@ describe("GraphExport", () => {
      * - used to leave exactly that in the cache, an ontology of entries alone.
      */
     test("writes no header into a schema that has none", async () => {
-        const graphUri = graphOf("Notes");
+        const schemaName = graphOf("Notes");
         vi.mocked(api.getOntology).mockResolvedValue({
             data: null,
             error: undefined,
         });
 
-        await ontologyStore.generateOntologyEntries(WORKSPACE, graphUri);
-        const component = await open(graphUri);
+        await ontologyStore.generateOntologyEntries(WORKSPACE, schemaName);
+        const component = await open(schemaName);
 
         await component.handleExport(route);
 

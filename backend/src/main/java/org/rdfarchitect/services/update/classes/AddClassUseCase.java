@@ -29,7 +29,7 @@ public interface AddClassUseCase {
      * Constructs a new class and adds it to the specified graph, optionally at a given initial
      * diagram layout position.
      *
-     * @param graphIdentifier The graph URI and database name of the graph to add the class to.
+     * @param graphIdentifier The schema name and database name of the graph to add the class to.
      * @param packageDTO The Package to which the class will be added.
      * @param classURIPrefix The prefix of the class to be added.
      * @param className The name of the class to be added.

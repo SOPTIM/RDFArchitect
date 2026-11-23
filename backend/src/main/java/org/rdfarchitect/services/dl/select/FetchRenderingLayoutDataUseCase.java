@@ -37,11 +37,11 @@ public interface FetchRenderingLayoutDataUseCase {
     /**
      * Fetches all layout data necessary for constructing the DTO object for rendering
      *
-     * @param datasetName the literal name of the dataset
+     * @param workspaceName the literal name of the dataset
      * @param diagramId the UUID of the custom diagram for which the layout information shall be
      *     fetched
      * @return {@link RenderingLayoutData DTO object containing necessary layout information for
      *     rendering}
      */
-    RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId);
+    RenderingLayoutData fetchGlobalRenderingLayoutData(String workspaceName, UUID diagramId);
 }

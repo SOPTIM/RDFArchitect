@@ -56,15 +56,20 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
     return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
-async function getAllPackages(workspaceName, graphURI) {
-    const res = (await packageStore.getPackages(workspaceName, graphURI)) ?? {
+async function getAllPackages(workspaceName, schemaName) {
+    const res = (await packageStore.getPackages(workspaceName, schemaName)) ?? {
         internal: [],
         external: [],
     };
     return [...(res.internal ?? []), ...(res.external ?? [])];
 }
 
-async function getPackageDiagram(workspaceName, graphURI, packageUUID, signal) {
+async function getPackageDiagram(
+    workspaceName,
+    schemaName,
+    packageUUID,
+    signal,
+) {
     const filter = {
         packageUUID,
         includeEnumEntries: true,
@@ -74,7 +79,7 @@ async function getPackageDiagram(workspaceName, graphURI, packageUUID, signal) {
         includeRelationsToExternalPackages: true,
     };
     const res = await getRenderingDataParameterized({
-        path: { datasetName: workspaceName, graphURI: graphURI },
+        path: { workspaceName: workspaceName, schemaName: schemaName },
         body: filter,
         signal: signal,
     });
@@ -147,20 +152,20 @@ async function renderPackage(nodes, edges, fileType) {
  * Renders one diagram per package of the graph.
  *
  * @param workspaceName
- * @param graphURI
+ * @param schemaName
  * @param fileType
  * @param progress optional {@link ExportProgress} that receives the packages and
  *     their outcome, and whose cancellation stops the loop at the next package
  */
 export async function generatePackageImages(
     workspaceName,
-    graphURI,
+    schemaName,
     fileType,
     progress,
 ) {
     const images = [];
     const signal = progress?.signal;
-    const packages = await getAllPackages(workspaceName, graphURI);
+    const packages = await getAllPackages(workspaceName, schemaName);
 
     progress?.startDiagrams(
         packages.map(pkg => ({
@@ -180,7 +185,7 @@ export async function generatePackageImages(
         try {
             const diagram = await getPackageDiagram(
                 workspaceName,
-                graphURI,
+                schemaName,
                 packageUUID,
                 signal,
             );

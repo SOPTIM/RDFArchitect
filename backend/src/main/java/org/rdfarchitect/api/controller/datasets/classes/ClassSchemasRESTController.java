@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/classes/{classUUID}/schemas")
+@RequestMapping("api/workspaces/{workspaceName}/classes/{classUUID}/schemas")
 @RequiredArgsConstructor
 public class ClassSchemasRESTController {
 
@@ -58,20 +58,20 @@ public class ClassSchemasRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/classes/{{}}/schemas\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/classes/{{}}/schemas\" from \"{}\".",
+                workspaceName,
                 classUUID,
                 originURL);
 
         var occurrences =
-                listClassSchemaOccurrencesUseCase.listSchemaOccurrences(datasetName, classUUID);
+                listClassSchemaOccurrencesUseCase.listSchemaOccurrences(workspaceName, classUUID);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/classes/{{}}/schemas\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/classes/{{}}/schemas\" to \"{}\".",
+                workspaceName,
                 classUUID,
                 originURL);
         return occurrences;

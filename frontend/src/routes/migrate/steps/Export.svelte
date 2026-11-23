@@ -26,7 +26,11 @@
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
-    import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
+    import {
+        filenameFromContentDisposition,
+        saveFile,
+        sparqlMediaType,
+    } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
 
@@ -39,8 +43,8 @@
             const { data, error, response } = await request();
             if (error) throw error;
 
-            const suggestedFilename = response.headers.get(
-                "content-disposition",
+            const suggestedFilename = filenameFromContentDisposition(
+                response.headers.get("content-disposition"),
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {

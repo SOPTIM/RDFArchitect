@@ -43,9 +43,10 @@ public interface UpdateDiagramLayoutUseCase {
      * diagram of a dataset, see {@link #updateDiagramLayout(GraphIdentifier, UUID,
      * DiagramLayoutDTO)}.
      *
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      * @param diagramUUID the UUID of the cross-profile or custom diagram of the dataset
      * @param diagramLayout the layout of the changed elements
      */
-    void updateDiagramLayout(String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout);
+    void updateDiagramLayout(
+            String workspaceName, UUID diagramUUID, DiagramLayoutDTO diagramLayout);
 }

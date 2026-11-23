@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.enumentries.ReplaceOrCreateEnumEntryUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,13 +40,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries/{enumEntryUUID}")
+        "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
 @RequiredArgsConstructor
 public class ClassEnumEntriesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassEnumEntriesRESTController.class);
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
@@ -65,12 +63,8 @@ public class ClassEnumEntriesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the enum entry.") @PathVariable
                     String enumEntryUUID,
@@ -80,23 +74,21 @@ public class ClassEnumEntriesRESTController {
                     @RequestBody
                     EnumEntryDTO enumEntry) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 enumEntryUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                        new GraphIdentifier(datasetName, extendedGraphURI), enumEntry);
+                        new GraphIdentifier(workspaceName, schemaName), enumEntry);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 enumEntryUUID,
                 originURL);

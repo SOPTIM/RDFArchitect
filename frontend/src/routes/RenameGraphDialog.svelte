@@ -18,8 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { URI } from "$lib/models/dto/index.ts";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -27,30 +28,22 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        graphUri as uriOf,
+        schemaName as nameOfGraph,
     } from "$lib/utils/graph-label.js";
-    import { toLocalName, uriSuffix } from "$lib/utils/iri.js";
+    import { uriSuffix } from "$lib/utils/iri.js";
 
     let {
         showDialog = $bindable(),
         workspaceName,
-        graphUri,
+        schemaName,
         onEditHeader,
     } = $props();
 
     const uniqueId = uuidv4();
-    /**
-     * Every graph the app makes lives here — see `RDFA.GRAPH_URI`, `NewGraphDialog` and
-     * `ImportDialog`. A graph URI names the graph and nothing else, so it is not something to
-     * choose: only its tail is editable, and an older graph keeps whatever namespace it has.
-     */
-    const defaultNamespace = "http://graph#";
-    const nameInputId = `renameGraphName-${uniqueId}`;
+    const nameInputId = `renameSchemaName-${uniqueId}`;
 
     let nameUserInput = $state("");
-    let initialName = $state("");
-    let namespace = $state(defaultNamespace);
-    let otherGraphUris = $state([]);
+    let otherSchemaNames = $state([]);
     /** What the profile calls itself, if it does. Empty for a graph with no header to read. */
     let profileName = $state("");
     /**
@@ -61,40 +54,27 @@
      */
     let headerTarget = $state(null);
 
-    const trimmedName = $derived(nameUserInput.trim());
-    const localName = $derived(toLocalName(trimmedName));
-    const resolvedGraphUri = $derived(localName ? namespace + localName : "");
-    const graphExists = $derived(
-        !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
-    );
-    /**
-     * A rename is a change of the graph URI, and the URI is built from the name rather than being
-     * it: "My Notes" and "MyNotes" are the same graph, and renaming one to the other would report
-     * success for a request the backend turns into nothing.
-     */
-    const uriChanged = $derived(
-        !!resolvedGraphUri && resolvedGraphUri !== graphUri,
+    const resolvedSchemaName = $derived(nameUserInput.trim());
+    const nameViolations = $derived(
+        isInvalidSchemaName(nameUserInput, otherSchemaNames),
     );
     const disableSubmit = $derived(
-        !resolvedGraphUri || graphExists || !uriChanged,
+        nameViolations.length > 0 || resolvedSchemaName === schemaName,
     );
-    /** Shown where the typed name cannot stand in a URI as written. */
-    const spelledAs = $derived(localName !== trimmedName ? localName : "");
 
     async function onOpen() {
-        const uri = graphUri ? new URI(graphUri) : null;
-        namespace = uri?.prefix || defaultNamespace;
-        initialName = uri?.suffix ?? "";
-        nameUserInput = initialName;
+        nameUserInput = schemaName ?? "";
 
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
-        const current = graphs.find(graph => uriOf(graph) === graphUri);
+        const current = graphs.find(graph => nameOfGraph(graph) === schemaName);
         // Named among the other schemas, not on its own: the schemas this dialog has to tell
         // apart are exactly the ones whose profiles name themselves alike.
         profileName = current?.label || current?.keyword ? nameOf(current) : "";
         headerTarget = headerTargetOf(current);
-        otherGraphUris = graphs.map(uriOf).filter(uri => uri !== graphUri);
+        otherSchemaNames = graphs
+            .map(nameOfGraph)
+            .filter(name => name !== schemaName);
     }
 
     function headerTargetOf(graph) {
@@ -113,9 +93,7 @@
 
     function onClose() {
         nameUserInput = "";
-        initialName = "";
-        namespace = defaultNamespace;
-        otherGraphUris = [];
+        otherSchemaNames = [];
         profileName = "";
         headerTarget = null;
     }
@@ -129,17 +107,17 @@
     }
 
     async function renameGraph() {
-        const oldGraphUri = graphUri;
-        const newGraphUri = resolvedGraphUri;
+        const oldSchemaName = schemaName;
+        const newSchemaName = resolvedSchemaName;
 
         const { error } = await graphStore.renameGraph(
             workspaceName,
-            oldGraphUri,
-            newGraphUri,
+            oldSchemaName,
+            newSchemaName,
         );
         if (error) return;
 
-        editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
+        editorState.renameGraph(workspaceName, oldSchemaName, newSchemaName);
         forceReloadTrigger.trigger();
     }
 </script>
@@ -164,17 +142,7 @@
             bind:value={nameUserInput}
         />
 
-        {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
-        {:else if spelledAs}
-            <!--
-              The graph URI is built from the name, so a name an IRI cannot carry as written is
-              spelled differently in it - and without saying so, Rename simply stays greyed out.
-            -->
-            <div class="mt-1 mb-1 h-6 text-sm">
-                Stored as {spelledAs}
-            </div>
-        {/if}
+        <ViolationMessages violations={nameViolations} />
 
         {#if profileName}
             <!--

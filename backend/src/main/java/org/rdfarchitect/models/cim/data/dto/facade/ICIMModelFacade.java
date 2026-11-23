@@ -24,7 +24,7 @@ import java.util.UUID;
 
 public interface ICIMModelFacade {
 
-    String getGraphUri();
+    String getSchemaName();
 
     List<ICIMClass> getCIMClasses();
 

@@ -20,9 +20,9 @@ package org.rdfarchitect.services.update.dataset;
 public interface DeleteDatasetUseCase {
 
     /**
-     * Deletes the dataset addressed by {@code datasetName} and all resources managed within it.
+     * Deletes the dataset addressed by {@code workspaceName} and all resources managed within it.
      *
-     * @param datasetName the literal name of the dataset to delete
+     * @param workspaceName the literal name of the dataset to delete
      */
-    void deleteDataset(String datasetName);
+    void deleteDataset(String workspaceName);
 }

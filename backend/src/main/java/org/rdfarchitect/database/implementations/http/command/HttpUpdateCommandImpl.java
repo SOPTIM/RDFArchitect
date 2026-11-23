@@ -45,14 +45,14 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
 
     private String endpoint;
     private String url;
-    private String datasetName;
+    private String workspaceName;
     private Update update;
     private final DatabaseAdminProtocol databaseAdminProtocol;
 
     public HttpUpdateCommandImpl(DatabaseAdminProtocol databaseAdminProtocol) {
         this.endpoint = null;
         this.url = null;
-        this.datasetName = null;
+        this.workspaceName = null;
         this.update = null;
         this.databaseAdminProtocol = databaseAdminProtocol;
     }
@@ -60,14 +60,14 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
     @Override
     public HttpUpdateCommandImpl setEndpoint(String endpoint) {
         this.url = endpoint;
-        this.endpoint = this.url + "/" + this.datasetName;
+        this.endpoint = this.url + "/" + this.workspaceName;
         return this;
     }
 
     @Override
-    public HttpUpdateCommandImpl setDatasetName(String datasetName) {
-        this.datasetName = datasetName;
-        this.endpoint = this.url + "/" + datasetName;
+    public HttpUpdateCommandImpl setWorkspaceName(String workspaceName) {
+        this.workspaceName = workspaceName;
+        this.endpoint = this.url + "/" + workspaceName;
         return this;
     }
 
@@ -116,8 +116,8 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
 
     @Override
     public void insertGraph(GraphSource graphSource) throws DataAccessException {
-        if (!databaseAdminProtocol.listDatasets().contains(this.datasetName)) {
-            databaseAdminProtocol.createDataset(this.datasetName);
+        if (!databaseAdminProtocol.listDatasets().contains(this.workspaceName)) {
+            databaseAdminProtocol.createDataset(this.workspaceName);
         }
         // insert graph into dataset/database
         String graphName = graphSource.graphName();
@@ -144,7 +144,7 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
 
     @Override
     public void deleteDataset() {
-        this.databaseAdminProtocol.deleteDataset(this.datasetName);
+        this.databaseAdminProtocol.deleteDataset(this.workspaceName);
     }
 
     @Override

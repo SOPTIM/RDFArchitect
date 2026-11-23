@@ -20,6 +20,7 @@ package org.rdfarchitect.models.cim.queries.update;
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.database.SchemaIri;
 
 import java.util.Map;
 
@@ -59,14 +60,16 @@ public class CIMBaseUpdateBuilder {
     }
 
     /**
-     * Sets the graph the query should be executed on.
+     * Sets the graph the query should be executed on, i.e. the named graph {@link
+     * org.rdfarchitect.database.inmemory.SessionDataStore#wrapGraphInDataset} puts a graph of that
+     * name into.
      *
-     * @param graphURI the GraphUri or "default"/null
+     * @param schemaName the graph name, or null for the default graph
      * @return {@link CIMBaseUpdateBuilder this}
      */
-    public CIMBaseUpdateBuilder setGraph(String graphURI) {
-        if (graphURI != null && !graphURI.equals("default")) {
-            baseUpdate.with(NodeFactory.createURI(graphURI));
+    public CIMBaseUpdateBuilder setGraph(String schemaName) {
+        if (schemaName != null) {
+            baseUpdate.with(NodeFactory.createURI(SchemaIri.of(schemaName)));
         }
         return this;
     }

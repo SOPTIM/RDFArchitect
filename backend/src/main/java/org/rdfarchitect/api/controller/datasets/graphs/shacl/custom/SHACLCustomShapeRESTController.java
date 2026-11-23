@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
@@ -40,14 +39,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/{shaclShapeURI}")
 @RequiredArgsConstructor
 public class SHACLCustomShapeRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLCustomShapeRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLReplaceShapeUseCase shaclReplaceShapeUseCase;
 
@@ -68,34 +65,27 @@ public class SHACLCustomShapeRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The property shape to replace.") @PathVariable
                     String shaclShapeURI,
             @Parameter(description = "the triples to replace, requires valid turtle syntax.")
                     @RequestBody
                     String shaclString) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(datasetName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        shaclReplaceShapeUseCase.replaceSHACLShape(
-                graphIdentifier, extendedShaclShapeURI, shaclString);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        shaclReplaceShapeUseCase.replaceSHACLShape(graphIdentifier, shaclShapeURI, shaclString);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
         return Response.SUCCESS;
@@ -115,30 +105,24 @@ public class SHACLCustomShapeRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The property shape to delete.") @PathVariable
                     String shaclShapeURI) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(datasetName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, extendedShaclShapeURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, shaclShapeURI);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
         return Response.SUCCESS;

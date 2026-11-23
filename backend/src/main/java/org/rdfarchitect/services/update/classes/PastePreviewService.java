@@ -71,8 +71,8 @@ public class PastePreviewService implements PastePreviewUseCase {
                         CopyClassReference.Kind.class);
         try (var transaction =
                 databasePort.beginTransaction(
-                        targetGraphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphUri());
+                        targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             for (var kind : CopyClassReference.Kind.values()) {
                 missingByKind.put(kind, missing(references, kind, ctx.getRdfGraph(), pastedUris));
             }

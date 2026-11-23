@@ -22,7 +22,7 @@ import GraphSection from "../../src/routes/mainpage/packageNavigation/GraphSecti
 
 /** A schema entry as build-nav-object hands it over. */
 const GRAPH_NAV_ENTRY = {
-    id: "http://example.org/graphs/Equipment",
+    id: "http://example.org/schemas/Equipment",
     label: "Core Equipment Vocabulary",
     tooltip: [
         "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
@@ -38,7 +38,7 @@ const GRAPH_NAV_ENTRY = {
  * went back to labelling itself by the shortened IRI would be caught below.
  */
 const NAMESPACES = [
-    { prefix: "http://example.org/graphs/", substitutedPrefix: "graphs:" },
+    { prefix: "http://example.org/schemas/", substitutedPrefix: "graphs:" },
 ];
 
 let mounted = null;
@@ -101,7 +101,7 @@ describe("GraphSection", () => {
         const entry = render({
             ...GRAPH_NAV_ENTRY,
             label: "Notes",
-            tooltip: "http://example.org/graphs/Notes",
+            tooltip: "http://example.org/schemas/Notes",
             data: { keyword: "" },
         });
 

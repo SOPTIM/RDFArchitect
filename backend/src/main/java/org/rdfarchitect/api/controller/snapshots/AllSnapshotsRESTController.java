@@ -56,10 +56,10 @@ public class AllSnapshotsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @RequestBody
-                    String datasetName) {
+                    String workspaceName) {
         logger.info("Received POST request: \"/api/snapshots\" from \"{}\".", originURL);
 
-        var base64Token = createSnapshotUseCase.createSnapshot(datasetName);
+        var base64Token = createSnapshotUseCase.createSnapshot(workspaceName);
 
         logger.info("Sending response to POST request: \"/api/snapshots\" from \"{}\".", originURL);
         return base64Token;

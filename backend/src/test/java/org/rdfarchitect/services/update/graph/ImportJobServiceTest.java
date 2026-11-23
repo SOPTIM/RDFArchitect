@@ -34,7 +34,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.graph.InvalidPrefixException;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
@@ -111,8 +110,7 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:IMPORTED");
-        assertThat(status.importedGraphUris())
-                .containsExactly(RDFA.GRAPH_URI + "first", RDFA.GRAPH_URI + "second");
+        assertThat(status.importedSchemaNames()).containsExactly("first", "second");
         assertThat(status.failedImports()).isEmpty();
     }
 
@@ -125,7 +123,7 @@ class ImportJobServiceTest {
         var observedSettings = new AtomicReference<UserSettings>();
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             observedSession.set(SessionContext.getSessionId());
                             observedSettings.set(UserSettingsContext.get());
                             return new ImportResult();
@@ -143,7 +141,7 @@ class ImportJobServiceTest {
         var received = new AtomicReference<MultipartFile>();
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             received.set(files.getFirst());
                             return new ImportResult();
                         });
@@ -219,12 +217,12 @@ class ImportJobServiceTest {
         var release = new CountDownLatch(1);
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             listener.started(0);
                             running.countDown();
                             awaitLatch(release);
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             return new ImportResult();
                         });
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
@@ -245,7 +243,7 @@ class ImportJobServiceTest {
     void startImport_importDyingOnAnError_settlesTheJobAndFreesTheSession() {
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new StackOverflowError("nesting too deep");
                         });
 
@@ -301,12 +299,12 @@ class ImportJobServiceTest {
     void startImport_importDiesHalfWay_stillReportsWhatItWrote() {
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             throw new IllegalStateException("out of memory");
                         });
 
@@ -319,20 +317,20 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("out of memory");
         // The graph is in the store whether the job survived or not, so the caller has to hear
         // about it; otherwise it stays invisible until the workspace is reloaded by hand.
-        assertThat(status.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(status.importedSchemaNames()).containsExactly("first");
     }
 
     @Test
     void startImport_importDiesHalfWay_settlesTheFilesItNeverFinished() {
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1),
                                             new PlannedImport(2, "third.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             listener.started(1);
                             throw new IllegalStateException("out of memory");
                         });
@@ -380,7 +378,7 @@ class ImportJobServiceTest {
     void cancel_runningImport_stopsItAndReportsTheJobAsCancelled() {
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             await().pollInSameThread().atMost(TIMEOUT).until(listener::isCancelled);
                             listener.finished(0, ImportProgressListener.Outcome.SKIPPED, null);
@@ -405,7 +403,7 @@ class ImportJobServiceTest {
     void startImport_importThrowing_reportsTheJobAsFailed() {
         service =
                 new ImportJobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new IllegalStateException("import blew up");
                         });
 
@@ -425,7 +423,7 @@ class ImportJobServiceTest {
 
         var waiting = awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
         assertThat(waiting.prefixComparison()).containsExactly(COMPARISON);
-        assertThat(waiting.importedGraphUris()).isEmpty();
+        assertThat(waiting.importedSchemaNames()).isEmpty();
         assertThat(waiting.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -498,7 +496,7 @@ class ImportJobServiceTest {
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.CANCELLED);
-        assertThat(status.importedGraphUris()).isEmpty();
+        assertThat(status.importedSchemaNames()).isEmpty();
         assertThat(status.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -564,7 +562,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase prefixAskingImportService(
             AtomicReference<ResolvedPrefixes> received, List<PrefixComparison> comparison) {
-        return (datasetName, files, graphUris, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
             listener.scanningPrefixes();
             received.set(listener.awaitResolvedPrefixes(comparison));
@@ -574,8 +572,8 @@ class ImportJobServiceTest {
                 return result;
             }
             listener.started(0);
-            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
-            result.importedGraphUris().add(RDFA.GRAPH_URI + "first");
+            listener.finished(0, Outcome.IMPORTED, "first");
+            result.importedSchemaNames().add("first");
             return result;
         };
     }
@@ -587,7 +585,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase blockingImportService(
             CountDownLatch running, CountDownLatch release) {
-        return (datasetName, files, graphUris, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             running.countDown();
             awaitLatch(release);
             return new ImportResult();

@@ -70,13 +70,13 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
                 var jsonObject = new JSONObject(jsonResponse);
                 var datasets = jsonObject.getJSONArray("datasets");
 
-                var datasetNames = new ArrayList<String>();
+                var workspaceNames = new ArrayList<String>();
                 for (var i = 0; i < datasets.length(); i++) {
                     var dataset = datasets.getJSONObject(i);
                     var datasetId = dataset.getString("ds.name").replace("/", "");
-                    datasetNames.add(datasetId);
+                    workspaceNames.add(datasetId);
                 }
-                return datasetNames;
+                return workspaceNames;
             }
         } catch (IOException | JSONException e) {
             throw new DataAccessException("Failed to list datasets", e);
@@ -88,9 +88,9 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
     }
 
     @Override
-    public void createDataset(String datasetName) {
+    public void createDataset(String workspaceName) {
         try (var client = HttpClient.newHttpClient()) {
-            var requestBody = "dbName=" + datasetName + "&dbType=tdb2";
+            var requestBody = "dbName=" + workspaceName + "&dbType=tdb2";
             var request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(this.url + "/$/datasets"))
@@ -102,12 +102,12 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
             if (response.statusCode() == 200) {
                 logger.info(
                         "Successfully created dataset: \"{}\" at endpoint: \"{}\"",
-                        datasetName,
+                        workspaceName,
                         this.url);
             } else {
                 throw new DataAccessException(
                         "Failed to create dataset \""
-                                + datasetName
+                                + workspaceName
                                 + "\" at endpoint: \""
                                 + this.url
                                 + "\"");
@@ -115,7 +115,7 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
         } catch (IOException e) {
             throw new DataAccessException(
                     "Failed to create dataset \""
-                            + datasetName
+                            + workspaceName
                             + "\" at endpoint: \""
                             + this.url
                             + "\"",
@@ -124,7 +124,7 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
             Thread.currentThread().interrupt();
             throw new DataAccessException(
                     "Failed to create dataset \""
-                            + datasetName
+                            + workspaceName
                             + "\" at endpoint: \""
                             + this.url
                             + "\"",
@@ -133,11 +133,11 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
+    public void deleteDataset(String workspaceName) {
         try (var client = HttpClient.newHttpClient()) {
             var request =
                     HttpRequest.newBuilder()
-                            .uri(URI.create(this.url + "/$/datasets/" + datasetName))
+                            .uri(URI.create(this.url + "/$/datasets/" + workspaceName))
                             .DELETE()
                             .build();
 
@@ -146,12 +146,12 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
             if (response.statusCode() == 200) {
                 logger.info(
                         "Successfully deleted dataset: \"{}\" at endpoint: \"{}\"",
-                        datasetName,
+                        workspaceName,
                         this.url);
             } else {
                 throw new DataAccessException(
                         "Failed to delete dataset \""
-                                + datasetName
+                                + workspaceName
                                 + "\" at endpoint: \""
                                 + this.url
                                 + "\"");
@@ -159,7 +159,7 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
         } catch (IOException e) {
             throw new DataAccessException(
                     "Failed to delete dataset \""
-                            + datasetName
+                            + workspaceName
                             + "\" at endpoint: \""
                             + this.url
                             + "\"",
@@ -168,7 +168,7 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
             Thread.currentThread().interrupt();
             throw new DataAccessException(
                     "Failed to delete dataset \""
-                            + datasetName
+                            + workspaceName
                             + "\" at endpoint: \""
                             + this.url
                             + "\"",

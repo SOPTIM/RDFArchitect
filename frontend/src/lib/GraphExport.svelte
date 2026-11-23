@@ -27,7 +27,11 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
-    import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
+    import {
+        filenameFromContentDisposition,
+        saveFile,
+        supportedRDFMediaTypes,
+    } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
     import { workspaceStore } from "./stores/workspaceStore.ts";
@@ -36,13 +40,13 @@
         showDialog = $bindable(),
         disablePrimary = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedSchemaName,
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
 
     let selectedWorkspaceName = $state(null);
-    let graphURI = $state(null);
+    let schemaName = $state(null);
     let selectedMediaType = $state();
 
     let ontology = $state();
@@ -63,7 +67,7 @@
     $effect(
         () =>
             (disablePrimary =
-                !selectedWorkspaceName || !graphURI || !selectedMediaType),
+                !selectedWorkspaceName || !schemaName || !selectedMediaType),
     );
 
     $effect(async () => {
@@ -77,10 +81,10 @@
     });
 
     $effect(async () => {
-        if (selectedWorkspaceName && graphURI) {
+        if (selectedWorkspaceName && schemaName) {
             const result = await ontologyStore.getOntologyForGraph(
                 selectedWorkspaceName,
-                graphURI,
+                schemaName,
             );
             if (result == null || result === undefined) {
                 ontology = null;
@@ -96,10 +100,10 @@
     });
 
     $effect(async () => {
-        if (selectedWorkspaceName && graphURI && hasOntology) {
+        if (selectedWorkspaceName && schemaName && hasOntology) {
             const { error, data } = await ontologyStore.generateOntologyEntries(
                 selectedWorkspaceName,
-                graphURI,
+                schemaName,
             );
             if (!error) {
                 generatedOntologyEntries = data;
@@ -115,7 +119,7 @@
     onMount(async () => {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        schemaName = lockedSchemaName ?? editorState.selectedGraph.getValue();
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
             ? (supportedMediaTypes.find(m => m.mimeType === saved) ??
@@ -129,7 +133,7 @@
     }
 
     async function fetchGraphFile(getAPIRoute) {
-        return fetch(getAPIRoute(selectedWorkspaceName, graphURI), {
+        return fetch(getAPIRoute(selectedWorkspaceName, schemaName), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
             credentials: "include",
@@ -141,7 +145,7 @@
         if (
             !getAPIRoute ||
             !selectedWorkspaceName ||
-            !graphURI ||
+            !schemaName ||
             !selectedMediaType
         ) {
             return;
@@ -156,7 +160,7 @@
             }
             const { error } = await ontologyStore.replaceOntology(
                 selectedWorkspaceName,
-                graphURI,
+                schemaName,
                 ontology.getPlainObject(),
             );
             if (!error) {
@@ -168,18 +172,18 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphURI}".`,
+                    `Could not export "${schemaName}".`,
                 );
                 return;
             }
             const blob = await response.blob();
-            const suggestedFilename = response.headers.get(
-                "content-disposition",
+            const suggestedFilename = filenameFromContentDisposition(
+                response.headers.get("content-disposition"),
             );
             saveFile(blob, suggestedFilename, selectedMediaType);
             toastStore.success(
                 "Export ready",
-                `"${graphURI}" downloaded as ${selectedMediaType.name}.`,
+                `"${schemaName}" downloaded as ${selectedMediaType.name}.`,
             );
         } catch (e) {
             console.error("Failed to download graph:", e);
@@ -209,9 +213,9 @@
 <div class="mx-2 mt-2 flex h-full flex-col">
     <WorkspaceAndGraphSelection
         bind:workspace={selectedWorkspaceName}
-        bind:graph={graphURI}
+        bind:graph={schemaName}
         {lockedWorkspaceName}
-        {lockedGraphUri}
+        {lockedSchemaName}
         displayAsCard={false}
     />
     {#if generateOntologyEntries}
@@ -258,7 +262,7 @@
                     schema.
                 </p>
             {/if}
-        {:else if graphURI}
+        {:else if schemaName}
             <p class="mt-2 text-sm italic">This schema has no profile header</p>
         {/if}
     {/if}
