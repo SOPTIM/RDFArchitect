@@ -26,6 +26,7 @@ import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
@@ -37,6 +38,7 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -70,6 +72,37 @@ public class GraphUtils {
             newGraph.add(iterator.next());
         }
         return newGraph;
+    }
+
+    /**
+     * Copies {@code subject}'s statements from {@code source} to {@code target}, together with the
+     * statements of every blank node they lead to, however deeply nested. A named object is
+     * followed only when the statement's predicate is in {@code alsoFollow}.
+     *
+     * <p>Walks with a work list and a visited set, so that a cyclic list ends and a deeply nested
+     * structure cannot overflow the stack. Both can come from a document a user uploads.
+     */
+    public static void copyWithBlankNodes(
+            Model source, Model target, Resource subject, Set<Property> alsoFollow) {
+        var visited = new HashSet<RDFNode>();
+        var pending = new ArrayDeque<Resource>();
+        pending.push(subject);
+        visited.add(subject);
+        while (!pending.isEmpty()) {
+            var statements = source.listStatements(pending.pop(), null, (RDFNode) null);
+            while (statements.hasNext()) {
+                var statement = statements.nextStatement();
+                target.add(statement);
+                var object = statement.getObject();
+                var follow =
+                        object.isAnon()
+                                || (object.isResource()
+                                        && alsoFollow.contains(statement.getPredicate()));
+                if (follow && visited.add(object)) {
+                    pending.push(object.asResource());
+                }
+            }
+        }
     }
 
     public static Graph enhanceWithUUIDs(Graph graph) {

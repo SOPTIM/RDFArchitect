@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl;
+package org.rdfarchitect.rdf.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,9 +26,12 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.shacl.vocabulary.SHACL;
+import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.junit.jupiter.api.Test;
 
-class ShapeClosureTest {
+import java.util.Set;
+
+class GraphUtilsCopyWithBlankNodesTest {
 
     private static final String EX = "http://example.org/";
 
@@ -46,12 +49,12 @@ class ShapeClosureTest {
 
     private static Model closureOf(Model source, Resource subject) {
         var target = ModelFactory.createDefaultModel();
-        ShapeClosure.copy(source, target, subject);
+        GraphUtils.copyWithBlankNodes(source, target, subject, Set.of(SHACLM.sparql));
         return target;
     }
 
     @Test
-    void copiesAShapeWithWhatItHoldsInlineAndLeavesItsNeighboursOut() {
+    void copiesASubjectWithItsNestedBlankNodesAndLeavesNamedNeighboursOut() {
         var source =
                 model(
                         """
@@ -70,7 +73,7 @@ class ShapeClosureTest {
     }
 
     @Test
-    void followsANamedSparqlConstraint() {
+    void followsANamedObjectThroughAChosenProperty() {
         var source =
                 model(
                         """
@@ -81,6 +84,29 @@ class ShapeClosureTest {
         var closure = closureOf(source, source.createResource(EX + "Shape"));
 
         assertThat(closure.contains(null, source.createProperty(SHACL.NS + "select"))).isTrue();
+    }
+
+    @Test
+    void followsANamedObjectOnlyThroughTheChosenProperties() {
+        var source =
+                model(
+                        """
+                        ex:Shape sh:sparql ex:Query .
+                        ex:Query sh:select "SELECT ?this WHERE { }" .
+                        """);
+        var target = ModelFactory.createDefaultModel();
+
+        GraphUtils.copyWithBlankNodes(
+                source, target, source.createResource(EX + "Shape"), Set.of());
+
+        assertThat(target.size()).isEqualTo(1);
+    }
+
+    @Test
+    void ignoresALiteralWhereAChosenPropertyUsuallyNamesSomething() {
+        var source = model("ex:Shape sh:sparql \"not a constraint\" .");
+
+        assertThat(closureOf(source, source.createResource(EX + "Shape")).size()).isEqualTo(1);
     }
 
     @Test
