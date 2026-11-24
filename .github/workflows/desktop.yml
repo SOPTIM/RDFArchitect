@@ -122,6 +122,8 @@ jobs:
       - name: Build portable app
         id: portable
         run: desktop/build.sh --skip-frontend --version "$APP_VERSION"
+      - name: Start the app
+        run: desktop/smoke-test.sh
       - name: Build installer
         # A release builds its .msi only once RDFArchitect.exe is signed
         # (desktop-windows-installer.yml), so that the program it installs is signed as well.

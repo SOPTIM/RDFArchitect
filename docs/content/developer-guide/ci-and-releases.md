@@ -16,7 +16,7 @@ Every Maven build of the backend fails in the `validate` phase when a test libra
 
 A third workflow, **`publish-test-images.yml`**, builds preview images for PRs from trusted contributors.
 
-**`.github/workflows/desktop.yml`** builds the [desktop app](/user-guide/desktop-app): the frontend once, then one job per platform (Windows x64, macOS arm64 and x64, Linux x64), since jpackage only builds for the system it runs on. It runs for release tags, and on pushes and pull requests that touch the desktop packaging, `backend/pom.xml` or the desktop-only backend code. A platform whose installer fails to build fails its job, but still uploads its portable archive as a workflow artifact.
+**`.github/workflows/desktop.yml`** builds the [desktop app](/user-guide/desktop-app): the frontend once, then one job per platform (Windows x64, macOS arm64 and x64, Linux x64), since jpackage only builds for the system it runs on. It runs for release tags, and on pushes and pull requests that touch the desktop packaging, `backend/pom.xml` or the desktop-only backend code. Each job starts the app it built and checks with `desktop/smoke-test.sh` that it serves its pages and API and stops after its last window. A platform whose installer fails to build fails its job, but still uploads its portable archive as a workflow artifact.
 
 ## Releases
 
@@ -84,7 +84,7 @@ JAVA_HOME=/path/to/jdk-25 desktop/build.sh              # portable archive in de
 JAVA_HOME=/path/to/jdk-25 desktop/build.sh --installer  # plus .msi, .dmg or .deb
 ```
 
-It builds the frontend, then the desktop jar with `mvn -Pdesktop package` (which copies `frontend/build` into the jar), trims a Java runtime with `jlink`, and packages both with `jpackage`. The `.msi` needs the WiX Toolset 3 on the path, the `.deb` needs `dpkg-deb` and `fakeroot`. On Windows run it from Git Bash. The installers register `.rdfa` files with the app (`--file-associations`); the launcher hands a file it is started with to the running app, which opens a window at `/mainpage?open=<id>`.
+It builds the frontend, then the desktop jar with `mvn -Pdesktop package` (which copies `frontend/build` into the jar), trims a Java runtime with `jlink`, and packages both with `jpackage`. The `.msi` needs the WiX Toolset 3 on the path, the `.deb` needs `dpkg-deb` and `fakeroot`. On Windows run it from Git Bash. `desktop/smoke-test.sh` then starts the built app without a window and checks that it works. The installers register `.rdfa` files with the app (`--file-associations`); the launcher hands a file it is started with to the running app, which opens a window at `/mainpage?open=<id>`.
 
 To try the desktop mode during development without packaging, build the frontend and run the backend with the profile and the build directory:
 
