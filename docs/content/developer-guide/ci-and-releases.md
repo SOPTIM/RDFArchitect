@@ -12,6 +12,8 @@ Two GitHub Actions workflows run on every push and PR:
 - **`.github/workflows/backend-ci.yml`** — checkout, setup Java 25, resolve version, lint (`mvn -B -Plint -DskipTests verify`), unit tests (`mvn -B test`), integration tests (`mvn -B verify`), third-party license consistency check, build & push Docker image (only on `main` and tags).
 - **`.github/workflows/frontend-ci.yml`** — checkout, setup Node 24, install, lint, test, build, third-party license check, build & push Docker image (only on `main` and tags).
 
+Every Maven build of the backend fails in the `validate` phase when a test library (JUnit, Mockito, AssertJ, the Spring test modules and others) is in a scope other than `test`, because it would end up in the application jar. The rule is the enforcer execution `ban-test-libraries` in `backend/pom.xml`.
+
 A third workflow, **`publish-test-images.yml`**, builds preview images for PRs from trusted contributors.
 
 **`.github/workflows/desktop.yml`** builds the [desktop app](/user-guide/desktop-app): the frontend once, then one job per platform (Windows x64, macOS arm64 and x64, Linux x64), since jpackage only builds for the system it runs on. It runs for release tags, and on pushes and pull requests that touch the desktop packaging, `backend/pom.xml` or the desktop-only backend code. A platform whose installer fails to build fails its job, but still uploads its portable archive as a workflow artifact.
