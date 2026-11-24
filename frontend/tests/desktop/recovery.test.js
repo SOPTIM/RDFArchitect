@@ -17,8 +17,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
-    discardRecoveredWorkspace,
     fetchRecoveredWorkspace,
+    markRestoredFrom,
 } from "$lib/desktop/desktopApi.js";
 import {
     RecoveredWorkspaceGoneError,
@@ -31,8 +31,8 @@ import { openImportedWorkspace } from "$lib/utils/importJob.svelte.js";
 const KEPT = { id: "Draft-1.rdfa", workspaceName: "Draft" };
 
 vi.mock("$lib/desktop/desktopApi.js", () => ({
-    discardRecoveredWorkspace: vi.fn(),
     fetchRecoveredWorkspace: vi.fn(),
+    markRestoredFrom: vi.fn(),
 }));
 vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: {
@@ -63,8 +63,8 @@ describe("restoreRecoveredWorkspace", () => {
         vi.useFakeTimers();
         vi.mocked(fetchRecoveredWorkspace).mockReset();
         vi.mocked(fetchRecoveredWorkspace).mockResolvedValue(new Blob(["zip"]));
-        vi.mocked(discardRecoveredWorkspace).mockReset();
-        vi.mocked(discardRecoveredWorkspace).mockResolvedValue();
+        vi.mocked(markRestoredFrom).mockReset();
+        vi.mocked(markRestoredFrom).mockResolvedValue();
         vi.mocked(graphStore.startWorkspaceImport).mockReset();
         vi.mocked(graphStore.startWorkspaceImport).mockResolvedValue({
             error: null,
@@ -85,7 +85,7 @@ describe("restoreRecoveredWorkspace", () => {
             .mockResolvedValue({ error: null, data });
     }
 
-    test("restoreRecoveredWorkspace_nameTaken_restoresUnderAFreeNameAndDiscardsTheCopy", async () => {
+    test("restoreRecoveredWorkspace_nameTaken_restoresUnderAFreeNameAndReportsIt", async () => {
         importEndsAs({ state: "COMPLETED", importedSchemaNames: ["g"] });
 
         const restoring = restoreRecoveredWorkspace(KEPT, ["Draft"]);
@@ -101,7 +101,10 @@ describe("restoreRecoveredWorkspace", () => {
             "Draft (recovered)",
             ["g"],
         );
-        expect(discardRecoveredWorkspace).toHaveBeenCalledWith("Draft-1.rdfa");
+        expect(markRestoredFrom).toHaveBeenCalledWith(
+            "Draft (recovered)",
+            "Draft-1.rdfa",
+        );
     });
 
     test("restoreRecoveredWorkspace_importFails_keepsTheCopy", async () => {
@@ -112,14 +115,12 @@ describe("restoreRecoveredWorkspace", () => {
         await vi.advanceTimersByTimeAsync(1000);
         await outcome;
 
-        expect(discardRecoveredWorkspace).not.toHaveBeenCalled();
+        expect(markRestoredFrom).not.toHaveBeenCalled();
     });
 
     test("restoreRecoveredWorkspace_copyCannotBeRemoved_stillReportsTheRestore", async () => {
         importEndsAs({ state: "COMPLETED", importedSchemaNames: ["g"] });
-        vi.mocked(discardRecoveredWorkspace).mockRejectedValue(
-            new Error("500"),
-        );
+        vi.mocked(markRestoredFrom).mockRejectedValue(new Error("500"));
         vi.spyOn(console, "warn").mockImplementation(() => {});
 
         const restoring = restoreRecoveredWorkspace(KEPT, []);

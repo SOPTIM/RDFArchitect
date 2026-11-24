@@ -3167,7 +3167,7 @@
     },
     "/api/desktop/recovery/{id}" : {
       "delete" : {
-        "description" : "Removes the copy, once it is restored or not wanted. Only in the desktop app.",
+        "description" : "Removes a copy that is not wanted. Only in the desktop app.",
         "operationId" : "discardRecoveredWorkspace",
         "parameters" : [
           {
@@ -3376,6 +3376,45 @@
           }
         },
         "summary" : "Workspace opened from a registered file",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/workspaces/{workspaceName}/restored-from/{id}" : {
+      "put" : {
+        "description" : "Records that the workspace was restored from a copy kept from the previous run. The copy is removed once the app keeps a copy of the restored workspace. 409 while it cannot; the copy stays for another try. Only in the desktop app.",
+        "operationId" : "markRestoredFromCopy",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Recorded"
+          },
+          "404" : {
+            "description" : "No such copy"
+          },
+          "409" : {
+            "description" : "The restored workspace could not be kept right now"
+          }
+        },
+        "summary" : "Workspace restored from a kept copy",
         "tags" : [
           "desktop"
         ]

@@ -21,6 +21,7 @@ import {
     getWorkspaceFile,
     listRecoveredWorkspaces as requestRecoveredWorkspaces,
     markOpenedFromRequest,
+    markRestoredFromCopy,
     markWorkspaceSaved as requestMarkWorkspaceSaved,
     reportWindowClosed,
     reportWindowOpen,
@@ -204,6 +205,19 @@ export async function fetchRecoveredWorkspace(id) {
         }
         throw error;
     }
+}
+
+/**
+ * Records that the workspace was restored from a kept copy. The copy is removed once the backend
+ * keeps the restored workspace itself; asks again for a moment while it cannot.
+ *
+ * @param {string} workspaceName
+ * @param {string} id the copy
+ */
+export async function markRestoredFrom(workspaceName, id) {
+    await retryWhileBusy(() =>
+        call(markRestoredFromCopy({ path: { workspaceName, id } })),
+    );
 }
 
 /**

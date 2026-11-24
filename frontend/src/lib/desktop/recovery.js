@@ -19,10 +19,7 @@ import { workspaceArchiveMediaType } from "$lib/utils/fileUtils";
 import { openImportedWorkspace } from "$lib/utils/importJob.svelte.js";
 import { JobState } from "$lib/utils/importProgress.svelte.js";
 
-import {
-    discardRecoveredWorkspace,
-    fetchRecoveredWorkspace,
-} from "./desktopApi.js";
+import { fetchRecoveredWorkspace, markRestoredFrom } from "./desktopApi.js";
 
 /**
  * Restoring the workspaces the desktop app kept when it stopped with unsaved changes (see
@@ -61,9 +58,9 @@ export function restoredName(workspaceName, existingNames) {
 }
 
 /**
- * Restores a kept workspace as a new workspace and removes the copy once that worked. The
- * workspace stays unsaved: no file of the user's holds it. A copy that cannot be removed is
- * offered again at the next start.
+ * Restores a kept workspace as a new workspace and has the copy removed once the app keeps the
+ * restored one. The workspace stays unsaved: no file of the user's holds it. A copy that cannot be
+ * removed is offered again at the next start.
  *
  * @param {{id: string, workspaceName: string}} recovered
  * @param {string[]} existingNames the workspaces there are, so the restored one gets a name of its own
@@ -96,7 +93,7 @@ export async function restoreRecoveredWorkspace(recovered, existingNames) {
     }
     openImportedWorkspace(name, status.importedSchemaNames ?? []);
     try {
-        await discardRecoveredWorkspace(recovered.id);
+        await markRestoredFrom(name, recovered.id);
     } catch (error) {
         console.warn(
             `[recovery] Restored "${name}", but could not remove its copy`,

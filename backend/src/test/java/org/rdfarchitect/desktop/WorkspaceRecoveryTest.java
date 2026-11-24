@@ -201,6 +201,69 @@ class WorkspaceRecoveryTest {
         assertThat(next.read(id)).isEmpty();
     }
 
+    /** A run that kept a copy of the unsaved workspace "Draft" and ended. */
+    private void endRunWithUnsavedDraft() {
+        var previous = recovery();
+        addSchema("Draft", "a");
+        previous.close();
+        databasePort.deleteDataset("Draft");
+    }
+
+    @Test
+    void removeRestored_restoredWorkspace_keepsItBeforeTheCopyGoes() throws Exception {
+        endRunWithUnsavedDraft();
+        var recovery = new WorkspaceRecovery(directory, databasePort, savedWorkspaces, export);
+        var id = recovery.previousRun().getFirst().id();
+        addSchema("Draft", "a");
+
+        assertThat(recovery.removeRestored(id, "Draft"))
+                .isEqualTo(WorkspaceRecovery.RestoredCopy.REMOVED);
+
+        assertThat(recovery.previousRun()).isEmpty();
+        assertThat(copies())
+                .singleElement()
+                .satisfies(file -> assertThat(file.getFileName().toString()).startsWith("Draft-"));
+    }
+
+    @Test
+    void removeRestored_restoredWorkspaceCannotBeKept_leavesTheCopy() throws Exception {
+        endRunWithUnsavedDraft();
+        ExportWorkspaceUseCase failing =
+                _ -> {
+                    throw new IllegalStateException("export failed");
+                };
+        var recovery = new WorkspaceRecovery(directory, databasePort, savedWorkspaces, failing);
+        var id = recovery.previousRun().getFirst().id();
+        addSchema("Draft", "a");
+
+        assertThat(recovery.removeRestored(id, "Draft"))
+                .isEqualTo(WorkspaceRecovery.RestoredCopy.STILL_NEEDED);
+
+        assertThat(recovery.previousRun()).hasSize(1);
+        assertThat(copies()).isEmpty();
+    }
+
+    @Test
+    void removeRestored_restoredWorkspaceSavedMeanwhile_removesTheCopy() throws Exception {
+        endRunWithUnsavedDraft();
+        var recovery = new WorkspaceRecovery(directory, databasePort, savedWorkspaces, export);
+        var id = recovery.previousRun().getFirst().id();
+        addSchema("Draft", "a");
+        savedWorkspaces.markSavedNow("Draft");
+
+        assertThat(recovery.removeRestored(id, "Draft"))
+                .isEqualTo(WorkspaceRecovery.RestoredCopy.REMOVED);
+
+        assertThat(recovery.previousRun()).isEmpty();
+        assertThat(copies()).isEmpty();
+    }
+
+    @Test
+    void removeRestored_unknownCopy_saysSo() {
+        assertThat(recovery().removeRestored("missing.rdfa", "Draft"))
+                .isEqualTo(WorkspaceRecovery.RestoredCopy.UNKNOWN);
+    }
+
     @Test
     void read_idOutsideDirectory_readsNothing() throws Exception {
         Files.createDirectories(directory);

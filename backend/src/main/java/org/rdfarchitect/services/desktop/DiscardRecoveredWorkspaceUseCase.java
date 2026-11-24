@@ -21,7 +21,7 @@ package org.rdfarchitect.services.desktop;
 public interface DiscardRecoveredWorkspaceUseCase {
 
     /**
-     * Removes the copy of a kept workspace, once it is restored or not wanted.
+     * Removes the copy of a kept workspace that is not wanted.
      *
      * @param id the id {@link ListRecoveredWorkspacesUseCase} names it by
      * @return whether there was such a copy

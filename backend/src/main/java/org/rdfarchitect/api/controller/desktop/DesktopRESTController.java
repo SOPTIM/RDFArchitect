@@ -36,6 +36,7 @@ import org.rdfarchitect.services.desktop.GetRecoveredWorkspaceUseCase;
 import org.rdfarchitect.services.desktop.GetWorkspaceFileUseCase;
 import org.rdfarchitect.services.desktop.ListRecoveredWorkspacesUseCase;
 import org.rdfarchitect.services.desktop.MarkOpenedFromRequestUseCase;
+import org.rdfarchitect.services.desktop.MarkRestoredFromCopyUseCase;
 import org.rdfarchitect.services.desktop.MarkWorkspaceSavedUseCase;
 import org.rdfarchitect.services.desktop.ReportWindowClosedUseCase;
 import org.rdfarchitect.services.desktop.ReportWindowOpenUseCase;
@@ -97,6 +98,7 @@ public class DesktopRESTController {
     private final ListRecoveredWorkspacesUseCase listRecoveredWorkspacesUseCase;
     private final GetRecoveredWorkspaceUseCase getRecoveredWorkspaceUseCase;
     private final DiscardRecoveredWorkspaceUseCase discardRecoveredWorkspaceUseCase;
+    private final MarkRestoredFromCopyUseCase markRestoredFromCopyUseCase;
 
     @Operation(
             summary = "Desktop app",
@@ -345,8 +347,7 @@ public class DesktopRESTController {
 
     @Operation(
             summary = "Discard a workspace kept from the previous run",
-            description =
-                    "Removes the copy, once it is restored or not wanted. Only in the desktop app.",
+            description = "Removes a copy that is not wanted. Only in the desktop app.",
             tags = {TAG},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Removed"),
@@ -358,6 +359,36 @@ public class DesktopRESTController {
         logger.info("Received a request to discard the kept workspace {}.", id);
         if (!discardRecoveredWorkspaceUseCase.discardRecoveredWorkspace(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Operation(
+            summary = "Workspace restored from a kept copy",
+            description =
+                    "Records that the workspace was restored from a copy kept from the previous run."
+                            + " The copy is removed once the app keeps a copy of the restored"
+                            + " workspace. 409 while it cannot; the copy stays for another try. Only"
+                            + " in the desktop app.",
+            tags = {TAG},
+            responses = {
+                @ApiResponse(responseCode = "204", description = "Recorded"),
+                @ApiResponse(responseCode = "404", description = "No such copy"),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The restored workspace could not be kept right now")
+            })
+    @PutMapping("/workspaces/{workspaceName}/restored-from/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void markRestoredFromCopy(@PathVariable String workspaceName, @PathVariable String id) {
+        logger.info("Received a report that \"{}\" was restored from a copy.", workspaceName);
+        switch (markRestoredFromCopyUseCase.markRestoredFromCopy(workspaceName, id)) {
+            case REMOVED -> {
+                // Nothing more to answer.
+            }
+            case UNKNOWN_COPY -> throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            case STILL_NEEDED ->
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT, "The restored workspace could not be kept yet.");
         }
     }
 }

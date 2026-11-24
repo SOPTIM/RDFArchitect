@@ -44,6 +44,7 @@ import org.rdfarchitect.services.desktop.GetWorkspaceFileUseCase;
 import org.rdfarchitect.services.desktop.ListRecoveredWorkspacesUseCase;
 import org.rdfarchitect.services.desktop.MarkOpenedFromRequestUseCase;
 import org.rdfarchitect.services.desktop.MarkOpenedFromRequestUseCase.Result;
+import org.rdfarchitect.services.desktop.MarkRestoredFromCopyUseCase;
 import org.rdfarchitect.services.desktop.MarkWorkspaceSavedUseCase;
 import org.rdfarchitect.services.desktop.OpenRequestFile;
 import org.rdfarchitect.services.desktop.ReportWindowClosedUseCase;
@@ -80,6 +81,8 @@ class DesktopRESTControllerTest {
             mock(GetRecoveredWorkspaceUseCase.class);
     private final DiscardRecoveredWorkspaceUseCase discardRecovered =
             mock(DiscardRecoveredWorkspaceUseCase.class);
+    private final MarkRestoredFromCopyUseCase markRestoredFromCopy =
+            mock(MarkRestoredFromCopyUseCase.class);
 
     private MockMvc mockMvc;
 
@@ -99,7 +102,8 @@ class DesktopRESTControllerTest {
                                         markOpenedFromRequest,
                                         listRecovered,
                                         getRecovered,
-                                        discardRecovered))
+                                        discardRecovered,
+                                        markRestoredFromCopy))
                         .build();
     }
 
@@ -292,5 +296,22 @@ class DesktopRESTControllerTest {
                 .andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/desktop/recovery/missing.rdfa"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void markRestoredFromCopy_eachResult_answersItsStatus() throws Exception {
+        when(markRestoredFromCopy.markRestoredFromCopy("Draft", "done.rdfa"))
+                .thenReturn(MarkRestoredFromCopyUseCase.Result.REMOVED);
+        when(markRestoredFromCopy.markRestoredFromCopy("Draft", "missing.rdfa"))
+                .thenReturn(MarkRestoredFromCopyUseCase.Result.UNKNOWN_COPY);
+        when(markRestoredFromCopy.markRestoredFromCopy("Draft", "busy.rdfa"))
+                .thenReturn(MarkRestoredFromCopyUseCase.Result.STILL_NEEDED);
+
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/restored-from/done.rdfa"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/restored-from/missing.rdfa"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/restored-from/busy.rdfa"))
+                .andExpect(status().isConflict());
     }
 }

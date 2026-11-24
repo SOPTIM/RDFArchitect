@@ -24,6 +24,7 @@ import {
     fetchWorkspaceFile,
     fileNameOfContentDisposition,
     markOpenedFrom,
+    markRestoredFrom,
     markWorkspaceSaved,
     saveWorkspaceToItsFile,
     sendHeartbeat,
@@ -42,6 +43,7 @@ vi.mock("$lib/api/generated/index.ts", () => ({
     getWorkspaceFile: vi.fn(),
     listRecoveredWorkspaces: vi.fn(),
     markOpenedFromRequest: vi.fn(),
+    markRestoredFromCopy: vi.fn(),
     markWorkspaceSaved: vi.fn(),
     reportWindowClosed: vi.fn(),
     reportWindowOpen: vi.fn(),
@@ -172,6 +174,22 @@ describe("desktop API", () => {
         expect(api.markOpenedFromRequest).toHaveBeenCalledTimes(2);
         expect(api.markOpenedFromRequest).toHaveBeenLastCalledWith({
             path: { workspaceName: "My Draft", requestId: "request-1" },
+        });
+    });
+
+    test("markRestoredFrom_workspaceNotKeptYet_asksAgainWithTheSameCopy", async () => {
+        vi.useFakeTimers();
+        vi.mocked(api.markRestoredFromCopy)
+            .mockResolvedValueOnce(answer(409))
+            .mockResolvedValueOnce(answer(204));
+
+        const marked = markRestoredFrom("Draft (recovered)", "Draft-1.rdfa");
+        await vi.runAllTimersAsync();
+        await marked;
+
+        expect(api.markRestoredFromCopy).toHaveBeenCalledTimes(2);
+        expect(api.markRestoredFromCopy).toHaveBeenLastCalledWith({
+            path: { workspaceName: "Draft (recovered)", id: "Draft-1.rdfa" },
         });
     });
 

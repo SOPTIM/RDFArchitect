@@ -57,7 +57,7 @@ import java.util.zip.ZipInputStream;
  * periodically and once more when the app stops. The run holds a lock on its directory until then.
  * At the next start the copies of every run whose directory is no longer locked are moved to {@code
  * recovery/previous-run/}, where the user interface offers them for restoring. A second app running
- * at the same time, such as another version, leaves the copies of the first one alone.
+ * at the same time leaves the copies of the first one alone.
  *
  * <p>Workspaces live in sessions, and nothing here has a request to name one, so the sessions are
  * those that windows sent a heartbeat from ({@link #noteSession()}).
@@ -80,6 +80,16 @@ public class WorkspaceRecovery {
      * @param savedAt when the copy was written
      */
     public record RecoveredWorkspace(String id, String workspaceName, Instant savedAt) {}
+
+    /** What became of a copy whose workspace was restored. */
+    public enum RestoredCopy {
+        /** This run keeps the workspace as well, so the copy is removed. */
+        REMOVED,
+        /** There is no copy of that id. */
+        UNKNOWN,
+        /** This run could not keep the workspace, so the copy stays. */
+        STILL_NEEDED
+    }
 
     private record Key(String sessionId, String workspaceName) {}
 
@@ -255,7 +265,7 @@ public class WorkspaceRecovery {
     }
 
     /**
-     * Removes a workspace kept from the previous run, once it is restored or not wanted.
+     * Removes a workspace kept from the previous run.
      *
      * @return whether there was one
      */
@@ -263,6 +273,38 @@ public class WorkspaceRecovery {
         var file = previousRunFile(id);
         file.ifPresent(WorkspaceRecovery::deleteQuietly);
         return file.isPresent();
+    }
+
+    /**
+     * Removes a copy kept from the previous run whose workspace the current session restored, once
+     * this run keeps a copy of that workspace. Otherwise the work would be lost if the app stopped
+     * before the next {@link #writeUnsaved()}.
+     *
+     * @param id the copy
+     * @param workspaceName the workspace it was restored as
+     * @return what became of the copy
+     */
+    public synchronized RestoredCopy removeRestored(String id, String workspaceName) {
+        if (previousRunFile(id).isEmpty()) {
+            return RestoredCopy.UNKNOWN;
+        }
+        if (run == null || closed) {
+            return RestoredCopy.STILL_NEEDED;
+        }
+        noteSession();
+        var sessionId = SessionContext.getSessionId();
+        writeUnsavedOfCurrentSession(sessionId);
+        if (savedWorkspaces.unsavedWorkspaces().contains(workspaceName)
+                && !isKept(new Key(sessionId, workspaceName))) {
+            return RestoredCopy.STILL_NEEDED;
+        }
+        return discard(id) ? RestoredCopy.REMOVED : RestoredCopy.UNKNOWN;
+    }
+
+    private boolean isKept(Key key) {
+        var copy = copies.get(key);
+        var revision = WorkspaceRevision.current(databasePort, key.workspaceName());
+        return copy != null && copy.revision().equals(revision);
     }
 
     /**

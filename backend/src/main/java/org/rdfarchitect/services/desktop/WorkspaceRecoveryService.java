@@ -33,7 +33,8 @@ import java.util.Optional;
 public class WorkspaceRecoveryService
         implements ListRecoveredWorkspacesUseCase,
                 GetRecoveredWorkspaceUseCase,
-                DiscardRecoveredWorkspaceUseCase {
+                DiscardRecoveredWorkspaceUseCase,
+                MarkRestoredFromCopyUseCase {
 
     private final WorkspaceRecovery workspaceRecovery;
 
@@ -59,5 +60,14 @@ public class WorkspaceRecoveryService
     @Override
     public boolean discardRecoveredWorkspace(String id) {
         return workspaceRecovery.discard(id);
+    }
+
+    @Override
+    public Result markRestoredFromCopy(String workspaceName, String id) {
+        return switch (workspaceRecovery.removeRestored(id, workspaceName)) {
+            case REMOVED -> Result.REMOVED;
+            case UNKNOWN -> Result.UNKNOWN_COPY;
+            case STILL_NEEDED -> Result.STILL_NEEDED;
+        };
     }
 }
