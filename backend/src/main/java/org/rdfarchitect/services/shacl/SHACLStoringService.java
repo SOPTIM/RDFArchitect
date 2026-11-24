@@ -23,13 +23,12 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.PrefixEntry;
-import org.apache.jena.shacl.vocabulary.SHACL;
+import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDFS;
@@ -57,6 +56,7 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -498,22 +498,9 @@ public class SHACLStoringService
         return deleteModel;
     }
 
-    /**
-     * Copies the SHACL shape and its constraints to a new model.
-     *
-     * @param originalModel the original model containing the SHACL shapes
-     * @param newModel the new model to copy the SHACL shapes to
-     * @param subject the subject/uri of the SHACL shape
-     */
-    private void copySHACLShapeToNewModel(Model originalModel, Model newModel, Resource subject) {
-        var stmtIterator = originalModel.listStatements(subject, null, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            var stmt = stmtIterator.nextStatement();
-            newModel.add(stmt);
-            var object = stmt.getObject();
-            if (object.isAnon() || stmt.getPredicate().toString().equals(SHACL.sparql.getURI())) {
-                copySHACLShapeToNewModel(originalModel, newModel, object.asResource());
-            }
-        }
+    /** Copies a shape with what it holds inline and the SPARQL constraints it names. */
+    private static void copySHACLShapeToNewModel(
+            Model originalModel, Model newModel, Resource subject) {
+        GraphUtils.copyWithBlankNodes(originalModel, newModel, subject, Set.of(SHACLM.sparql));
     }
 }
