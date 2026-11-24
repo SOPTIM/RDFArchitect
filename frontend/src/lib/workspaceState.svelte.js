@@ -57,6 +57,24 @@ export const workspaceState = {
         }
     },
 
+    /**
+     * Activates the first workspace whenever none is active while the session has some, also when
+     * the selection is cleared while the editor stays open, as the logo does. `load` only does so
+     * when the list is reloaded.
+     *
+     * Must be called while a component initialises, since it installs an effect.
+     *
+     * @param {() => string[]} getNames names of the session's workspaces, in tab order
+     */
+    keepOneActive(getNames) {
+        $effect(() => {
+            const first = getNames()[0];
+            if (first !== undefined && !this.getActive()) {
+                this.activate(first);
+            }
+        });
+    },
+
     /** Activates a workspace and restores the selection it was left with. */
     activate(name) {
         const active = this.getActive();
