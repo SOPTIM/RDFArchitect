@@ -150,8 +150,14 @@
                         <dd>{document.tripleCount ?? 0}</dd>
                     </div>
                     <div class="flex gap-2">
-                        <dt class="text-text-subtle w-32 shrink-0">State</dt>
-                        <dd>{document.enabled ? "Enabled" : "Disabled"}</dd>
+                        <dt class="text-text-subtle w-32 shrink-0">
+                            Validation
+                        </dt>
+                        <dd>
+                            {document.enabled
+                                ? "Takes part"
+                                : "Excluded while disabled"}
+                        </dd>
                     </div>
                 </dl>
             </section>
@@ -159,7 +165,7 @@
             <section>
                 <h3
                     class="text-text-subtle mb-1 text-xs font-semibold uppercase"
-                    title="Decides under which schemas the document is listed."
+                    title="Decides under which schemas the document is listed. It is validated against every schema of the workspace either way."
                 >
                     Applies to
                 </h3>
@@ -254,6 +260,28 @@
                             to find the others.
                         </p>
                     {/if}
+                {/if}
+            </section>
+
+            <section>
+                <h3
+                    class="text-text-subtle mb-1 text-xs font-semibold uppercase"
+                >
+                    Checked against ({workbench.profiles.length})
+                </h3>
+                <!--
+                  Constraints are checked against every profile in the workspace, not only the
+                  schemas they apply to: the official cross-profile constraints files reference
+                  terms from their neighbours on purpose.
+                -->
+                {#if workbench.profiles.length === 0}
+                    <p class="text-text-subtle italic">Not validated yet.</p>
+                {:else}
+                    <ul class="text-text-subtle space-y-0.5 font-mono text-xs">
+                        {#each workbench.profiles as profile (profile)}
+                            <li class="break-all">{profile}</li>
+                        {/each}
+                    </ul>
                 {/if}
             </section>
         {/if}

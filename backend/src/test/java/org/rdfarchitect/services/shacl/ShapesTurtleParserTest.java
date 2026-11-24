@@ -83,6 +83,47 @@ class ShapesTurtleParserTest {
     }
 
     @Test
+    void anIriNoStoreTakesIsOneFindingWhereItStands() {
+        var result =
+                ShapesTurtleParser.parse(
+                        PREFIXES
+                                + "ex:Shape a sh:NodeShape ;\n"
+                                + "    sh:targetClass <http://example.org/a|b> , ex:Other .\n");
+
+        // The parser warns twice about it, once naming the character and once the whole IRI; both
+        // say what the error says.
+        assertThat(result.findings())
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getCode())
+                                    .isEqualTo(ShapesTurtleParser.UNWRITABLE_IRI_CODE);
+                            assertThat(finding.getLine()).isEqualTo(5);
+                            assertThat(finding.getColumn()).isEqualTo(20);
+                        });
+    }
+
+    @Test
+    void aWarningAboutSomethingElseOnTheLineStays() {
+        var result =
+                ShapesTurtleParser.parse(
+                        PREFIXES
+                                + "ex:Shape sh:targetClass <http://example.org/a|b> ;"
+                                + " sh:minCount \"many\"^^xsd:integer .\n");
+
+        assertThat(result.findings())
+                .extracting(ShapesValidationFinding::getCode)
+                .containsExactlyInAnyOrder(
+                        ShapesTurtleParser.UNWRITABLE_IRI_CODE,
+                        ShapesTurtleParser.PARSE_ERROR_CODE);
+        assertThat(result.findings())
+                .filteredOn(
+                        finding -> ShapesTurtleParser.PARSE_ERROR_CODE.equals(finding.getCode()))
+                .singleElement()
+                .satisfies(finding -> assertThat(finding.getMessage()).contains("many"));
+    }
+
+    @Test
     void textNestedTooDeeplyToParseIsAFindingRatherThanACrash() {
         var depth = 200_000;
         var result =

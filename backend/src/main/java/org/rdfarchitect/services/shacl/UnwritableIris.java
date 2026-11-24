@@ -132,7 +132,7 @@ final class UnwritableIris {
         }
     }
 
-    private static boolean notInAnIri(int code) {
+    static boolean notInAnIri(int code) {
         return NOT_IN_AN_IRI.matcher(Character.toString(code)).matches();
     }
 }

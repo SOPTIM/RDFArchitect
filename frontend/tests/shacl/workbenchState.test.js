@@ -71,6 +71,47 @@ function fakeServer(overrides = {}) {
         texts: { [EQ]: SHAPES, [CUSTOM]: "" },
         generated:
             "# generated from the schema\nex:Generated a sh:NodeShape .\n",
+        report: {
+            valid: false,
+            errorCount: 1,
+            warningCount: 0,
+            infoCount: 0,
+            profiles: ["http://example.org/EQ/1.0"],
+            documents: [
+                {
+                    documentId: EQ,
+                    documentName: "eq.ttl",
+                    valid: false,
+                    errorCount: 1,
+                    warningCount: 0,
+                    infoCount: 0,
+                    findings: [
+                        {
+                            severity: "ERROR",
+                            source: "SHAPE",
+                            code: "UNKNOWN_CLASS",
+                            message: "stored finding",
+                            line: 4,
+                            column: 1,
+                        },
+                    ],
+                },
+            ],
+        },
+        bufferReport: {
+            valid: true,
+            errorCount: 0,
+            warningCount: 0,
+            infoCount: 0,
+            documents: [
+                {
+                    documentId: EQ,
+                    documentName: "eq.ttl",
+                    valid: true,
+                    findings: [],
+                },
+            ],
+        },
         ...overrides,
     };
 
@@ -103,6 +144,12 @@ function fakeServer(overrides = {}) {
                 status: 200,
                 headers: { "content-type": "text/plain" },
             });
+        }
+        if (entry.path.endsWith("/shacl/validate")) {
+            return json(server.report);
+        }
+        if (entry.path.endsWith("/shacl/validate/text")) {
+            return json(server.bufferReport);
         }
         if (documentId && entry.method === "GET") {
             return new Response(server.texts[documentId] ?? "", {
@@ -152,6 +199,58 @@ function holdRequests(matches) {
     return gate;
 }
 
+/** What the text endpoint answers, holding one error with this message. */
+function bufferReportWith(message, line = 4) {
+    return {
+        valid: false,
+        errorCount: 1,
+        warningCount: 0,
+        infoCount: 0,
+        documents: [
+            {
+                documentId: EQ,
+                documentName: "eq.ttl",
+                valid: false,
+                errorCount: 1,
+                warningCount: 0,
+                infoCount: 0,
+                findings: [
+                    {
+                        severity: "ERROR",
+                        source: "SHAPE",
+                        code: "UNKNOWN_CLASS",
+                        message,
+                        line,
+                        column: 1,
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+/** What the stored-documents endpoint answers when it finds nothing. */
+function cleanReport() {
+    return {
+        valid: true,
+        errorCount: 0,
+        warningCount: 0,
+        infoCount: 0,
+        profiles: [],
+        documents: [
+            {
+                documentId: EQ,
+                documentName: "eq.ttl",
+                valid: true,
+                errorCount: 0,
+                warningCount: 0,
+                infoCount: 0,
+                findings: [],
+            },
+        ],
+    };
+}
+
 // $env/dynamic/public has no SvelteKit runtime under vitest, and the generated client reaches it
 // while resolving the backend base url. It has to be absolute, because the client builds a
 // Request and a relative url has no base to resolve against.
@@ -181,7 +280,7 @@ beforeEach(async () => {
 });
 
 describe("loading", () => {
-    test("orders the documents and opens the first", async () => {
+    test("orders the documents, opens the first and validates what is stored", async () => {
         await workbench.load();
 
         expect(workbench.documents.map(document => document.name)).toEqual([
@@ -191,6 +290,7 @@ describe("loading", () => {
         expect(workbench.selectedId).toBe(EQ);
         expect(workbench.text).toBe(SHAPES);
         expect(workbench.dirty).toBe(false);
+        expect(workbench.profiles).toEqual(["http://example.org/EQ/1.0"]);
         expect(workbench.loading).toBe(false);
     });
 
@@ -383,7 +483,7 @@ describe("editing and saving", () => {
         expect(workbench.saving).toBe(false);
     });
 
-    test("re-reads the documents after a save", async () => {
+    test("re-reads the documents and revalidates after a save", async () => {
         await workbench.load();
         workbench.text = "ex:X a sh:NodeShape .";
         server.requests.length = 0;
@@ -395,6 +495,7 @@ describe("editing and saving", () => {
         ).toEqual([
             expect.stringContaining("PUT"),
             expect.stringContaining("GET"),
+            expect.stringContaining("POST"),
         ]);
     });
 
@@ -523,10 +624,12 @@ describe("a read-only workspace", () => {
         }
     });
 
-    test("still reads, because looking is not changing", async () => {
+    test("still reads and validates, because looking is not changing", async () => {
         await workbench.load();
 
         expect(workbench.text).toBe(SHAPES);
+        expect(workbench.report).not.toBeNull();
+        expect(await workbench.validateBuffer()).not.toBeNull();
     });
 
     test("stays locked when the workspace cannot be asked", async () => {
@@ -540,7 +643,167 @@ describe("a read-only workspace", () => {
     });
 });
 
+describe("validation", () => {
+    test("names the open document so its own saved copy is not counted as a conflict", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}\n`;
+
+        await workbench.validateBuffer();
+
+        const post = server.requests.at(-1);
+        expect(post.path).toMatch(/\/shacl\/validate\/text$/);
+        expect(post.query.get("documentId")).toBe(EQ);
+        expect(post.query.get("name")).toBe("eq.ttl");
+        expect(post.contentType).toBe("text/plain");
+    });
+
+    test("shows the buffer's findings for the open document once they arrive", async () => {
+        await workbench.load();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "stored finding",
+        ]);
+
+        workbench.text = `${SHAPES}\n`;
+        await workbench.validateBuffer();
+
+        expect(workbench.findings).toEqual([]);
+    });
+
+    test("keeps the buffer's findings while the text changes, until the next answer", async () => {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `\n${SHAPES}`;
+        await workbench.validateBuffer();
+        const shown = workbench.findings;
+
+        // The stored findings belong to the saved text's lines. The editor moves the markers it
+        // has with the text being typed, so they stay until the next answer replaces them.
+        workbench.text = `\n\n${SHAPES}`;
+        expect(workbench.findings).toBe(shown);
+        workbench.text = SHAPES;
+        expect(workbench.findings).toBe(shown);
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({
+            errorCount: 1,
+        });
+    });
+
+    test("drops an answer that arrives after the text moved on", async () => {
+        await workbench.load();
+        let release;
+        const held = new Promise(resolve => {
+            release = () =>
+                resolve(
+                    new Response(JSON.stringify(server.bufferReport), {
+                        status: 200,
+                        headers: { "content-type": "application/json" },
+                    }),
+                );
+        });
+        server.respond = entry =>
+            entry.path.endsWith("/validate/text")
+                ? held
+                : new Response("{}", {
+                      status: 200,
+                      headers: { "content-type": "application/json" },
+                  });
+
+        workbench.text = "first";
+        const inFlight = workbench.validateBuffer();
+        workbench.text = "second";
+        release();
+        await inFlight;
+
+        expect(workbench.bufferReport).toBeNull();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "stored finding",
+        ]);
+    });
+
+    test("a burst of keystrokes produces one request", async () => {
+        vi.useFakeTimers();
+        await workbench.load();
+        server.requests.length = 0;
+
+        workbench.text = "a";
+        workbench.scheduleValidation(50);
+        workbench.text = "ab";
+        workbench.scheduleValidation(50);
+        workbench.text = "abc";
+        workbench.scheduleValidation(50);
+
+        expect(server.requests).toHaveLength(0);
+        await vi.advanceTimersByTimeAsync(60);
+
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(1);
+    });
+
+    test("selecting another document cancels a pending run", async () => {
+        vi.useFakeTimers();
+        await workbench.load();
+        workbench.text = "a";
+        workbench.scheduleValidation(50);
+        server.requests.length = 0;
+
+        await workbench.select(CUSTOM);
+        await vi.advanceTimersByTimeAsync(60);
+
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(0);
+    });
+});
+
 describe("the document list", () => {
+    test("totals the counts across documents", async () => {
+        await workbench.load();
+
+        expect(workbench.totals).toEqual({
+            errorCount: 1,
+            warningCount: 0,
+            infoCount: 0,
+        });
+        expect(workbench.results.map(result => result.documentName)).toEqual([
+            "eq.ttl",
+            "custom.ttl",
+        ]);
+    });
+
+    test("a document validation has not reported on has no result", async () => {
+        await workbench.load();
+
+        // custom.ttl is not in the stored report, as a disabled document is not.
+        expect(workbench.resultFor(CUSTOM)).toBeNull();
+        expect(
+            workbench.results.find(result => result.documentId === CUSTOM),
+        ).toMatchObject({ validated: false });
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({ validated: true, errorCount: 1 });
+    });
+
+    test("no document has a result before the first validation is back", async () => {
+        const gate = holdRequests(entry => entry.path.endsWith("/validate"));
+        const loading = workbench.load();
+        await vi.waitFor(() => expect(workbench.text).toBe(SHAPES));
+
+        expect(workbench.results.map(result => result.validated)).toEqual([
+            false,
+            false,
+        ]);
+        expect(workbench.validated).toBe(false);
+        gate.release();
+        await loading;
+        expect(workbench.validated).toBe(true);
+    });
+
     test("does not try to move a document past either end", async () => {
         await workbench.load();
         server.requests.length = 0;
@@ -846,6 +1109,8 @@ describe("the generated shapes", () => {
         expect(server.requests[0].path).toBe(
             "/api/workspaces/cgmes/schemas/SSH/shacl/generate/string",
         );
+        expect(workbench.resultFor(generatedId(SSH_SCHEMA))).toBeNull();
+        expect(workbench.findings).toEqual([]);
     });
 
     test("leave when their schema does", async () => {
@@ -898,10 +1163,20 @@ describe("the generated shapes", () => {
         expect(server.requests).toHaveLength(0);
     });
 
+    test("are not sent for validation", async () => {
+        await workbench.load();
+        await workbench.select(GENERATED_ID);
+        server.requests.length = 0;
+
+        expect(await workbench.validateBuffer()).toBeNull();
+        expect(server.requests).toHaveLength(0);
+    });
+
     test("stay selected when the document list is refreshed", async () => {
         await workbench.load();
         await workbench.select(GENERATED_ID);
 
+        await workbench.validateAll();
         // A refresh used to fall back to the first document, because the generated entry is in no
         // document list.
         await workbench.setEnabled(EQ, false);
@@ -1070,6 +1345,208 @@ describe("saving while a save is on its way", () => {
     });
 });
 
+describe("revalidating what has changed elsewhere", () => {
+    /** Types into the open document and has the buffer validated, finding one error. */
+    async function typedWithAnError() {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "buffer finding",
+        ]);
+    }
+
+    /** The schema is fixed elsewhere: from now on the server finds nothing anywhere. */
+    function fixedElsewhere() {
+        server.report = cleanReport();
+        server.bufferReport = {
+            ...cleanReport(),
+            profiles: undefined,
+        };
+    }
+
+    test("Validate all validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.validateAll();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(workbench.text).toBe(`${SHAPES}# typed\n`);
+    });
+
+    test("a reload after an undo elsewhere validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.reload();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+    });
+
+    test("switching another document off validates the unsaved text again", async () => {
+        await typedWithAnError();
+        fixedElsewhere();
+
+        await workbench.setEnabled(CUSTOM, false);
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+    });
+
+    test("once the text is as saved, a newer stored report replaces the buffer's", async () => {
+        await typedWithAnError();
+        workbench.revert();
+        fixedElsewhere();
+        server.requests.length = 0;
+
+        await workbench.validateAll();
+
+        expect(workbench.findings).toEqual([]);
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(0);
+    });
+
+    test("the last Validate all wins, whichever answer arrives last", async () => {
+        await workbench.load();
+        const gates = [held(), held()];
+        const reports = [server.report, cleanReport()];
+        let run = 0;
+        const answer = server.respond;
+        server.respond = async (entry, url) => {
+            if (entry.path.endsWith("/validate")) {
+                const mine = run++;
+                await gates[mine].promise;
+                return new Response(JSON.stringify(reports[mine]), {
+                    status: 200,
+                    headers: { "content-type": "application/json" },
+                });
+            }
+            return answer(entry, url);
+        };
+
+        const first = workbench.validateAll();
+        const second = workbench.validateAll();
+        await vi.waitFor(() => expect(run).toBe(2));
+        gates[1].release();
+        await second;
+        gates[0].release();
+        await first;
+
+        expect(workbench.totals.errorCount).toBe(0);
+        expect(workbench.report).toEqual(reports[1]);
+    });
+});
+
+describe("a validation that fails", () => {
+    test("says so for the buffer, and keeps the findings it had", async () => {
+        await workbench.load();
+        server.bufferReport = bufferReportWith("buffer finding");
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+
+        workbench.text = `${SHAPES}# typed more\n`;
+        await workbench.validateBuffer();
+
+        expect(workbench.validationError).toContain("could not be validated");
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "buffer finding",
+        ]);
+
+        server.respond = answer;
+        await workbench.validateBuffer();
+        expect(workbench.validationError).toBeNull();
+    });
+
+    test("says no more about the buffer once another document opens", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        expect(workbench.validationError).not.toBeNull();
+
+        workbench.revert();
+        await workbench.select(CUSTOM);
+
+        expect(workbench.validationError).toBeNull();
+    });
+
+    test("says a text too large for the server was refused as such", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("<html>413 Request Entity Too Large</html>", {
+                      status: 413,
+                      headers: { "content-type": "text/html" },
+                  })
+                : answer(entry, url);
+
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+
+        expect(workbench.validationError).toContain("too large");
+    });
+
+    test("says so for the stored documents, and leaves the editor usable", async () => {
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate")
+                ? new Response("boom", { status: 500 })
+                : fakeServer().respond(entry, url);
+
+        await workbench.load();
+
+        expect(workbench.error).toBeNull();
+        expect(workbench.text).toBe(SHAPES);
+        expect(workbench.validationError).toContain("could not be validated");
+        expect(workbench.results.every(result => !result.validated)).toBe(true);
+    });
+});
+
+describe("validation in flight", () => {
+    test("stays marked as running until the last run is back", async () => {
+        await workbench.load();
+        const gates = [held(), held()];
+        let run = 0;
+        const answer = server.respond;
+        server.respond = async (entry, url) => {
+            if (entry.path.endsWith("/validate/text")) {
+                await gates[run++].promise;
+            }
+            return answer(entry, url);
+        };
+
+        workbench.text = "first";
+        const first = workbench.validateBuffer();
+        workbench.text = "second";
+        const second = workbench.validateBuffer();
+        await vi.waitFor(() => expect(run).toBe(2));
+        gates[0].release();
+        await first;
+
+        expect(workbench.validating).toBe(true);
+        gates[1].release();
+        await second;
+        expect(workbench.validating).toBe(false);
+    });
+});
+
 describe("a workspace whose read-only flag changes", () => {
     test("is followed while the workbench is open", async () => {
         await workbench.load();
@@ -1195,6 +1672,29 @@ describe("when the open document is gone from the list", () => {
             return answer(entry, url);
         };
     }
+
+    test("is validated as text of no document, and its findings are listed", async () => {
+        await workbench.load();
+        workbench.text = TYPED;
+        takeAway();
+        await workbench.reload();
+        server.bufferReport = bufferReportWith("detached finding");
+        server.requests.length = 0;
+
+        await workbench.validateBuffer();
+
+        const post = server.requests.find(entry =>
+            entry.path.endsWith("/validate/text"),
+        );
+        expect(post.query.has("documentId")).toBe(false);
+        expect(post.query.get("name")).toBe("eq.ttl");
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "detached finding",
+        ]);
+        expect(
+            workbench.results.find(result => result.documentId === EQ),
+        ).toMatchObject({ documentName: "eq.ttl", errorCount: 1 });
+    });
 
     test("keeps unsaved text, and under no other document", async () => {
         await workbench.load();

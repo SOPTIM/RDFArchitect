@@ -44,6 +44,11 @@
         uniqueDocumentName,
     } from "$lib/shacl/documentNames.js";
     import {
+        severityMeta,
+        summarise,
+        VALID_ICON,
+    } from "$lib/shacl/severity.js";
+    import {
         GENERATED_NAME,
         generatedId,
     } from "$lib/shacl/workbenchState.svelte.js";
@@ -82,6 +87,10 @@
 
     /** Read-only is a property of the workspace; nothing here may write when it is set. */
     const readOnly = $derived(workbench.readOnly === true);
+
+    const results = $derived(
+        new Map(workbench.results.map(result => [result.documentId, result])),
+    );
 
     const unassigned = $derived(workbench.unassigned);
 
@@ -227,8 +236,8 @@
 
 <!--
   @component
-  The workspace's schemas and the constraints documents applying to each: which one is open, and
-  which take part. A document applying to two schemas is
+  The workspace's schemas and the constraints documents applying to each: which one is open, which
+  take part in validation, and what validation found in each. A document applying to two schemas is
   listed under both, and one applying to none is under "Not assigned".
 
   Every enabled document applies and none overrides another, so the checkbox is about participation
@@ -243,6 +252,13 @@
 -->
 
 {#snippet documentRow(document, schemaName)}
+    {@const result = results.get(document.id)}
+    {@const worst = result?.errorCount
+        ? "ERROR"
+        : result?.warningCount
+          ? "WARNING"
+          : null}
+    {@const summary = summarise(result)}
     {@const selected = document.id === workbench.selectedId}
     <li class="py-px">
         <ContextMenu.Root>
@@ -254,7 +270,7 @@
                 >
                     <div
                         class="shrink-0"
-                        title={document.enabled ? "Enabled" : "Disabled"}
+                        title="Take part in validation and export"
                     >
                         <CheckBoxEditControl
                             value={document.enabled}
@@ -302,10 +318,23 @@
                             <span
                                 class="text-text-subtle w-full truncate text-xs leading-tight"
                             >
-                                {document.tripleCount ?? 0} triples
+                                {document.tripleCount ?? 0} triples{summary
+                                    ? ` · ${summary}`
+                                    : ""}
                             </span>
                         </button>
                     {/if}
+
+                    <span class="shrink-0">
+                        {#if worst}
+                            <Fa
+                                icon={severityMeta(worst).icon}
+                                class={severityMeta(worst).text}
+                            />
+                        {:else if result?.validated}
+                            <Fa icon={VALID_ICON} class="text-green-text" />
+                        {/if}
+                    </span>
 
                     <!--
                       The actions sit over the right end of the row rather than beside the name: a
@@ -388,7 +417,9 @@
                             )}
                         faIcon={document.enabled ? faBan : faCheck}
                     >
-                        {document.enabled ? "Disable" : "Enable"}
+                        {document.enabled
+                            ? "Exclude from validation"
+                            : "Include in validation"}
                     </ContextMenu.Item.Button>
                     <ContextMenu.Separator />
                     <ContextMenu.Item.Button
@@ -567,7 +598,7 @@
             <li>
                 <div
                     class="flex items-center gap-1 px-1 py-1"
-                    title="These documents apply to no schema of this workspace."
+                    title="These documents apply to no schema of this workspace. They are still validated."
                 >
                     {@render groupToggle("not-assigned", "Not assigned")}
                     <span class="text-sm font-semibold">Not assigned</span>

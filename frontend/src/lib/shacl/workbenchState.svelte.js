@@ -24,12 +24,22 @@ import {
     listShapesDocuments,
     replaceShapesDocumentText,
     updateShapesDocument,
+    validateShapes,
+    validateShapesText,
 } from "$lib/api/generated/index.ts";
 import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 import { graphLabeller, schemaName as nameOf } from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
+
+/**
+ * How long typing has to pause before the buffer is sent for validation.
+ *
+ * Long enough that a normal typing burst produces one request rather than one per keystroke,
+ * short enough that the squiggles feel like they belong to what is on screen.
+ */
+export const VALIDATION_DEBOUNCE_MS = 500;
 
 /** Said instead of a server error when the workspace is the reason nothing can be written. */
 const READ_ONLY =
@@ -47,6 +57,9 @@ const GENERATED_PREFIX = "generated:";
 
 /** What the generated entry is called in the list. */
 export const GENERATED_NAME = "Generated shapes";
+
+/** The findings of nothing, one list so the editor sees no change where there is none. */
+const NO_FINDINGS = Object.freeze([]);
 
 const UNICODE_SPACE = /[\p{Zs}\u2028\u2029]/u;
 
@@ -120,11 +133,26 @@ export function reasonFrom(error) {
     return error.detail ?? error.message ?? null;
 }
 
+/** What to say when a validation request failed, so a failure is never taken for a clean result. */
+function validationFailure(error, response) {
+    if (response?.status === 413) {
+        return "The text is too large for the server to accept, so it was not validated.";
+    }
+    const reason = typeof error === "object" ? reasonFrom(error) : null;
+    return `The constraints could not be validated${reason ? `: ${reason}` : "."}`;
+}
+
 /**
- * A workspace's constraints documents and the text being edited.
+ * A workspace's constraints documents, the text being edited, and what validation says about them.
  *
  * All of the workbench's behaviour lives here rather than in the page so it can be tested without
  * a DOM: the components below it render this and call into it, and hold no state of their own.
+ *
+ * Two validations are in play and they answer different questions. `validateAll` asks about what
+ * is *stored*, which is what the document list's badges are about; `validateBuffer` asks about the
+ * text in the editor, which is what the squiggles are about. Once the buffer has an answer, the
+ * open document shows it until a newer one arrives: the stored findings are placed on the saved
+ * text's lines, while the editor moves the markers it has with the text being typed.
  */
 export class ShapesWorkbench {
     /** @type {import("$lib/api/generated").ShapesDocumentInfo[]} */
@@ -144,6 +172,16 @@ export class ShapesWorkbench {
     documentsRevision = $state(0);
     text = $state("");
     savedText = $state("");
+    /** What validating the stored documents found, or null before it has answered. */
+    /** @type {import("$lib/api/generated").ShapesValidationReport | null} */
+    report = $state(null);
+    /** What validating the open buffer last found, or null before it has answered. */
+    /** @type {import("$lib/api/generated").ShapesValidationReport | null} */
+    bufferReport = $state(null);
+    /** Why validating the open buffer last failed, or null when it did not. */
+    #bufferError = $state(null);
+    /** Why validating the stored documents last failed, or null when it did not. */
+    #reportError = $state(null);
     /**
      * Whether the workspace forbids changes.
      *
@@ -158,6 +196,7 @@ export class ShapesWorkbench {
     saving = $state(false);
     /** True while the generated shapes are being fetched for the first time. */
     generating = $state(false);
+    validating = $state(false);
     /** Last failure, shown in place of the editor rather than swallowed. */
     error = $state(null);
     /**
@@ -168,12 +207,26 @@ export class ShapesWorkbench {
     bufferKey = $state(0);
 
     /**
+     * Whether the open document shows the buffer's findings rather than the stored ones. Set when
+     * the buffer's answer arrives, and given back to the stored report only when that is newer and
+     * describes the same text — never by typing, which would move the markers onto the saved
+     * text's lines.
+     */
+    #bufferShown = $state(false);
+    /**
      * Whether the buffer holds the selected document's text. False while it is being read and
      * after a read failed, when the buffer describes nothing and must neither be edited nor saved.
      */
     #textReady = $state(true);
     /** Bumped by every `select`, so an answer for a document no longer selected is dropped. */
     #selection = 0;
+    /** Validations on their way, so `validating` stays set until the last is back. */
+    #validations = 0;
+    /** Bumped by every `validateAll`, so only the last one's answer is kept. */
+    #reportRun = 0;
+    /** Bumped by every `validateBuffer`, so an older answer cannot replace a newer one. */
+    #bufferRun = 0;
+    #bufferRunShown = 0;
     #saveInFlight = null;
     /** The last change to which schemas a document applies, which the next one waits for. */
     #schemaChanges = Promise.resolve();
@@ -183,6 +236,7 @@ export class ShapesWorkbench {
     /** The schema selected in the rest of the app, which decides what opens first. */
     #preferredSchema;
     #requestOptions;
+    #timer = null;
     /** Generated Turtle per schema. Cleared when a schema may have changed elsewhere. */
     #generated = new Map();
 
@@ -275,6 +329,76 @@ export class ShapesWorkbench {
         );
     }
 
+    /** The profiles the shapes were checked against, for the inspector. */
+    get profiles() {
+        return this.report?.profiles ?? [];
+    }
+
+    /** Why the last validation failed, or null when it did not. */
+    get validationError() {
+        return this.#bufferError ?? this.#reportError;
+    }
+
+    /** Whether validation has answered for anything yet. */
+    get validated() {
+        return this.report !== null || this.#bufferShown;
+    }
+
+    /**
+     * Validation result per document, with the open document's from the buffer once that has
+     * answered. This is the single list the badges, the problems panel and the editor markers all
+     * read, so they cannot disagree with each other. A document validation has not reported on —
+     * a disabled one, or any before the first answer — is listed with `validated: false`.
+     *
+     * Edits to a document that is gone are listed too, under its last name.
+     */
+    get results() {
+        const listed = this.detached
+            ? [...this.documents, this.detached]
+            : this.documents;
+        return listed.map(document => {
+            const result = this.resultFor(document.id);
+            return {
+                documentId: document.id,
+                documentName: document.name,
+                ...result,
+                validated: result !== null,
+            };
+        });
+    }
+
+    /** What validation says about a document, or null when it has said nothing yet. */
+    resultFor(documentId) {
+        if (isGenerated(documentId)) {
+            // Nothing validates the generated shapes against the schema they were generated from.
+            return null;
+        }
+        if (documentId === this.selectedId && this.#bufferShown) {
+            return this.bufferReport?.documents?.[0] ?? null;
+        }
+        return (
+            this.report?.documents?.find(
+                result => result.documentId === documentId,
+            ) ?? null
+        );
+    }
+
+    /** Findings for the open document — what the editor shows as squiggles. */
+    get findings() {
+        return this.resultFor(this.selectedId)?.findings ?? NO_FINDINGS;
+    }
+
+    get totals() {
+        return this.results.reduce(
+            (totals, result) => ({
+                errorCount: totals.errorCount + (result.errorCount ?? 0),
+                warningCount: totals.warningCount + (result.warningCount ?? 0),
+                infoCount: totals.infoCount + (result.infoCount ?? 0),
+            }),
+            { errorCount: 0, warningCount: 0, infoCount: 0 },
+        );
+    }
+
     // -------------------------------------------------------------------------
     // Loading and editing
     // -------------------------------------------------------------------------
@@ -285,10 +409,13 @@ export class ShapesWorkbench {
             await this.refreshReadOnly();
             await this.#refreshSchemas();
             const gone = await this.#refreshDocuments();
+            // Validating on top of a failed listing would replace the message that says what
+            // actually went wrong with a vaguer one about validation.
             if (this.error) {
                 return;
             }
             await this.select(gone ? this.#firstToOpen() : this.selectedId);
+            await this.validateAll();
         } finally {
             this.loading = false;
         }
@@ -316,6 +443,7 @@ export class ShapesWorkbench {
         } else if (!this.dirty) {
             await this.#reread();
         }
+        await this.validateAll();
     }
 
     /** Re-reads the workspace's read-only flag. An unknown answer counts as read-only. */
@@ -347,6 +475,7 @@ export class ShapesWorkbench {
 
     /** Stops everything that would otherwise outlive the workbench. */
     dispose() {
+        this.cancelPendingValidation();
         this.#unwatchReadOnly?.();
         this.#unwatchReadOnly = null;
     }
@@ -362,8 +491,12 @@ export class ShapesWorkbench {
             documentId = this.#firstToOpen();
         }
         const selection = ++this.#selection;
+        this.cancelPendingValidation();
         this.selectedId = documentId;
         this.detached = null;
+        this.bufferReport = null;
+        this.#bufferShown = false;
+        this.#bufferError = null;
         if (documentId === null) {
             this.#replaceBuffer("");
             this.#textReady = true;
@@ -559,6 +692,7 @@ export class ShapesWorkbench {
                 this.savedText = sent;
             }
             await this.#relist();
+            await this.validateAll();
             return { saved: true, reason: null };
         } finally {
             this.saving = false;
@@ -605,6 +739,7 @@ export class ShapesWorkbench {
                 this.savedText = sent;
             }
             await this.#relist();
+            await this.validateAll();
             return { saved: true, reason: null };
         } finally {
             this.saving = false;
@@ -641,6 +776,7 @@ export class ShapesWorkbench {
         }
         await this.#refreshDocuments();
         await this.select(data.id);
+        await this.validateAll();
         return data;
     }
 
@@ -661,6 +797,7 @@ export class ShapesWorkbench {
         }
         await this.#refreshDocuments();
         await this.select(data.id);
+        await this.validateAll();
         return data;
     }
 
@@ -755,6 +892,7 @@ export class ShapesWorkbench {
         if (wasOpen || gone) {
             await this.select(this.#firstToOpen());
         }
+        await this.validateAll();
         return true;
     }
 
@@ -773,6 +911,7 @@ export class ShapesWorkbench {
             return false;
         }
         await this.#relist();
+        await this.validateAll();
         return true;
     }
 
@@ -891,6 +1030,123 @@ export class ShapesWorkbench {
             this.error = null;
         } finally {
             this.generating = false;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Validates the stored documents.
+     *
+     * An answer replaces the buffer's findings for the open document only when the buffer is the
+     * saved text. With unsaved edits, the buffer is validated again instead: what changed the
+     * report — the schema, another document — changes what the edits are checked against too.
+     */
+    async validateAll() {
+        const run = ++this.#reportRun;
+        this.#validations += 1;
+        this.validating = true;
+        try {
+            const { data, error } = await validateShapes({
+                ...this.#requestOptions,
+                path: this.path,
+            });
+            if (run !== this.#reportRun) {
+                return null;
+            }
+            if (error) {
+                this.report = null;
+                this.#reportError = validationFailure(error);
+                return null;
+            }
+            this.report = data;
+            this.#reportError = null;
+            const storedOpen = data?.documents?.some(
+                result => result.documentId === this.selectedId,
+            );
+            if (storedOpen && !this.dirty && !this.detached) {
+                this.#bufferShown = false;
+            } else if (this.#bufferShown || this.dirty || this.detached) {
+                await this.validateBuffer();
+            }
+            return data;
+        } finally {
+            this.#validations -= 1;
+            this.validating = this.#validations > 0;
+        }
+    }
+
+    /**
+     * Validates the editor's text.
+     *
+     * The open document's id goes with it so the report can include contradictions with the
+     * *other* documents applying to its schemas while leaving the document's own stored copy out of
+     * the comparison — otherwise every shape the user has not renamed reads as defined twice. Edits
+     * to a document that is gone are validated as text of no document.
+     */
+    async validateBuffer() {
+        if (this.selectedId === null || this.showingGenerated) {
+            return null;
+        }
+        const documentId = this.selectedId;
+        const detached = this.detached !== null;
+        const text = this.text;
+        const run = ++this.#bufferRun;
+        this.#validations += 1;
+        this.validating = true;
+        try {
+            const { data, error, response } = await validateShapesText({
+                ...this.#requestOptions,
+                path: this.path,
+                query: detached
+                    ? { name: this.detached.name }
+                    : { name: this.selected?.name ?? "unsaved", documentId },
+                body: text === "" ? " " : text,
+                bodySerializer: null,
+                headers: { "Content-Type": "text/plain" },
+            });
+            // Two runs can be in flight after a fast edit; the one that started last wins, and an
+            // older answer is dropped rather than allowed to overwrite it. So is one for a text the
+            // user has changed since: the next run is already on its way.
+            if (
+                documentId !== this.selectedId ||
+                text !== this.text ||
+                run < this.#bufferRunShown
+            ) {
+                return null;
+            }
+            if (error) {
+                this.#bufferError = validationFailure(error, response);
+                return null;
+            }
+            this.#bufferRunShown = run;
+            this.bufferReport = data;
+            this.#bufferShown = true;
+            this.#bufferError = null;
+            return data;
+        } finally {
+            // Cleared by the last run to finish, not the first: an older answer arriving must
+            // not announce that a newer run is done.
+            this.#validations -= 1;
+            this.validating = this.#validations > 0;
+        }
+    }
+
+    /** Validates the buffer once typing has paused. Safe to call on every keystroke. */
+    scheduleValidation(delay = VALIDATION_DEBOUNCE_MS) {
+        this.cancelPendingValidation();
+        this.#timer = setTimeout(() => {
+            this.#timer = null;
+            this.validateBuffer();
+        }, delay);
+    }
+
+    cancelPendingValidation() {
+        if (this.#timer !== null) {
+            clearTimeout(this.#timer);
+            this.#timer = null;
         }
     }
 }
