@@ -36,7 +36,7 @@ The desktop app keeps your workspaces in memory while it runs, like the server k
 - **File → Save Workspace As…** (Ctrl+Shift+S) saves it to another file.
 - **File → Open Workspace…** (Ctrl+O) opens a workspace file as a new workspace, with all of its schemas, constraints, diagrams and layouts. Saving it again writes back to the file it came from.
 
-Saving to the same file again works where the browser can write files, which Chrome, Edge and Brave can. In other browsers every save downloads the file into your downloads folder.
+Saving to the same file again works where the browser can write files, which Chrome, Edge and Brave can. In other browsers, such as Firefox or Safari, every save downloads the file into your downloads folder, and the workspace counts as saved as soon as the download starts. If you cancel the download, the workspace still counts as saved, so save it again.
 
 With RDFArchitect installed from the installer, double-clicking a `.rdfa` file opens it: RDFArchitect starts if it is not running, and a window shows the file in **Open Workspace**. **File → Save Workspace** then writes back to that file, in every browser. The portable archives do not register `.rdfa` files; start RDFArchitect with the file as argument instead, for example `RDFArchitect.exe model.rdfa`.
 
