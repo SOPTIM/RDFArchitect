@@ -30,7 +30,7 @@ import org.rdfarchitect.shacl.dto.SchemaTerms;
 public interface SchemaTermsUseCase {
 
     /** Every class, property and enum member of the workspace, for completion. */
-    SchemaTerms listTerms(String datasetName);
+    SchemaTerms listTerms(String workspaceName);
 
     /**
      * What the schema knows about one term.
@@ -38,5 +38,5 @@ public interface SchemaTermsUseCase {
      * @param iri the term's absolute IRI
      * @return the detail, or {@code null} when no profile in the workspace declares the term
      */
-    SchemaTermDetail detailOf(String datasetName, String iri);
+    SchemaTermDetail detailOf(String workspaceName, String iri);
 }

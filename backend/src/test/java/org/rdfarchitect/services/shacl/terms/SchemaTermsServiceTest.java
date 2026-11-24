@@ -46,8 +46,8 @@ import java.util.UUID;
  */
 class SchemaTermsServiceTest {
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier SCHEMA_ID = new GraphIdentifier(WORKSPACE, "EQ");
 
     private static final String SCHEMA =
             """
@@ -93,10 +93,10 @@ class SchemaTermsServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.fromString(SCHEMA, Lang.TURTLE).parse(schema);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, schema);
         service = new SchemaTermsService(databasePort, new SchemaIndexCache(databasePort));
     }
 
@@ -112,7 +112,7 @@ class SchemaTermsServiceTest {
 
     @Test
     void listsTheClassesAndPropertiesTheSchemaDeclares() {
-        var terms = service.listTerms(GRAPH.datasetName());
+        var terms = service.listTerms(SCHEMA_ID.workspaceName());
 
         assertThat(terms.getProfiles()).contains("http://ex.org/EQ/1.0");
         assertThat(terms.getTerms())
@@ -145,15 +145,15 @@ class SchemaTermsServiceTest {
 
     @Test
     void ordersTermsSoTheSameSchemaAlwaysAnswersTheSame() {
-        var first = service.listTerms(GRAPH.datasetName()).getTerms();
-        var second = service.listTerms(GRAPH.datasetName()).getTerms();
+        var first = service.listTerms(SCHEMA_ID.workspaceName()).getTerms();
+        var second = service.listTerms(SCHEMA_ID.workspaceName()).getTerms();
 
         assertThat(first).isEqualTo(second);
         assertThat(first).isSortedAccordingTo((a, b) -> a.getIri().compareTo(b.getIri()));
     }
 
     private SchemaTerm termFor(String iri) {
-        return service.listTerms(GRAPH.datasetName()).getTerms().stream()
+        return service.listTerms(SCHEMA_ID.workspaceName()).getTerms().stream()
                 .filter(term -> term.getIri().equals(iri))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Term not listed: " + iri));
@@ -166,7 +166,8 @@ class SchemaTermsServiceTest {
     @Test
     void describesAClassWithItsComment() {
         var detail =
-                service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
+                service.detailOf(
+                        SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
 
         assertThat(detail.getKind()).isEqualTo(SchemaTerm.Kind.CLASS);
         assertThat(detail.getComment()).isEqualTo("A wire or combination of wires.");
@@ -179,7 +180,8 @@ class SchemaTermsServiceTest {
     void describesAPropertyWithItsDomainRangeAndMultiplicity() {
         var detail =
                 service.detailOf(
-                        GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment.length");
+                        SCHEMA_ID.workspaceName(),
+                        "http://iec.ch/TC57/CIM100#ACLineSegment.length");
 
         assertThat(detail.getKind()).isEqualTo(SchemaTerm.Kind.PROPERTY);
         assertThat(detail.getComment()).startsWith("Segment length");
@@ -192,7 +194,9 @@ class SchemaTermsServiceTest {
 
     @Test
     void aTermNoProfileDeclaresHasNoDetail() {
-        assertThat(service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#Nonsense"))
+        assertThat(
+                        service.detailOf(
+                                SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#Nonsense"))
                 .isNull();
     }
 
@@ -203,9 +207,10 @@ class SchemaTermsServiceTest {
     @Test
     void aClassCanBeOpenedWhereTheWorkspaceHoldsIt() {
         var detail =
-                service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
+                service.detailOf(
+                        SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
 
-        assertThat(detail.getGraphUri()).isEqualTo("http://ex.org/EQ");
+        assertThat(detail.getSchemaName()).isEqualTo("EQ");
         assertThat(detail.getClassUUID()).isNotNull();
     }
 
@@ -214,14 +219,16 @@ class SchemaTermsServiceTest {
         // Opening the class editor alone leaves the diagram wherever the user last was, so the
         // package is what lets the caller put the class on screen highlighted.
         var detail =
-                service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
+                service.detailOf(
+                        SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
 
         assertThat(detail.getPackageUUID()).isNotNull();
     }
 
     @Test
     void aClassInNoPackageNamesNone() {
-        var detail = service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#Terminal");
+        var detail =
+                service.detailOf(SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#Terminal");
 
         assertThat(detail.getClassUUID()).isNotNull();
         assertThat(detail.getPackageUUID()).isNull();
@@ -231,13 +238,15 @@ class SchemaTermsServiceTest {
     void aPropertyLeadsToTheClassItIsOn() {
         // A property is edited as a row of its class, so its domain is the useful destination.
         var onClass =
-                service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
+                service.detailOf(
+                        SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#ACLineSegment");
         var onProperty =
                 service.detailOf(
-                        GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#ACLineSegment.length");
+                        SCHEMA_ID.workspaceName(),
+                        "http://iec.ch/TC57/CIM100#ACLineSegment.length");
 
         assertThat(onProperty.getClassUUID()).isEqualTo(onClass.getClassUUID());
-        assertThat(onProperty.getGraphUri()).isEqualTo(onClass.getGraphUri());
+        assertThat(onProperty.getSchemaName()).isEqualTo(onClass.getSchemaName());
         assertThat(onProperty.getPackageUUID()).isEqualTo(onClass.getPackageUUID());
     }
 
@@ -246,11 +255,12 @@ class SchemaTermsServiceTest {
         // The index knows a term is an enum member but not which class enumerates it, so following
         // one would mean guessing from its name. Describing it still works.
         var detail =
-                service.detailOf(GRAPH.datasetName(), "http://iec.ch/TC57/CIM100#UnitSymbol.W");
+                service.detailOf(
+                        SCHEMA_ID.workspaceName(), "http://iec.ch/TC57/CIM100#UnitSymbol.W");
 
         assertThat(detail).isNotNull();
         assertThat(detail.getKind()).isEqualTo(SchemaTerm.Kind.ENUM_MEMBER);
         assertThat(detail.getClassUUID()).isNull();
-        assertThat(detail.getGraphUri()).isNull();
+        assertThat(detail.getSchemaName()).isNull();
     }
 }

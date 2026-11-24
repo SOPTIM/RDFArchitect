@@ -35,7 +35,6 @@
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
-    import { showClass } from "$lib/shacl/classNavigation.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import {
@@ -51,6 +50,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { schemaName as nameOf } from "$lib/utils/graph-label.js";
+    import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
@@ -116,7 +116,7 @@
     /** The workspace's CIM terms, which the editor completes and explains against. */
     const termSource = $derived(
         selectedWorkspace
-            ? new SchemaTermSource({ datasetName: selectedWorkspace })
+            ? new SchemaTermSource({ workspaceName: selectedWorkspace })
             : null,
     );
 
@@ -214,13 +214,18 @@
      * component only knows it was asked to follow something.
      */
     $effect(() => {
-        return onOpenClass(async (graphUri, classUUID, packageUUID) => {
+        return onOpenClass(async (schemaName, classUUID, packageUUID) => {
             // Asked before the selection moves: once it has, the workbench can be rebuilt for
             // another workspace and the edits are gone before any navigation guard could see them.
             if (!(await confirmDiscard())) {
                 return;
             }
-            showClass(selectedWorkspace, graphUri, classUUID, packageUUID);
+            navigateToClass({
+                workspaceName: selectedWorkspace,
+                schemaName,
+                packageUUID,
+                classUUID,
+            });
             goto("/mainpage");
         });
     });

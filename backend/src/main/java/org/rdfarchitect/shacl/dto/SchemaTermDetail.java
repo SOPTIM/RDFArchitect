@@ -59,16 +59,16 @@ public class SchemaTermDetail {
     private List<String> profiles;
 
     /**
-     * The graph holding the class this term belongs to, or {@code null} when the workspace has no
+     * The schema holding the class this term belongs to, or {@code null} when the workspace has no
      * editable class for it.
      *
      * <p>Present so that following a term from a constraints document lands on the class it
      * constrains. For a property that is the class the property is on, which is the useful
      * destination — a property is edited as a row of its class, not on its own.
      */
-    private String graphUri;
+    private String schemaName;
 
-    /** The class's id in {@link #graphUri}, or {@code null} when there is none to open. */
+    /** The class's id in {@link #schemaName}, or {@code null} when there is none to open. */
     private UUID classUUID;
 
     /**
@@ -76,7 +76,7 @@ public class SchemaTermDetail {
      *
      * <p>Opening the class editor alone leaves the diagram showing wherever the user last was, and
      * the class they asked for unhighlighted. {@code null} when the class belongs to no package,
-     * which the caller reads as the graph's default diagram.
+     * which the caller reads as the schema's default diagram.
      */
     private UUID packageUUID;
 }

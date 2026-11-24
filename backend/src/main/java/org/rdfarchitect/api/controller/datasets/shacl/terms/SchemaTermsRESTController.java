@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
  * official constraints reference terms across profiles on purpose.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/terms")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/terms")
 @RequiredArgsConstructor
 public class SchemaTermsRESTController {
 
@@ -77,14 +77,14 @@ public class SchemaTermsRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/shacl/terms\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/terms\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        return schemaTermsUseCase.listTerms(datasetName);
+        return schemaTermsUseCase.listTerms(workspaceName);
     }
 
     @Operation(
@@ -113,18 +113,18 @@ public class SchemaTermsRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "The absolute IRI of the term.") @RequestParam String iri) {
         logger.debug(
-                "Received GET request: \"/api/datasets/{{}}/shacl/terms/detail\" for \"{}\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/shacl/terms/detail\" for \"{}\" from \"{}\".",
+                workspaceName,
                 iri,
                 originURL);
 
         // Most of what an editor hovers over is not a schema term, so "unknown" is an ordinary
         // answer rather than an error the browser would log for every one of them.
-        var detail = schemaTermsUseCase.detailOf(datasetName, iri);
+        var detail = schemaTermsUseCase.detailOf(workspaceName, iri);
         return detail == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(detail);
     }
 }

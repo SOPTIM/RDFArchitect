@@ -26,7 +26,7 @@ import {
 } from "$lib/monaco/turtleLanguageFeatures.js";
 
 const CIM = "http://iec.ch/TC57/CIM100#";
-const GRAPH = "http://ex.org/EQ";
+const SCHEMA = "EQ draft #2";
 const CLASS_UUID = "11111111-2222-3333-4444-555555555555";
 const PACKAGE_UUID = "99999999-8888-7777-6666-555555555555";
 
@@ -122,7 +122,7 @@ describe("following a term", () => {
             model,
             fakeSource({
                 iri: `${CIM}ACLineSegment`,
-                graphUri: GRAPH,
+                schemaName: SCHEMA,
                 classUUID: CLASS_UUID,
                 packageUUID: PACKAGE_UUID,
             }),
@@ -148,7 +148,7 @@ describe("following a term", () => {
             model,
             fakeSource({
                 iri: `${CIM}ACLineSegment.r`,
-                graphUri: GRAPH,
+                schemaName: SCHEMA,
                 classUUID: CLASS_UUID,
                 packageUUID: PACKAGE_UUID,
             }),
@@ -169,13 +169,13 @@ describe("following a term", () => {
         });
     });
 
-    test("hands the graph, the class and the package to the handler", async () => {
+    test("hands the schema, the class and the package to the handler", async () => {
         const model = fakeModel();
         attachTermSource(
             model,
             fakeSource({
                 iri: `${CIM}ACLineSegment`,
-                graphUri: GRAPH,
+                schemaName: SCHEMA,
                 classUUID: CLASS_UUID,
                 packageUUID: PACKAGE_UUID,
             }),
@@ -192,7 +192,7 @@ describe("following a term", () => {
         // Without the package the class editor fills but the diagram stays wherever it was, so the
         // class the user asked for is nowhere on screen.
         expect(opened).toBe(true);
-        expect(handler).toHaveBeenCalledWith(GRAPH, CLASS_UUID, PACKAGE_UUID);
+        expect(handler).toHaveBeenCalledWith(SCHEMA, CLASS_UUID, PACKAGE_UUID);
     });
 
     test("a class in no package is still followable", async () => {
@@ -201,7 +201,7 @@ describe("following a term", () => {
             model,
             fakeSource({
                 iri: `${CIM}ACLineSegment`,
-                graphUri: GRAPH,
+                schemaName: SCHEMA,
                 classUUID: CLASS_UUID,
                 packageUUID: null,
             }),
@@ -215,7 +215,7 @@ describe("following a term", () => {
         );
         registered.opener.openCodeEditor(null, definition.uri);
 
-        expect(handler).toHaveBeenCalledWith(GRAPH, CLASS_UUID, null);
+        expect(handler).toHaveBeenCalledWith(SCHEMA, CLASS_UUID, null);
     });
 
     test("a term the workspace holds no class for is not followable", async () => {

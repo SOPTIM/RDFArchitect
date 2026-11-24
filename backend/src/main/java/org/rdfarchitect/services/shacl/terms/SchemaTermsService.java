@@ -28,7 +28,6 @@ import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.validation.ProfileVersionIris;
@@ -62,11 +61,11 @@ public class SchemaTermsService implements SchemaTermsUseCase {
     private final SchemaIndexCache schemaIndexCache;
 
     /** Where a term can be opened for editing, and which diagram shows it. */
-    private record ClassLocation(String graphUri, UUID classUUID, UUID packageUUID) {}
+    private record ClassLocation(String schemaName, UUID classUUID, UUID packageUUID) {}
 
     @Override
-    public SchemaTerms listTerms(String datasetName) {
-        var index = schemaIndexCache.apiFor(datasetName).schemaIndex();
+    public SchemaTerms listTerms(String workspaceName) {
+        var index = schemaIndexCache.apiFor(workspaceName).schemaIndex();
         var terms = new ArrayList<SchemaTerm>();
         collect(terms, index, index.allClasses(), SchemaTerm.Kind.CLASS);
         collect(terms, index, index.allProperties(), SchemaTerm.Kind.PROPERTY);
@@ -76,8 +75,8 @@ public class SchemaTermsService implements SchemaTermsUseCase {
     }
 
     @Override
-    public SchemaTermDetail detailOf(String datasetName, String iri) {
-        var index = schemaIndexCache.apiFor(datasetName).schemaIndex();
+    public SchemaTermDetail detailOf(String workspaceName, String iri) {
+        var index = schemaIndexCache.apiFor(workspaceName).schemaIndex();
         var term = NodeFactory.createURI(iri);
 
         var kind = kindOf(index, term);
@@ -89,7 +88,7 @@ public class SchemaTermsService implements SchemaTermsUseCase {
         var domains = isProperty ? index.domainsOf(term, profiles) : Set.<Node>of();
         var ranges = isProperty ? index.rangesOf(term, profiles) : Set.<Node>of();
         var multiplicity = index.multiplicityOf(term, profiles);
-        var location = locate(datasetName, kind, term, domains);
+        var location = locate(workspaceName, kind, term, domains);
 
         return SchemaTermDetail.builder()
                 .kind(kind)
@@ -104,7 +103,7 @@ public class SchemaTermsService implements SchemaTermsUseCase {
                 .minCount(multiplicity.map(m -> m.min()).orElse(null))
                 .maxCount(multiplicity.map(m -> m.max()).orElse(null))
                 .profiles(iris(profiles))
-                .graphUri(location.map(ClassLocation::graphUri).orElse(null))
+                .schemaName(location.map(ClassLocation::schemaName).orElse(null))
                 .classUUID(location.map(ClassLocation::classUUID).orElse(null))
                 .packageUUID(location.map(ClassLocation::packageUUID).orElse(null))
                 .build();
@@ -174,14 +173,14 @@ public class SchemaTermsService implements SchemaTermsUseCase {
      * of which class — so following one is not offered rather than guessed from its name.
      */
     private Optional<ClassLocation> locate(
-            String datasetName, SchemaTerm.Kind kind, Node term, Set<Node> domains) {
+            String workspaceName, SchemaTerm.Kind kind, Node term, Set<Node> domains) {
         return switch (kind) {
-            case CLASS -> locateClass(datasetName, term);
+            case CLASS -> locateClass(workspaceName, term);
             case PROPERTY ->
                     domains.stream()
                             .filter(Node::isURI)
                             .sorted(Comparator.comparing(Node::getURI))
-                            .map(domain -> locateClass(datasetName, domain))
+                            .map(domain -> locateClass(workspaceName, domain))
                             .flatMap(Optional::stream)
                             .findFirst();
             case ENUM_MEMBER -> Optional.empty();
@@ -189,27 +188,24 @@ public class SchemaTermsService implements SchemaTermsUseCase {
     }
 
     /**
-     * The graph and id under which the workspace holds a class, if it holds one.
+     * The schema and id under which the workspace holds a class, if it holds one.
      *
      * <p>Found by the {@code rdfa:uuid} the in-memory database stamps onto every typed resource on
      * commit, which is the same id the class editor is addressed by. A term that only a read-only
      * imported profile declares has none, and is simply not followable.
      *
      * <p>The package is read in the same pass. It is what tells the caller which diagram to put on
-     * screen, and looking it up separately would mean walking every graph a second time.
+     * screen, and looking it up separately would mean walking every schema a second time.
      */
-    private Optional<ClassLocation> locateClass(String datasetName, Node classNode) {
-        for (String graphUri : databasePort.listGraphUris(datasetName)) {
-            var identifier = new GraphIdentifier(datasetName, graphUri);
-            try (var transaction =
-                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(identifier.graphUri());
-                var graph = ctx.getRdfGraph();
+    private Optional<ClassLocation> locateClass(String workspaceName, Node classNode) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
+                var graph = transaction.graph(schemaName).getRdfGraph();
                 var uuid = uuidOf(graph, classNode);
                 if (uuid.isPresent()) {
                     return Optional.of(
                             new ClassLocation(
-                                    graphUri,
+                                    schemaName,
                                     uuid.get(),
                                     packageOf(graph, classNode).orElse(null)));
                 }

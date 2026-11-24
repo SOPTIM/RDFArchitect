@@ -100,7 +100,7 @@ export function detachTermSource(model) {
 /**
  * Registers what happens when the user follows a term to the class it belongs to.
  *
- * The handler is given `(graphUri, classUUID, packageUUID)`. The package is part of the
+ * The handler is given `(schemaName, classUUID, packageUUID)`. The package is part of the
  * destination, not decoration: opening the class editor without it leaves the diagram showing
  * wherever the user last was, with the class they asked for nowhere in sight.
  */
@@ -370,7 +370,7 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             // screen, and a class that belongs to none simply leaves it empty.
             const uri = monaco.Uri.from({
                 scheme: CLASS_SCHEME,
-                path: `/${encodeURIComponent(detail.graphUri)}/${detail.classUUID}`,
+                path: `/${encodeURIComponent(detail.schemaName)}/${detail.classUUID}`,
                 query: detail.packageUUID ?? "",
             });
             // Ctrl+hover asks Monaco's own preview widget to resolve this uri to a model before the
@@ -402,11 +402,11 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             if (resource.scheme !== CLASS_SCHEME || !openClass) {
                 return false;
             }
-            const [graphUri, classUUID] = resource.path
+            const [schemaName, classUUID] = resource.path
                 .replace(/^\//, "")
                 .split("/");
             openClass(
-                decodeURIComponent(graphUri),
+                decodeURIComponent(schemaName),
                 classUUID,
                 resource.query || null,
             );

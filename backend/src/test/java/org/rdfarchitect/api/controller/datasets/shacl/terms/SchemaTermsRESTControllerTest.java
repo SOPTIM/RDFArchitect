@@ -40,7 +40,7 @@ import java.util.List;
 /** The HTTP contract of the schema-terms endpoints an editor completes and hovers against. */
 class SchemaTermsRESTControllerTest {
 
-    private static final String URL = "/api/datasets/cgmes/shacl/terms";
+    private static final String URL = "/api/workspaces/cgmes/shacl/terms";
 
     private static final String IRI = "http://iec.ch/TC57/CIM100#ACLineSegment";
 

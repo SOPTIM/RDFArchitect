@@ -1969,6 +1969,116 @@
         },
         "type" : "object"
       },
+      "SchemaTerm" : {
+        "properties" : {
+          "iri" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CLASS",
+              "PROPERTY",
+              "ENUM_MEMBER"
+            ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "localName" : {
+            "type" : "string"
+          },
+          "namespace" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaTermDetail" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "comment" : {
+            "type" : "string"
+          },
+          "domains" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CLASS",
+              "PROPERTY",
+              "ENUM_MEMBER"
+            ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "localName" : {
+            "type" : "string"
+          },
+          "maxCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "multiplicity" : {
+            "type" : "string"
+          },
+          "namespace" : {
+            "type" : "string"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "ranges" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "schemaName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaTerms" : {
+        "properties" : {
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "terms" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SchemaTerm"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "SearchFilter" : {
         "description" : "The scope where the search is performed.",
         "properties" : {
@@ -11189,6 +11299,111 @@
           }
         },
         "summary" : "export chosen constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceName}/shacl/terms" : {
+      "get" : {
+        "description" : "Every class, property and enum member the workspace's profiles declare, for an editor to complete against. Sent whole so the client can filter it locally; it changes only when the schema does.",
+        "operationId" : "listTerms",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the workspace.",
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTerms"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "list the schema's terms",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceName}/shacl/terms/detail" : {
+      "get" : {
+        "description" : "What the workspace's schema knows about a term: its label and comment, a property's domain, range and multiplicity, the profiles declaring it, and where its class can be opened for editing.",
+        "operationId" : "describeTerm",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the workspace.",
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The absolute IRI of the term.",
+            "in" : "query",
+            "name" : "iri",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTermDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "204" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTermDetail"
+                }
+              }
+            },
+            "description" : "No profile in this workspace declares the term."
+          }
+        },
+        "summary" : "describe one schema term",
         "tags" : [
           "shacl"
         ]

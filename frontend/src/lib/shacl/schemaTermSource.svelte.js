@@ -20,7 +20,7 @@ import { describeTerm, listTerms } from "$lib/api/generated/index.ts";
 import { STANDARD_TERMS, standardDetailOf } from "./standardVocabulary.js";
 
 /**
- * The schema terms of one graph's workspace, held for as long as an editor is open on it.
+ * The schema terms of one workspace, held for as long as an editor is open on it.
  *
  * The whole term list is fetched once and filtered in the browser, so completion appears as the
  * user types instead of after a round trip. That is affordable because the list is small and
@@ -30,8 +30,8 @@ import { STANDARD_TERMS, standardDetailOf } from "./standardVocabulary.js";
  * over and over while someone reads a file.
  *
  * SHACL's own vocabulary is added on top of what the workspace declares. It is in no profile, so
- * the schema index does not know it exists — which is why `sh:` used to complete to nothing in a
- * file made entirely of `sh:` terms.
+ * the schema index does not know it exists, and a constraints file is written mostly in `sh:`
+ * terms.
  */
 export class SchemaTermSource {
     /** @type {import("$lib/api/generated").SchemaTerm[]} */
@@ -39,19 +39,19 @@ export class SchemaTermSource {
     profiles = $state([]);
     loaded = $state(false);
 
-    #datasetName;
+    #workspaceName;
     #requestOptions;
     #details = new Map();
     #pending = new Map();
     #loading = null;
 
-    constructor({ datasetName, requestOptions = {} }) {
-        this.#datasetName = datasetName;
+    constructor({ workspaceName, requestOptions = {} }) {
+        this.#workspaceName = workspaceName;
         this.#requestOptions = requestOptions;
     }
 
     get #path() {
-        return { datasetName: this.#datasetName };
+        return { workspaceName: this.#workspaceName };
     }
 
     /**

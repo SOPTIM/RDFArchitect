@@ -72,8 +72,7 @@ function fakeServer(overrides = {}) {
 
 function sourceFor(server) {
     return new SchemaTermSource({
-        datasetName: "cgmes",
-        graphUri: "http://ex.org/EQ",
+        workspaceName: "cgmes",
         requestOptions: { fetch: server.fetch },
     });
 }
