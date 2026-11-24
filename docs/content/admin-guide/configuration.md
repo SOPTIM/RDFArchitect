@@ -21,7 +21,6 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |
 | Session cookie `secure` flag       | `server.servlet.session.cookie.secure`  | `false` (set to `true` in production) |
 | Session cookie `SameSite` policy   | `server.servlet.session.cookie.same-site` | `lax`                      |
-| Load workspaces from Fuseki into each new session | `database.enabled` | `true`                 |
 | Share Snapshot (its endpoints)     | `snapshots.enabled`                     | `true`                       |
 
 ## Embedding RDFArchitect in another application
