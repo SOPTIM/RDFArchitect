@@ -22,7 +22,8 @@ export const CONFORMANCE_KIND = {
     CONTRADICTED: {
         label: "Contradiction",
         order: 0,
-        explanation: "The schema and a document cannot both be satisfied.",
+        explanation:
+            "The schema and the documents cannot both be satisfied, or the documents allow a value the schema does not list.",
         example:
             "For example: the schema says a property holds an xsd:float, and a document says sh:datatype xsd:integer.",
     },
@@ -30,7 +31,7 @@ export const CONFORMANCE_KIND = {
         label: "Difference",
         order: 1,
         explanation:
-            "Both can be satisfied, but they do not say the same thing.",
+            "They do not say the same thing, though both can be satisfied, or the workspace does not declare the classes needed to tell.",
         example:
             "For example: the schema allows 0..1 values, and a document says sh:minCount 1. Often this is the profile doing its job and narrowing what the schema allows.",
     },
@@ -38,7 +39,7 @@ export const CONFORMANCE_KIND = {
         label: "Not covered",
         order: 2,
         explanation:
-            "The schema implies this; none of the documents applying to it state it.",
+            "The schema implies this; none of the documents applying to it state it in a way the comparison reads.",
         example:
             "For example: the schema gives a property a multiplicity of 1..1, and no document says anything about it. Not a disagreement: official files split their rules on purpose.",
     },
@@ -46,7 +47,7 @@ export const CONFORMANCE_KIND = {
         label: "Not in the schema",
         order: 3,
         explanation:
-            "A document constrains something no schema in the workspace has.",
+            "A document constrains a property the schema does not have on that class, or a class or property no schema in the workspace declares.",
         example:
             "For example: a document has a rule on cim:Terminal.foo, and no schema of this workspace declares that property.",
     },

@@ -19,6 +19,7 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+    CONFORMANCE_KIND,
     ConformanceView,
     foldFindings,
 } from "$lib/shacl/conformanceState.svelte.js";
@@ -530,6 +531,46 @@ describe("ConformanceReportView", () => {
                 button.textContent.includes("Compare"),
             ).disabled,
         ).toBe(false);
+    });
+
+    test("lists what the documents state in a way it does not compare", () => {
+        const view = render({
+            conformance: conformance({
+                report: {
+                    ...REPORT,
+                    notCompared: [
+                        {
+                            document: "official.ttl",
+                            reason: "OTHER_TARGET",
+                            count: 270,
+                            terms: [
+                                "http://www.w3.org/ns/shacl#targetSubjectsOf",
+                            ],
+                            message:
+                                "270 shapes choose what they apply to with sh:targetSubjectsOf rather than by class.",
+                        },
+                    ],
+                },
+            }),
+        });
+        const text = view.textContent.replace(/\s+/g, " ");
+
+        expect(text).toContain("Not compared");
+        expect(text).toContain(
+            "official.ttl: 270 shapes choose what they apply to with sh:targetSubjectsOf",
+        );
+    });
+
+    test("explains each kind of finding for every case it covers", () => {
+        expect(CONFORMANCE_KIND.CONTRADICTED.explanation).toContain(
+            "a value the schema does not list",
+        );
+        expect(CONFORMANCE_KIND.DIFFERENT.explanation).toContain(
+            "does not declare the classes needed to tell",
+        );
+        expect(CONFORMANCE_KIND.NOT_IN_SCHEMA.explanation).toContain(
+            "does not have on that class",
+        );
     });
 
     test("says unsaved edits are not part of the comparison", () => {

@@ -258,6 +258,33 @@
                 </p>
             </div>
 
+            {#if report.notCompared?.length}
+                <!--
+                  Without this, a rule the comparison cannot read would look like silence, and the
+                  constraint it states like one no document covers.
+                -->
+                <section class="mb-4">
+                    <h3
+                        class="text-default-text mb-1 flex items-center gap-2 text-sm font-semibold"
+                    >
+                        <Fa icon={faCircleInfo} />
+                        Not compared
+                        <span class="text-text-subtle font-normal">
+                            — what the documents state in a way this comparison
+                            does not read
+                        </span>
+                    </h3>
+                    <ul class="text-text-subtle flex flex-col gap-1 text-xs">
+                        {#each report.notCompared as entry, index (index)}
+                            <li>
+                                <span class="font-mono">{entry.document}:</span>
+                                {entry.message}
+                            </li>
+                        {/each}
+                    </ul>
+                </section>
+            {/if}
+
             {#if groups.length === 0}
                 <p class="text-text-subtle text-sm italic">
                     Every constraint the schema implies is stated, and nothing
