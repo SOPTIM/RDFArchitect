@@ -44,8 +44,8 @@ import java.util.UUID;
  */
 class ShapesValidationComparisonCacheTest {
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier SCHEMA_ID = new GraphIdentifier(WORKSPACE, "EQ");
 
     private static final String SCHEMA =
             """
@@ -74,17 +74,17 @@ class ShapesValidationComparisonCacheTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.fromString(SCHEMA, Lang.TURTLE).parse(schema);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, schema);
         documents = new SHACLStoringService(databasePort);
         service = new ShapesValidationService(databasePort, new SchemaIndexCache(databasePort));
         custom =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "custom.ttl",
                                 null,
                                 "",
@@ -100,7 +100,7 @@ class ShapesValidationComparisonCacheTest {
 
     private boolean bufferCollides(UUID draft) {
         return service
-                .validateTurtle(GRAPH.datasetName(), "draft.ttl", SHAPES, draft)
+                .validateTurtle(SCHEMA_ID.workspaceName(), "draft.ttl", SHAPES, draft)
                 .getDocuments()
                 .stream()
                 .map(ShapesDocumentValidationResult::getFindings)
@@ -111,12 +111,12 @@ class ShapesValidationComparisonCacheTest {
 
     @Test
     void switchingADocumentOffIsNoticed() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, SHAPES);
         var draft =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "draft.ttl",
                                 null,
                                 "",
@@ -124,7 +124,7 @@ class ShapesValidationComparisonCacheTest {
                         .getId();
         assertThat(bufferCollides(draft)).isTrue();
 
-        documents.updateShapesDocument(GRAPH.datasetName(), custom, null, false, null, null);
+        documents.updateShapesDocument(SCHEMA_ID.workspaceName(), custom, null, false, null, null);
 
         assertThat(bufferCollides(draft)).isFalse();
     }
@@ -134,17 +134,17 @@ class ShapesValidationComparisonCacheTest {
         var draft =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "draft.ttl",
                                 null,
                                 "",
                                 Lang.TURTLE)
                         .getId();
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, SHAPES);
         assertThat(bufferCollides(draft)).isTrue();
 
-        databasePort.undo(GRAPH.datasetName());
+        databasePort.undo(SCHEMA_ID.workspaceName());
 
         assertThat(bufferCollides(draft)).isFalse();
     }

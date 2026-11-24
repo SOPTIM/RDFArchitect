@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
  * <p>Reading is kept short: each document's triples and text are copied out under a read
  * transaction and the analysis then runs outside it. Validating a full constraints file takes on
  * the order of a hundred milliseconds, which is far too long to hold a lock that blocks every
- * writer on the graph.
+ * writer on the workspace.
  */
 @RequiredArgsConstructor
 public class ShapesValidationService implements ShapesValidationUseCase {
@@ -77,7 +77,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
     private final SchemaIndexCache schemaIndexCache;
 
     /** Identifies a workspace's committed documents, within the session whose database holds it. */
-    private record ComparisonKey(String sessionId, String datasetName, UUID version) {}
+    private record ComparisonKey(String sessionId, String workspaceName, UUID version) {}
 
     private record Comparison(ComparisonKey key, List<ShapesConflictAnalyzer.Document> documents) {}
 
@@ -114,9 +114,9 @@ public class ShapesValidationService implements ShapesValidationUseCase {
     }
 
     @Override
-    public ShapesValidationReport validateShapes(String datasetName, UUID documentId) {
-        var snapshots = readDocuments(datasetName, documentId);
-        var api = schemaIndexCache.apiFor(datasetName);
+    public ShapesValidationReport validateShapes(String workspaceName, UUID documentId) {
+        var snapshots = readDocuments(workspaceName, documentId);
+        var api = schemaIndexCache.apiFor(workspaceName);
         var conflicts = conflictsAmong(snapshots);
 
         // Conflicts are found across the documents even when only one is being reported on:
@@ -137,15 +137,16 @@ public class ShapesValidationService implements ShapesValidationUseCase {
 
     @Override
     public ShapesValidationReport validateTurtle(
-            String datasetName, String name, String turtle, UUID documentId) {
+            String workspaceName, String name, String turtle, UUID documentId) {
         var parsed = ShapesTurtleParser.parse(turtle);
-        var api = schemaIndexCache.apiFor(datasetName);
+        var api = schemaIndexCache.apiFor(workspaceName);
         var findings = new ArrayList<>(parsed.findings());
         // A document that stopped parsing has no complete graph to check the shapes against, and
         // reporting the syntax error alone beats reporting whatever the fragment happens to imply.
         if (!parsed.failed()) {
             findings.addAll(validate(api, parsed.graph(), turtle));
-            findings.addAll(bufferConflicts(datasetName, documentId, name, parsed.graph(), turtle));
+            findings.addAll(
+                    bufferConflicts(workspaceName, documentId, name, parsed.graph(), turtle));
         }
         return report(api, List.of(result(documentId, name, findings)));
     }
@@ -176,34 +177,38 @@ public class ShapesValidationService implements ShapesValidationUseCase {
      * <p>An id that no stored document has applies to no schema, so the text only meets itself.
      */
     private List<ShapesValidationFinding> bufferConflicts(
-            String datasetName, UUID documentId, String name, Graph graph, String turtle) {
+            String workspaceName, UUID documentId, String name, Graph graph, String turtle) {
         if (documentId == null) {
             return List.of();
         }
         var documents =
-                storedForComparison(datasetName).stream()
+                storedForComparison(workspaceName).stream()
                         .filter(document -> !documentId.equals(document.id()))
                         .collect(Collectors.toCollection(ArrayList::new));
         documents.add(
                 new ShapesConflictAnalyzer.Document(
-                        documentId, name, schemasOf(datasetName, documentId), graph, () -> turtle));
+                        documentId,
+                        name,
+                        schemasOf(workspaceName, documentId),
+                        graph,
+                        () -> turtle));
         return ShapesConflictAnalyzer.analyze(documents).getOrDefault(documentId, List.of());
     }
 
-    private Set<String> schemasOf(String datasetName, UUID documentId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    private Set<String> schemasOf(String workspaceName, UUID documentId) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var document = transaction.shapesDocuments().get(documentId);
             return document == null ? Set.of() : document.getSchemas();
         }
     }
 
     /** The enabled documents, from {@link #comparison} unless a document has changed. */
-    private List<ShapesConflictAnalyzer.Document> storedForComparison(String datasetName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    private List<ShapesConflictAnalyzer.Document> storedForComparison(String workspaceName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var key =
                     new ComparisonKey(
                             SessionContext.getSessionId(),
-                            datasetName,
+                            workspaceName,
                             transaction.shapesDocumentsVersion());
             var cached = comparison.get();
             if (cached != null && cached.key().equals(key)) {
@@ -238,8 +243,8 @@ public class ShapesValidationService implements ShapesValidationUseCase {
      * The documents to validate over: every enabled one, plus {@code required} even when it is
      * disabled, because naming a document is asking for it.
      */
-    private List<Snapshot> readDocuments(String datasetName, UUID required) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    private List<Snapshot> readDocuments(String workspaceName, UUID required) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var documents = transaction.shapesDocuments();
             if (required != null && !documents.containsKey(required)) {
                 throw new ResourceNotFoundException(

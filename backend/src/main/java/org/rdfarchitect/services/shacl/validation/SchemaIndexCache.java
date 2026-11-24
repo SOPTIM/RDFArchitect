@@ -30,7 +30,6 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,14 +64,12 @@ import java.util.function.LongSupplier;
  * <p>A commit only versions what it changed, so saving a shapes document leaves the schema graph's
  * id alone and the entry stays good.
  *
- * <h2>Scope: the whole workspace, not one graph</h2>
+ * <h2>Scope: the whole workspace, not one schema</h2>
  *
- * <p>The index spans every graph in the workspace and validation is scoped to all of them. Official
- * ENTSO-E constraints files reference terms across profiles on purpose — the cross-profile files do
- * nothing else — so scoping to the one graph a document belongs to reports its every cross-profile
- * reference as an unknown class. Measured against {@code
- * 61970-456_StateVariables-AP-Con-Complex-Explicit-CrossProfile-SHACL.ttl}: 25 such errors scoped
- * to one profile, none scoped to the workspace. A term that no profile in the workspace declares is
+ * <p>The index spans every schema in the workspace and validation is scoped to all of them.
+ * Official ENTSO-E constraints files reference terms across profiles on purpose — the cross-profile
+ * files do nothing else — so scoping to the schemas a document applies to would report its every
+ * cross-profile reference as an unknown class. A term that no profile in the workspace declares is
  * still an error, which is the question worth answering.
  */
 public class SchemaIndexCache {
@@ -147,7 +144,7 @@ public class SchemaIndexCache {
      * Keyed by session as well as workspace: the in-memory database is per session, so two sessions
      * each holding a workspace called {@code cgmes} hold two different schemas.
      */
-    private record CacheKey(String sessionId, String datasetName) {}
+    private record CacheKey(String sessionId, String workspaceName) {}
 
     /**
      * @param indexedTriples what the index was built from, standing in for how much room it takes
@@ -177,12 +174,12 @@ public class SchemaIndexCache {
     private final Object cacheLock = new Object();
 
     /**
-     * The validation API for {@code datasetName}, built from its graphs the first time it is asked
-     * for and after every change to any of them.
+     * The validation API for {@code workspaceName}, built from its graphs the first time it is
+     * asked for and after every change to any of them.
      */
-    public SparqlValidationApi apiFor(String datasetName) {
-        var key = new CacheKey(SessionContext.getSessionId(), datasetName);
-        var versions = graphVersions(datasetName);
+    public SparqlValidationApi apiFor(String workspaceName) {
+        var key = new CacheKey(SessionContext.getSessionId(), workspaceName);
+        var versions = graphVersions(workspaceName);
         synchronized (cacheLock) {
             // Only the idle pass here. Evicting for size before the lookup could drop the very
             // entry this call is about to hit, and rebuilding it would cost more than the room it
@@ -195,13 +192,13 @@ public class SchemaIndexCache {
                 return cached.api();
             }
         }
-        var built = build(datasetName, versions.keySet());
+        var built = build(workspaceName, versions.keySet());
         // Building reads the graphs again, outside the lock, so a commit landing in between means
         // the index describes content newer than the versions it was asked for. Filing it under
         // those would hand a later reader of the *older* version an index of the newer schema —
         // after an undo, terms the schema no longer declares would still validate. The caller gets
         // the index it built either way; only the caching waits for a version that stayed put.
-        var versionsAfter = graphVersions(datasetName);
+        var versionsAfter = graphVersions(workspaceName);
         if (!versionsAfter.equals(versions)) {
             return built.api();
         }
@@ -248,29 +245,23 @@ public class SchemaIndexCache {
         }
     }
 
-    /** Committed version id per graph, which together identify the workspace's schema. */
-    private Map<String, UUID> graphVersions(String datasetName) {
+    /** Committed version id per schema, which together identify the workspace's schema. */
+    private Map<String, UUID> graphVersions(String workspaceName) {
         var versions = new LinkedHashMap<String, UUID>();
-        for (String graphUri : databasePort.listGraphUris(datasetName)) {
-            var identifier = new GraphIdentifier(datasetName, graphUri);
-            try (var transaction =
-                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(identifier.graphUri());
-                versions.put(graphUri, ctx.getRdfGraphVersion());
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
+                versions.put(schemaName, transaction.graph(schemaName).getRdfGraphVersion());
             }
         }
         return versions;
     }
 
-    private Built build(String datasetName, Iterable<String> graphUris) {
+    private Built build(String workspaceName, Iterable<String> schemaNames) {
         var started = System.currentTimeMillis();
         var copies = new LinkedHashMap<String, Graph>();
-        for (String graphUri : graphUris) {
-            var identifier = new GraphIdentifier(datasetName, graphUri);
-            try (var transaction =
-                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(identifier.graphUri());
-                copies.put(graphUri, copyOf(ctx.getRdfGraph()));
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : schemaNames) {
+                copies.put(schemaName, copyOf(transaction.graph(schemaName).getRdfGraph()));
             }
         }
 
@@ -293,9 +284,9 @@ public class SchemaIndexCache {
 
         var indexedTriples = copies.values().stream().mapToLong(Graph::size).sum();
         logger.info(
-                "Indexed the schema of workspace \"{}\" in {} ms: {} graph(s), {} triple(s), {}"
+                "Indexed the schema of workspace \"{}\" in {} ms: {} schema(s), {} triple(s), {}"
                         + " profile(s), {} class(es), {} property(ies).",
-                datasetName,
+                workspaceName,
                 System.currentTimeMillis() - started,
                 copies.size(),
                 indexedTriples,
@@ -375,12 +366,12 @@ public class SchemaIndexCache {
      * one, since two profiles under one IRI would be merged into one scope entry.
      */
     private static VersionIri fallbackProfile(
-            String graphUri, Graph graph, LinkedHashSet<VersionIri> covered) {
+            String schemaName, Graph graph, LinkedHashSet<VersionIri> covered) {
         var fallback =
                 ProfileVersionIris.declaredIn(graph).stream()
                         .filter(declared -> !covered.contains(declared))
                         .findFirst()
-                        .orElseGet(() -> ProfileVersionIris.syntheticFor(graphUri));
+                        .orElseGet(() -> ProfileVersionIris.syntheticFor(schemaName));
         return covered.add(fallback) ? fallback : null;
     }
 

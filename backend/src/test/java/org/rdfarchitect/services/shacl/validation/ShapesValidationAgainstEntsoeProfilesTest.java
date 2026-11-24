@@ -45,7 +45,7 @@ import java.util.stream.Stream;
 /**
  * Validation against the real CGMES profiles from the ENTSO-E application profiles library.
  *
- * <p>The workspace is loaded with the whole current CGMES RDFS release, one graph per profile,
+ * <p>The workspace is loaded with the whole current CGMES RDFS release, one schema per profile,
  * which is how a user actually works with it — and the reason official constraints files
  * referencing terms across profiles come back clean here.
  *
@@ -60,12 +60,12 @@ class ShapesValidationAgainstEntsoeProfilesTest {
     private static final String RDFS = PROFILES + "RDFS/";
     private static final String CONSTRAINTS = PROFILES + "SHACL/TTL/";
 
-    private static final String DATASET = "cgmes";
+    private static final String WORKSPACE = "cgmes";
     private static final String SESSION = "entsoe-profiles-test";
 
-    /** The profile the shapes documents are attached to; any graph in the workspace would do. */
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier(DATASET, "http://ex.org/CoreEquipment");
+    /** The profile the shapes documents are attached to; any schema in the workspace would do. */
+    private static final GraphIdentifier SCHEMA_ID =
+            new GraphIdentifier(WORKSPACE, "CoreEquipment");
 
     /** A large official file that is free of errors, embedded SPARQL included. */
     private static final String CLEAN_COMPLEX = "61970-452_Equipment-AP-Con-Complex-SHACL.ttl";
@@ -89,27 +89,27 @@ class ShapesValidationAgainstEntsoeProfilesTest {
         SessionContext.setSessionId(SESSION);
         database = new InMemoryDatabaseImpl(new SchemaConfig());
         databasePort = new InMemoryDatabaseAdapter(database);
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         try (Stream<Path> files = Files.list(Path.of(RDFS))) {
             files.filter(path -> path.toString().endsWith(".rdf"))
                     .sorted()
                     .forEach(ShapesValidationAgainstEntsoeProfilesTest::loadProfile);
         }
-        assertThat(databasePort.listGraphUris(DATASET)).hasSizeGreaterThan(1);
+        assertThat(databasePort.listSchemaNames(WORKSPACE)).hasSizeGreaterThan(1);
     }
 
     private static void loadProfile(Path file) {
         var graph = GraphFactory.createDefaultGraph();
         RDFDataMgr.read(graph, file.toUri().toString());
         DatabaseFixtures.createGraph(
-                databasePort, new GraphIdentifier(DATASET, graphUriOf(file)), graph);
+                databasePort, new GraphIdentifier(WORKSPACE, schemaNameOf(file)), graph);
     }
 
-    /** The Equipment profile becomes {@link #GRAPH}, the rest keep their file-derived names. */
-    private static String graphUriOf(Path file) {
+    /** The Equipment profile becomes {@link #SCHEMA_ID}, the rest keep their file-derived names. */
+    private static String schemaNameOf(Path file) {
         return file.getFileName().toString().contains("_Equipment-AP-Voc")
-                ? GRAPH.graphUri()
-                : "http://ex.org/" + file.getFileName();
+                ? SCHEMA_ID.schemaName()
+                : file.getFileName().toString();
     }
 
     @BeforeEach
@@ -127,13 +127,16 @@ class ShapesValidationAgainstEntsoeProfilesTest {
      */
     private void clearShapesDocuments() {
         documents
-                .listShapesDocuments(GRAPH.datasetName())
-                .forEach(info -> documents.deleteShapesDocument(GRAPH.datasetName(), info.getId()));
+                .listShapesDocuments(SCHEMA_ID.workspaceName())
+                .forEach(
+                        info ->
+                                documents.deleteShapesDocument(
+                                        SCHEMA_ID.workspaceName(), info.getId()));
         custom =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "custom.ttl",
                                 null,
                                 "",
@@ -144,7 +147,8 @@ class ShapesValidationAgainstEntsoeProfilesTest {
     @Test
     void everyProfileInTheWorkspaceIsOneTheShapesAreCheckedAgainst() {
         var report =
-                service.validateTurtle(GRAPH.datasetName(), CLEAN_SIMPLE, read(CLEAN_SIMPLE), null);
+                service.validateTurtle(
+                        SCHEMA_ID.workspaceName(), CLEAN_SIMPLE, read(CLEAN_SIMPLE), null);
 
         assertThat(report.getProfiles())
                 .as("profiles the loader recognised, addressed by their owl:versionIRI")
@@ -157,18 +161,18 @@ class ShapesValidationAgainstEntsoeProfilesTest {
                                 + " CIM profile, so it is indexed generically under that IRI")
                 .contains("http://iec.ch/TC57/61970-552/ModelDescription/1")
                 .as(
-                        "one graph in this release declares no owl:versionIRI; it is indexed under"
-                                + " a stand-in and named by its graph URI")
-                .anyMatch(profile -> databasePort.listGraphUris(DATASET).contains(profile))
+                        "one profile in this release declares no owl:versionIRI; it is indexed under"
+                                + " a stand-in and named by its schema name")
+                .anyMatch(profile -> databasePort.listSchemaNames(WORKSPACE).contains(profile))
                 .noneMatch(profile -> profile.startsWith("urn:rdfa:profile:"));
-        assertThat(report.getProfiles()).hasSize(databasePort.listGraphUris(DATASET).size());
+        assertThat(report.getProfiles()).hasSize(databasePort.listSchemaNames(WORKSPACE).size());
     }
 
     @Test
     void anOfficialConstraintsFileReportsNoError() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, read(CLEAN_COMPLEX));
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, read(CLEAN_COMPLEX));
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(
@@ -181,7 +185,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
     void anOfficialCrossProfileFileReportsNoError() {
         var report =
                 service.validateTurtle(
-                        GRAPH.datasetName(), CROSS_PROFILE, read(CROSS_PROFILE), null);
+                        SCHEMA_ID.workspaceName(), CROSS_PROFILE, read(CROSS_PROFILE), null);
 
         assertThat(report.isValid()).isTrue();
         assertThat(report.getErrorCount()).isZero();
@@ -193,7 +197,8 @@ class ShapesValidationAgainstEntsoeProfilesTest {
         var corrupted = original.replaceFirst("cim:ACLineSegment\\b", "cim:AClineSegment");
         assertThat(corrupted).isNotEqualTo(original);
 
-        var report = service.validateTurtle(GRAPH.datasetName(), CLEAN_SIMPLE, corrupted, null);
+        var report =
+                service.validateTurtle(SCHEMA_ID.workspaceName(), CLEAN_SIMPLE, corrupted, null);
 
         assertThat(findings(report.getDocuments()))
                 .anySatisfy(
@@ -221,7 +226,8 @@ class ShapesValidationAgainstEntsoeProfilesTest {
                     sh:targetClass cim:NotAClassAnyProfileDeclares .
                 """;
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "invented.ttl", shapes, null);
+        var report =
+                service.validateTurtle(SCHEMA_ID.workspaceName(), "invented.ttl", shapes, null);
 
         assertThat(report.isValid()).isFalse();
         assertThat(findings(report.getDocuments()))
@@ -239,14 +245,14 @@ class ShapesValidationAgainstEntsoeProfilesTest {
         var lineCount = text.split("\n", -1).length;
         var info =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         CLEAN_COMPLEX,
                         CLEAN_COMPLEX,
                         text,
                         Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), info.getId());
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), info.getId());
 
         assertThat(report.getDocuments())
                 .singleElement()

@@ -23,7 +23,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * The outcome of validating a graph's SHACL shapes against its workspace's CIM schema.
+ * The outcome of validating a workspace's SHACL shapes against its CIM schema.
  *
  * <p>Documents are reported separately, never merged: a finding is only useful if it names the file
  * and line it is about. The totals are the sum over the documents.

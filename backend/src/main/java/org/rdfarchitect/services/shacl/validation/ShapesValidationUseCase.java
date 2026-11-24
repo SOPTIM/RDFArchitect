@@ -22,7 +22,7 @@ import org.rdfarchitect.shacl.dto.ShapesValidationReport;
 import java.util.UUID;
 
 /**
- * Checking a graph's SHACL shapes against the CIM schema of its workspace.
+ * Checking a workspace's SHACL shapes against its CIM schema.
  *
  * <p>This answers "is this SHACL valid?" — do its classes and properties exist, do its
  * cardinalities agree with the schema's multiplicities, does the SPARQL embedded in it parse and
@@ -38,7 +38,7 @@ public interface ShapesValidationUseCase {
      * @param documentId a single document to validate, or {@code null} for all enabled ones. A
      *     document is validated when named explicitly even if it is disabled — the user asked.
      */
-    ShapesValidationReport validateShapes(String datasetName, UUID documentId);
+    ShapesValidationReport validateShapes(String workspaceName, UUID documentId);
 
     /**
      * Validates Turtle that is not stored, in the context of a workspace.
@@ -54,5 +54,5 @@ public interface ShapesValidationUseCase {
      *     Without one the text is checked on its own.
      */
     ShapesValidationReport validateTurtle(
-            String datasetName, String name, String turtle, UUID documentId);
+            String workspaceName, String name, String turtle, UUID documentId);
 }

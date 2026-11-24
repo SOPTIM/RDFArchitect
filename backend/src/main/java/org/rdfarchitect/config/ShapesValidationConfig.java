@@ -28,8 +28,8 @@ import org.springframework.context.annotation.Configuration;
 public class ShapesValidationConfig {
 
     /**
-     * Shared deliberately: indexing a workspace's schema costs a few hundred milliseconds, and the
-     * editor's terms read the same index in a later commit.
+     * One for the application: indexing a workspace's schema costs a few hundred milliseconds, so
+     * an index is built once per version of the schema and kept.
      */
     @Bean
     public SchemaIndexCache schemaIndexCache(DatabasePort databasePort) {

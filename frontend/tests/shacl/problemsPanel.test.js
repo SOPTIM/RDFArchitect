@@ -30,7 +30,7 @@ function fakeWorkbench(overrides = {}) {
         documents: [],
         schemas: [],
         readOnly: false,
-        setSchemas: vi.fn().mockResolvedValue(true),
+        setApplies: vi.fn().mockResolvedValue(true),
         selected: null,
         selectedId: null,
         text: "",
@@ -415,31 +415,12 @@ eq:Terminal a sh:NodeShape ;
         });
     });
 
-    test("says nothing about a document while a schema is being compared", () => {
-        const panel = render(DocumentInspector, {
-            workbench: fakeWorkbench({
-                selectedId: "eq",
-                comparedSchema: "http://ex.org/EQ",
-                selected: {
-                    id: "eq",
-                    name: "eq.ttl",
-                    origin: "AUTHORED",
-                    enabled: true,
-                    schemas: [],
-                },
-            }),
-        });
-
-        expect(panel.textContent).toContain("No document open");
-        expect(panel.textContent).not.toContain("eq.ttl");
-    });
-
     describe("what the document applies to", () => {
-        const EQ = "http://ex.org/EQ";
-        const SSH = "http://ex.org/SSH";
+        const EQ = "EQ";
+        const SSH = "SSH";
         const schemas = [
-            { uri: EQ, label: "Equipment" },
-            { uri: SSH, label: "Hypothesis" },
+            { name: EQ, label: "Equipment" },
+            { name: SSH, label: "Hypothesis" },
         ];
         const selected = schemasOf => ({
             id: "eq",
@@ -466,7 +447,7 @@ eq:Terminal a sh:NodeShape ;
             expect(boxes(panel).map(box => box.checked)).toEqual([false, true]);
         });
 
-        test("ticking one adds it to the others", async () => {
+        test("ticking one adds it", async () => {
             const workbench = fakeWorkbench({
                 selectedId: "eq",
                 schemas,
@@ -476,10 +457,11 @@ eq:Terminal a sh:NodeShape ;
 
             boxes(panel)[0].click();
             await vi.waitFor(() =>
-                expect(workbench.setSchemas).toHaveBeenCalledWith("eq", [
-                    SSH,
+                expect(workbench.setApplies).toHaveBeenCalledWith(
+                    "eq",
                     EQ,
-                ]),
+                    true,
+                ),
             );
         });
 
@@ -500,7 +482,7 @@ eq:Terminal a sh:NodeShape ;
             const workbench = fakeWorkbench({
                 selectedId: "eq",
                 schemas,
-                selected: selected(["http://ex.org/Deleted", SSH]),
+                selected: selected(["Deleted", SSH]),
             });
             const panel = render(DocumentInspector, { workbench });
 
@@ -511,7 +493,11 @@ eq:Terminal a sh:NodeShape ;
                 .find(button => button.textContent.includes("Forget it"))
                 .click();
             await vi.waitFor(() =>
-                expect(workbench.setSchemas).toHaveBeenCalledWith("eq", [SSH]),
+                expect(workbench.setApplies).toHaveBeenCalledWith(
+                    "eq",
+                    "Deleted",
+                    false,
+                ),
             );
         });
     });

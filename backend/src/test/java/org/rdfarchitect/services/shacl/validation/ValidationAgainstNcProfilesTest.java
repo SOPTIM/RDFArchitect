@@ -53,9 +53,9 @@ class ValidationAgainstNcProfilesTest {
     private static final String VOCABULARY = "RDFS/EquipmentReliability-AP-Voc-RDFS2020.rdf";
     private static final String CONSTRAINTS = "SHACL/EquipmentReliability-AP-Con-Simple-SHACL.ttl";
 
-    private static final String DATASET = "nc";
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier(DATASET, "http://ex.org/EquipmentReliability");
+    private static final String WORKSPACE = "nc";
+    private static final GraphIdentifier SCHEMA_ID =
+            new GraphIdentifier(WORKSPACE, "EquipmentReliability");
 
     private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
     private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
@@ -66,15 +66,15 @@ class ValidationAgainstNcProfilesTest {
     @BeforeEach
     void setUp() throws IOException {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.source(Path.of(BASE, VOCABULARY).toUri().toString()).parse(schema);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, schema);
         documentId =
                 new SHACLStoringService(databasePort)
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "er.ttl",
                                 null,
                                 Files.readString(Path.of(BASE, CONSTRAINTS)),
@@ -91,7 +91,7 @@ class ValidationAgainstNcProfilesTest {
 
     @Test
     void typesOfOtherCimVersionsAreNotErrors() {
-        var report = service.validateShapes(GRAPH.datasetName(), documentId);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), documentId);
 
         var errors =
                 report.getDocuments().getFirst().getFindings().stream()

@@ -32,20 +32,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * How a graph is named when CIM terms are looked up in it.
+ * How a schema is named when CIM terms are looked up in it.
  *
  * <p>CIMVocabCheck addresses a profile by its {@code owl:versionIRI} — that is how it can say a
  * class exists in {@code StateVariables-EU/3.0} but not in the profile you are writing shapes
- * against. A graph in RDFArchitect need not carry one: it may be a profile still being authored, or
- * a header profile, and the schema index would then hold nothing for it, making every one of its
- * own classes look unknown. Such a graph therefore gets a synthetic version IRI so its terms are
+ * against. A schema in RDFArchitect need not carry one: it may be a profile still being authored,
+ * or a header profile, and the schema index would then hold nothing for it, making every one of its
+ * own classes look unknown. Such a schema therefore gets a synthetic version IRI so its terms are
  * recognised, distinguishable from a real profile IRI by its {@code urn:rdfa:profile:} scheme.
  */
 public final class ProfileVersionIris {
 
     /**
-     * Scheme for graphs with no {@code owl:versionIRI}. {@code urn:} cannot collide with the {@code
-     * http(s)} IRIs real profiles use.
+     * Scheme for schemas with no {@code owl:versionIRI}. {@code urn:} cannot collide with the
+     * {@code http(s)} IRIs real profiles use.
      */
     private static final String SYNTHETIC_PREFIX = "urn:rdfa:profile:";
 
@@ -71,16 +71,16 @@ public final class ProfileVersionIris {
         return out;
     }
 
-    /** The stand-in version IRI for a graph that declares none. */
-    public static VersionIri syntheticFor(String graphUri) {
+    /** The stand-in version IRI for a schema whose graph declares none. */
+    public static VersionIri syntheticFor(String schemaName) {
         return VersionIri.of(
-                SYNTHETIC_PREFIX + URLEncoder.encode(graphUri, StandardCharsets.UTF_8));
+                SYNTHETIC_PREFIX + URLEncoder.encode(schemaName, StandardCharsets.UTF_8));
     }
 
     /**
-     * How a profile is named to a user: its version IRI, or for a synthetic one the graph it stands
-     * for. The synthetic IRI is an addressing detail of the index; the graph URI is what the user
-     * picked and sees in the navigation.
+     * How a profile is named to a user: its version IRI, or for a synthetic one the name of the
+     * schema it stands for. The synthetic IRI is an addressing detail of the index; the schema name
+     * is what the user picked and sees in the navigation.
      */
     public static String displayName(String versionIri) {
         if (!versionIri.startsWith(SYNTHETIC_PREFIX)) {

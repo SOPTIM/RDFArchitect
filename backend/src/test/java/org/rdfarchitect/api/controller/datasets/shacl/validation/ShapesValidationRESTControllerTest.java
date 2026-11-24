@@ -48,7 +48,7 @@ import java.util.UUID;
  */
 class ShapesValidationRESTControllerTest {
 
-    private static final String URL = "/api/datasets/cgmes/shacl/validate";
+    private static final String URL = "/api/workspaces/cgmes/shacl/validate";
 
     /** Deliberately carries prefixes and a comment — both must reach the service unchanged. */
     private static final String TTL =

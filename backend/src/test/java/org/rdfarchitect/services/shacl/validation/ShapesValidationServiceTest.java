@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Validating a graph's shapes against the schema its workspace holds.
+ * Validating a workspace's shapes documents against the schemas it holds.
  *
  * <p>The schema here is a small RDFS vocabulary rather than a real profile, so that these tests are
  * about the service's behaviour — positions, per-document reporting, contradictions — and not about
@@ -51,8 +51,8 @@ import java.util.UUID;
  */
 class ShapesValidationServiceTest {
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier SCHEMA_ID = new GraphIdentifier(WORKSPACE, "EQ");
 
     private static final String SCHEMA =
             """
@@ -97,17 +97,17 @@ class ShapesValidationServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.fromString(SCHEMA, Lang.TURTLE).parse(schema);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, schema);
         documents = new SHACLStoringService(databasePort);
         service = new ShapesValidationService(databasePort, new SchemaIndexCache(databasePort));
         custom =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "custom.ttl",
                                 null,
                                 "",
@@ -127,9 +127,9 @@ class ShapesValidationServiceTest {
 
     @Test
     void shapesOverKnownTermsReportNoError() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(report.isValid()).isTrue();
         assertThat(report.getErrorCount()).isZero();
@@ -146,9 +146,9 @@ class ShapesValidationServiceTest {
     @Test
     void anUnknownClassIsReportedAtItsLineAndColumn() {
         var shapes = VALID_SHAPES.replace("cim:ACLineSegment ;", "cim:ACLineSegmentt ;");
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, shapes);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, shapes);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(report.isValid()).isFalse();
         assertThat(findings(report.getDocuments()))
@@ -170,9 +170,9 @@ class ShapesValidationServiceTest {
     @Test
     void anUnknownPropertyIsReported() {
         var shapes = VALID_SHAPES.replace("ACLineSegment.length", "ACLineSegment.lenght");
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, shapes);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, shapes);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .anySatisfy(
@@ -202,7 +202,7 @@ class ShapesValidationServiceTest {
                     ] .
                 """;
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "values.ttl", shapes, null);
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "values.ttl", shapes, null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> CIM_REFERENCE_VALUE.equals(finding.getTerm()))
@@ -237,7 +237,7 @@ class ShapesValidationServiceTest {
     void aTypeOfAnotherCimVersionIsInformationNotAnError() {
         var report =
                 service.validateTurtle(
-                        GRAPH.datasetName(),
+                        SCHEMA_ID.workspaceName(),
                         "nc.ttl",
                         typeListWith("cim:ACLineSegment cim16:ACLineSegment"),
                         null);
@@ -256,7 +256,10 @@ class ShapesValidationServiceTest {
     void aMisspeltTypeInTheSchemasOwnNamespaceStaysAnError() {
         var report =
                 service.validateTurtle(
-                        GRAPH.datasetName(), "typo.ttl", typeListWith("cim:ACLineSegmnet"), null);
+                        SCHEMA_ID.workspaceName(),
+                        "typo.ttl",
+                        typeListWith("cim:ACLineSegmnet"),
+                        null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> finding.getTerm() != null)
@@ -284,7 +287,7 @@ class ShapesValidationServiceTest {
                     ] .
                 """;
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "values.ttl", shapes, null);
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "values.ttl", shapes, null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> CIM_REFERENCE_VALUE.equals(finding.getTerm()))
@@ -314,7 +317,7 @@ class ShapesValidationServiceTest {
                     ] .
                 """;
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "query.ttl", shapes, null);
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "query.ttl", shapes, null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> finding.getSource() == ShapesValidationFinding.Source.SPARQL)
@@ -328,8 +331,8 @@ class ShapesValidationServiceTest {
     }
 
     @Test
-    void aGraphWithoutAVersionIriIsNamedByItsUri() {
-        var draft = new GraphIdentifier(DATASET, "http://ex.org/draft");
+    void aSchemaWithoutAVersionIriIsNamedByItsName() {
+        var draft = new GraphIdentifier(WORKSPACE, "draft");
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.fromString(
                         "<http://ex.org/Draft> a <http://www.w3.org/2000/01/rdf-schema#Class> .",
@@ -338,9 +341,9 @@ class ShapesValidationServiceTest {
         DatabaseFixtures.createGraph(databasePort, draft, schema);
         var shapes = VALID_SHAPES.replace("cim:ACLineSegment ;", "cim:Nonsense ;");
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "draft.ttl", shapes, null);
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "draft.ttl", shapes, null);
 
-        assertThat(report.getProfiles()).contains("http://ex.org/draft");
+        assertThat(report.getProfiles()).contains("draft");
         assertThat(report.getProfiles()).noneMatch(profile -> profile.startsWith("urn:rdfa:"));
         assertThat(findings(report.getDocuments()))
                 .isNotEmpty()
@@ -359,19 +362,20 @@ class ShapesValidationServiceTest {
         var broken = VALID_SHAPES.replace("cim:ACLineSegment ;", "cim:Nonsense ;");
         var info =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         "draft.ttl",
                         null,
                         broken,
                         Lang.TURTLE);
-        documents.updateShapesDocument(GRAPH.datasetName(), info.getId(), null, false, null, null);
+        documents.updateShapesDocument(
+                SCHEMA_ID.workspaceName(), info.getId(), null, false, null, null);
 
-        assertThat(service.validateShapes(GRAPH.datasetName(), null).getDocuments())
+        assertThat(service.validateShapes(SCHEMA_ID.workspaceName(), null).getDocuments())
                 .extracting(ShapesDocumentValidationResult::getDocumentId)
                 .doesNotContain(info.getId());
 
-        var targeted = service.validateShapes(GRAPH.datasetName(), info.getId());
+        var targeted = service.validateShapes(SCHEMA_ID.workspaceName(), info.getId());
         assertThat(targeted.getDocuments()).hasSize(1);
         assertThat(targeted.isValid()).isFalse();
     }
@@ -380,7 +384,7 @@ class ShapesValidationServiceTest {
     void anUnknownDocumentIdIsNotFound() {
         var missing = UUID.randomUUID();
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> service.validateShapes(GRAPH.datasetName(), missing));
+                .isThrownBy(() -> service.validateShapes(SCHEMA_ID.workspaceName(), missing));
     }
 
     @Test
@@ -389,17 +393,17 @@ class ShapesValidationServiceTest {
                 VALID_SHAPES
                         .replace("cim:ACLineSegment ;", "cim:Nonsense ;")
                         .replace("ex:ACLineSegmentShape", "ex:OtherShape");
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         var second =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         "extra.ttl",
                         null,
                         broken,
                         Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(report.getDocuments()).hasSize(2);
         assertThat(report.getDocuments())
@@ -426,7 +430,7 @@ class ShapesValidationServiceTest {
                     a sh:NodeShape .
                 """;
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "draft.ttl", broken, null);
+        var report = service.validateTurtle(SCHEMA_ID.workspaceName(), "draft.ttl", broken, null);
 
         assertThat(report.isValid()).isFalse();
         assertThat(report.getDocuments())
@@ -451,7 +455,8 @@ class ShapesValidationServiceTest {
 
     @Test
     void turtleThatParsesIsCheckedAgainstTheSchema() {
-        var report = service.validateTurtle(GRAPH.datasetName(), "draft.ttl", VALID_SHAPES, null);
+        var report =
+                service.validateTurtle(SCHEMA_ID.workspaceName(), "draft.ttl", VALID_SHAPES, null);
 
         assertThat(report.isValid()).isTrue();
         assertThat(report.getDocuments())
@@ -469,17 +474,17 @@ class ShapesValidationServiceTest {
 
     @Test
     void oneShapeIriInTwoDocumentsIsReportedInBoth() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         var second =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         "copy.ttl",
                         null,
                         VALID_SHAPES,
                         Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(report.getDocuments())
                 .allSatisfy(
@@ -527,16 +532,16 @@ class ShapesValidationServiceTest {
                         sh:maxCount 0 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "tighter.ttl",
                 null,
                 tighter,
                 Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> "UNSATISFIABLE_CARDINALITY".equals(finding.getCode()))
@@ -568,16 +573,16 @@ class ShapesValidationServiceTest {
                         sh:maxCount 0 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "off.ttl",
                 null,
                 deactivated,
                 Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .noneSatisfy(
@@ -619,23 +624,23 @@ class ShapesValidationServiceTest {
                         sh:maxCount "many" ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "tighter.ttl",
                 null,
                 tighter,
                 Lang.TURTLE);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "vague.ttl",
                 null,
                 malformed,
                 Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> "UNSATISFIABLE_CARDINALITY".equals(finding.getCode()))
@@ -669,9 +674,9 @@ class ShapesValidationServiceTest {
                         sh:maxCount 1 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, selfContradictory);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, selfContradictory);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> "UNSATISFIABLE_CARDINALITY".equals(finding.getCode()))
@@ -682,16 +687,16 @@ class ShapesValidationServiceTest {
     void twoDatatypesOnOnePathAreReported() {
         var stringShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#string", "ex:First");
         var intShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#integer", "ex:Second");
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, stringShape);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, stringShape);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "second.ttl",
                 null,
                 intShape,
                 Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .filteredOn(finding -> "CONFLICTING_DATATYPE".equals(finding.getCode()))
@@ -706,16 +711,16 @@ class ShapesValidationServiceTest {
     @Test
     void complementaryConstraintsInTwoDocumentsAreNotAConflict() {
         var datatypeOnly = datatypeShapes("http://www.w3.org/2001/XMLSchema#string", "ex:Other");
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         documents.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
                 "datatype.ttl",
                 null,
                 datatypeOnly,
                 Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), null);
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
 
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getSource)
@@ -730,8 +735,8 @@ class ShapesValidationServiceTest {
     void unsavedTextIsNotFoundToConflictWithItsOwnSavedCopy() {
         var stored =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         "own.ttl",
                         null,
                         VALID_SHAPES,
@@ -739,7 +744,7 @@ class ShapesValidationServiceTest {
 
         var report =
                 service.validateTurtle(
-                        GRAPH.datasetName(), "own.ttl", VALID_SHAPES, stored.getId());
+                        SCHEMA_ID.workspaceName(), "own.ttl", VALID_SHAPES, stored.getId());
 
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getCode)
@@ -748,19 +753,21 @@ class ShapesValidationServiceTest {
 
     @Test
     void unsavedTextThatCollidesWithAnotherDocumentIsReported() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         var edited =
                 documents
                         .createShapesDocument(
-                                GRAPH.datasetName(),
-                                List.of(GRAPH.graphUri()),
+                                SCHEMA_ID.workspaceName(),
+                                List.of(SCHEMA_ID.schemaName()),
                                 "draft.ttl",
                                 null,
                                 "",
                                 Lang.TURTLE)
                         .getId();
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "draft.ttl", VALID_SHAPES, edited);
+        var report =
+                service.validateTurtle(
+                        SCHEMA_ID.workspaceName(), "draft.ttl", VALID_SHAPES, edited);
 
         assertThat(findings(report.getDocuments()))
                 .anySatisfy(
@@ -775,9 +782,10 @@ class ShapesValidationServiceTest {
 
     @Test
     void unsavedTextWithoutADocumentIdIsCheckedOnItsOwn() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
 
-        var report = service.validateTurtle(GRAPH.datasetName(), "draft.ttl", VALID_SHAPES, null);
+        var report =
+                service.validateTurtle(SCHEMA_ID.workspaceName(), "draft.ttl", VALID_SHAPES, null);
 
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getCode)
@@ -786,11 +794,11 @@ class ShapesValidationServiceTest {
 
     @Test
     void anIdNoStoredDocumentHasMeetsNoOtherDocument() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
 
         var report =
                 service.validateTurtle(
-                        GRAPH.datasetName(), "new.ttl", VALID_SHAPES, UUID.randomUUID());
+                        SCHEMA_ID.workspaceName(), "new.ttl", VALID_SHAPES, UUID.randomUUID());
 
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getCode)
@@ -801,14 +809,13 @@ class ShapesValidationServiceTest {
     // Which documents meet
     // -------------------------------------------------------------------------
 
-    private static final GraphIdentifier OTHER_SCHEMA =
-            new GraphIdentifier(DATASET, "http://ex.org/other");
+    private static final GraphIdentifier OTHER_SCHEMA = new GraphIdentifier(WORKSPACE, "other");
 
     private UUID documentAppliedTo(String name, String turtle, GraphIdentifier... schemas) {
         return documents
                 .createShapesDocument(
-                        DATASET,
-                        Arrays.stream(schemas).map(GraphIdentifier::graphUri).toList(),
+                        WORKSPACE,
+                        Arrays.stream(schemas).map(GraphIdentifier::schemaName).toList(),
                         name,
                         null,
                         turtle,
@@ -817,7 +824,7 @@ class ShapesValidationServiceTest {
     }
 
     private List<String> codesOf(UUID documentId) {
-        return findings(service.validateShapes(DATASET, documentId).getDocuments()).stream()
+        return findings(service.validateShapes(WORKSPACE, documentId).getDocuments()).stream()
                 .map(ShapesValidationFinding::getCode)
                 .toList();
     }
@@ -825,7 +832,7 @@ class ShapesValidationServiceTest {
     @Test
     void documentsApplyingToDifferentSchemasDoNotMeet() {
         DatabaseFixtures.createGraph(databasePort, OTHER_SCHEMA, GraphFactory.createDefaultGraph());
-        documents.replaceShapesDocumentText(DATASET, custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(WORKSPACE, custom, VALID_SHAPES);
 
         var other = documentAppliedTo("other.ttl", VALID_SHAPES, OTHER_SCHEMA);
 
@@ -834,7 +841,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void aDocumentApplyingToNoSchemaMeetsNoOther() {
-        documents.replaceShapesDocumentText(DATASET, custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(WORKSPACE, custom, VALID_SHAPES);
 
         var alone = documentAppliedTo("alone.ttl", VALID_SHAPES);
 
@@ -844,9 +851,9 @@ class ShapesValidationServiceTest {
     @Test
     void oneSharedSchemaIsEnoughForDocumentsToMeet() {
         DatabaseFixtures.createGraph(databasePort, OTHER_SCHEMA, GraphFactory.createDefaultGraph());
-        documents.replaceShapesDocumentText(DATASET, custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(WORKSPACE, custom, VALID_SHAPES);
 
-        var both = documentAppliedTo("both.ttl", VALID_SHAPES, GRAPH, OTHER_SCHEMA);
+        var both = documentAppliedTo("both.ttl", VALID_SHAPES, SCHEMA_ID, OTHER_SCHEMA);
 
         assertThat(codesOf(both)).contains("DUPLICATE_SHAPE_IRI");
     }
@@ -854,9 +861,9 @@ class ShapesValidationServiceTest {
     @Test
     void aPairSharingTwoSchemasReportsItsConflictOnce() {
         DatabaseFixtures.createGraph(databasePort, OTHER_SCHEMA, GraphFactory.createDefaultGraph());
-        documentAppliedTo("first.ttl", VALID_SHAPES, GRAPH, OTHER_SCHEMA);
+        documentAppliedTo("first.ttl", VALID_SHAPES, SCHEMA_ID, OTHER_SCHEMA);
 
-        var second = documentAppliedTo("second.ttl", VALID_SHAPES, GRAPH, OTHER_SCHEMA);
+        var second = documentAppliedTo("second.ttl", VALID_SHAPES, SCHEMA_ID, OTHER_SCHEMA);
 
         assertThat(codesOf(second)).filteredOn("DUPLICATE_SHAPE_IRI"::equals).hasSize(1);
     }
@@ -883,10 +890,10 @@ class ShapesValidationServiceTest {
     @Test
     void unsavedTextOnlyMeetsDocumentsApplyingToItsSchemas() {
         DatabaseFixtures.createGraph(databasePort, OTHER_SCHEMA, GraphFactory.createDefaultGraph());
-        documents.replaceShapesDocumentText(DATASET, custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(WORKSPACE, custom, VALID_SHAPES);
         var other = documentAppliedTo("other.ttl", "", OTHER_SCHEMA);
 
-        var report = service.validateTurtle(DATASET, "other.ttl", VALID_SHAPES, other);
+        var report = service.validateTurtle(WORKSPACE, "other.ttl", VALID_SHAPES, other);
 
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getCode)
@@ -895,17 +902,17 @@ class ShapesValidationServiceTest {
 
     @Test
     void askingForOneDocumentStillReportsItsConflictsWithTheOthers() {
-        documents.replaceShapesDocumentText(GRAPH.datasetName(), custom, VALID_SHAPES);
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, VALID_SHAPES);
         var second =
                 documents.createShapesDocument(
-                        GRAPH.datasetName(),
-                        List.of(GRAPH.graphUri()),
+                        SCHEMA_ID.workspaceName(),
+                        List.of(SCHEMA_ID.schemaName()),
                         "copy.ttl",
                         null,
                         VALID_SHAPES,
                         Lang.TURTLE);
 
-        var report = service.validateShapes(GRAPH.datasetName(), second.getId());
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), second.getId());
 
         assertThat(report.getDocuments())
                 .singleElement()

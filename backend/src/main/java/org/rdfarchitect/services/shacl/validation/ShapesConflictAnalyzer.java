@@ -82,7 +82,7 @@ final class ShapesConflictAnalyzer {
      * <p>The source text is a supplier because most comparisons produce no finding for most
      * documents, and a document restored from a snapshot has to have its text serialised from its
      * triples before a position can be resolved against it. Passing it eagerly made every keystroke
-     * in the editor pay that for every other document in the graph.
+     * in the editor pay that for every other document in the workspace.
      */
     record Document(
             UUID id,

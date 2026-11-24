@@ -43,8 +43,8 @@ import java.util.UUID;
 /** Keeping an indexed schema only as long as the schema it was built from. */
 class SchemaIndexCacheTest {
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier SCHEMA_ID = new GraphIdentifier(WORKSPACE, "EQ");
 
     private static final String SCHEMA =
             """
@@ -66,10 +66,10 @@ class SchemaIndexCacheTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.fromString(SCHEMA, Lang.TURTLE).parse(schema);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, schema);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, schema);
         cache = new SchemaIndexCache(databasePort);
     }
 
@@ -81,15 +81,15 @@ class SchemaIndexCacheTest {
 
     @Test
     void askingTwiceWithoutAChangeIndexesOnce() {
-        assertThat(cache.apiFor(DATASET)).isSameAs(cache.apiFor(DATASET));
+        assertThat(cache.apiFor(WORKSPACE)).isSameAs(cache.apiFor(WORKSPACE));
     }
 
     @Test
     void aCommitToTheSchemaMakesTheNextLookupReindex() {
-        var before = cache.apiFor(DATASET);
+        var before = cache.apiFor(WORKSPACE);
         addClass("http://iec.ch/TC57/CIM100#Terminal");
 
-        var after = cache.apiFor(DATASET);
+        var after = cache.apiFor(WORKSPACE);
 
         assertThat(after).isNotSameAs(before);
         assertThat(
@@ -103,10 +103,10 @@ class SchemaIndexCacheTest {
     @Test
     void anUndoMakesTheNextLookupReindexToo() {
         addClass("http://iec.ch/TC57/CIM100#Terminal");
-        var withTerminal = cache.apiFor(DATASET);
+        var withTerminal = cache.apiFor(WORKSPACE);
         undo();
 
-        var afterUndo = cache.apiFor(DATASET);
+        var afterUndo = cache.apiFor(WORKSPACE);
 
         assertThat(afterUndo).isNotSameAs(withTerminal);
         assertThat(
@@ -119,25 +119,25 @@ class SchemaIndexCacheTest {
     }
 
     @Test
-    void aNewGraphInTheWorkspaceMakesTheNextLookupReindex() {
-        var before = cache.apiFor(DATASET);
+    void aNewSchemaInTheWorkspaceMakesTheNextLookupReindex() {
+        var before = cache.apiFor(WORKSPACE);
         DatabaseFixtures.createGraph(
                 databasePort,
-                new GraphIdentifier(DATASET, "http://ex.org/TP"),
+                new GraphIdentifier(WORKSPACE, "TP"),
                 GraphFactory.createDefaultGraph());
 
-        assertThat(cache.apiFor(DATASET)).isNotSameAs(before);
+        assertThat(cache.apiFor(WORKSPACE)).isNotSameAs(before);
     }
 
     @Test
     void twoSessionsHoldingAWorkspaceOfTheSameNameDoNotShareOneIndex() {
-        var firstSession = cache.apiFor(DATASET);
+        var firstSession = cache.apiFor(WORKSPACE);
 
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
-        DatabaseFixtures.createGraph(databasePort, GRAPH, GraphFactory.createDefaultGraph());
+        databasePort.createDataset(WORKSPACE);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, GraphFactory.createDefaultGraph());
 
-        assertThat(cache.apiFor(DATASET)).isNotSameAs(firstSession);
+        assertThat(cache.apiFor(WORKSPACE)).isNotSameAs(firstSession);
     }
 
     // -------------------------------------------------------------------------
@@ -153,26 +153,26 @@ class SchemaIndexCacheTest {
     @Test
     void anIndexNothingHasAskedForIsReleased() {
         var bounded = bounded(Long.MAX_VALUE, Duration.ofMinutes(30), 64);
-        var first = bounded.apiFor(DATASET);
+        var first = bounded.apiFor(WORKSPACE);
 
         now += Duration.ofMinutes(31).toMillis();
 
         // Sessions end without telling anyone, so nothing else would ever release this.
-        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
+        assertThat(bounded.apiFor(WORKSPACE)).isNotSameAs(first);
     }
 
     @Test
     void anIndexStillInUseIsKept() {
         var bounded = bounded(Long.MAX_VALUE, Duration.ofMinutes(30), 64);
-        var first = bounded.apiFor(DATASET);
+        var first = bounded.apiFor(WORKSPACE);
 
         now += Duration.ofMinutes(20).toMillis();
-        var second = bounded.apiFor(DATASET);
+        var second = bounded.apiFor(WORKSPACE);
         now += Duration.ofMinutes(20).toMillis();
 
         // Asking again is what keeps it: the bound is on idleness, not on age.
         assertThat(second).isSameAs(first);
-        assertThat(bounded.apiFor(DATASET)).isSameAs(first);
+        assertThat(bounded.apiFor(WORKSPACE)).isSameAs(first);
     }
 
     @Test
@@ -181,7 +181,7 @@ class SchemaIndexCacheTest {
         // having no cache at all, and silently so.
         var bounded = bounded(1, Duration.ofDays(1), 64);
 
-        assertThat(bounded.apiFor(DATASET)).isSameAs(bounded.apiFor(DATASET));
+        assertThat(bounded.apiFor(WORKSPACE)).isSameAs(bounded.apiFor(WORKSPACE));
     }
 
     @Test
@@ -189,15 +189,15 @@ class SchemaIndexCacheTest {
         databasePort.createDataset("other");
         DatabaseFixtures.createGraph(
                 databasePort,
-                new GraphIdentifier("other", "http://ex.org/EQ"),
+                new GraphIdentifier("other", "EQ"),
                 GraphFactory.createDefaultGraph());
         var bounded = bounded(1, Duration.ofDays(1), 64);
 
-        var first = bounded.apiFor(DATASET);
+        var first = bounded.apiFor(WORKSPACE);
         bounded.apiFor("other");
 
         // Two entries and room for one, so the older one went.
-        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
+        assertThat(bounded.apiFor(WORKSPACE)).isNotSameAs(first);
     }
 
     @Test
@@ -205,20 +205,20 @@ class SchemaIndexCacheTest {
         databasePort.createDataset("other");
         DatabaseFixtures.createGraph(
                 databasePort,
-                new GraphIdentifier("other", "http://ex.org/EQ"),
+                new GraphIdentifier("other", "EQ"),
                 GraphFactory.createDefaultGraph());
         var bounded = bounded(Long.MAX_VALUE, Duration.ofDays(1), 1);
 
-        var first = bounded.apiFor(DATASET);
+        var first = bounded.apiFor(WORKSPACE);
         bounded.apiFor("other");
 
-        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
+        assertThat(bounded.apiFor(WORKSPACE)).isNotSameAs(first);
     }
 
     private void addClass(String classUri) {
-        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
             transaction
-                    .graph(GRAPH.graphUri())
+                    .graph(SCHEMA_ID.schemaName())
                     .getRdfGraph()
                     .add(
                             Triple.create(
@@ -232,7 +232,7 @@ class SchemaIndexCacheTest {
     }
 
     private void undo() {
-        databasePort.undo(DATASET);
+        databasePort.undo(WORKSPACE);
     }
 
     // -------------------------------------------------------------------------
@@ -241,7 +241,7 @@ class SchemaIndexCacheTest {
 
     private static final String LIBRARY = "../external/entsoe-application-profiles-library/";
 
-    private void loadFile(String graphUri, String file, String extraClass) {
+    private void loadFile(String schemaName, String file, String extraClass) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.source(java.nio.file.Path.of(LIBRARY + file).toUri().toString()).parse(graph);
         if (extraClass != null) {
@@ -251,17 +251,18 @@ class SchemaIndexCacheTest {
                             org.apache.jena.vocabulary.RDF.type.asNode(),
                             org.apache.jena.vocabulary.RDFS.Class.asNode()));
         }
-        DatabaseFixtures.createGraph(databasePort, new GraphIdentifier(DATASET, graphUri), graph);
+        DatabaseFixtures.createGraph(
+                databasePort, new GraphIdentifier(WORKSPACE, schemaName), graph);
     }
 
     @Test
     void aCopyOfAProfileUnderTheSameVersionIriStillHasItsOwnTermsIndexed() {
         var equipment = "CGMES/CurrentRelease/RDFS/61970-600-2_Equipment-AP-Voc-RDFS2020.rdf";
         var added = "http://iec.ch/TC57/CIM100#SomethingOnlyTheCopyDeclares";
-        loadFile("http://ex.org/EQ-official", equipment, null);
-        loadFile("http://ex.org/EQ-edited", equipment, added);
+        loadFile("EQ-official", equipment, null);
+        loadFile("EQ-edited", equipment, added);
 
-        var index = cache.apiFor(DATASET).schemaIndex();
+        var index = cache.apiFor(WORKSPACE).schemaIndex();
 
         assertThat(index.findClass(NodeFactory.createURI(added))).isNotEmpty();
     }
@@ -270,12 +271,12 @@ class SchemaIndexCacheTest {
     void aCgmes2ProfileIsIndexedOnceAndNotAlsoUnderASyntheticIri() {
         // CGMES 2.4.15 states its version on a {Profile}Version class, not as owl:versionIRI.
         loadFile(
-                "http://ex.org/SV",
+                "SV",
                 "CGMES/PastReleases/v2-4/Original/RDFS/"
                         + "StateVariableProfileRDFSAugmented-v2_4_15-4Sep2020.rdf",
                 null);
 
-        var profiles = cache.apiFor(DATASET).schemaIndex().getAllProfiles();
+        var profiles = cache.apiFor(WORKSPACE).schemaIndex().getAllProfiles();
 
         // The schema graph from setUp is not a profile and keeps its synthetic IRI; the 2.4.15
         // profile must not get one next to its real version IRI.

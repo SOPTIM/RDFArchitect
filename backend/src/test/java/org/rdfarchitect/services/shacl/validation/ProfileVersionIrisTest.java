@@ -26,7 +26,7 @@ import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
 
-/** Naming the profile a graph holds. */
+/** Naming the profile a schema holds. */
 class ProfileVersionIrisTest {
 
     private static final String WITH_VERSION =
@@ -72,17 +72,21 @@ class ProfileVersionIrisTest {
     }
 
     @Test
-    void aSyntheticIriCannotCollideWithAGraphUri() {
-        var synthetic = ProfileVersionIris.syntheticFor("http://ex.org/EQ");
+    void anySchemaNameGivesAnIriThatNamesTheSchemaAgain() {
+        var name = "Equipment draft #2 (50% done), Ä";
+        var synthetic = ProfileVersionIris.syntheticFor(name);
 
-        assertThat(synthetic.iri()).doesNotContain("http://ex.org/EQ");
+        assertThat(synthetic.iri()).doesNotContain(" ", "#", ",");
         assertThat(ProfileVersionIris.isSynthetic(synthetic)).isTrue();
+        assertThat(ProfileVersionIris.displayName(synthetic.iri())).isEqualTo(name);
+        assertThat(ProfileVersionIris.withDisplayNames("in [" + synthetic.iri() + ", x]"))
+                .isEqualTo("in [" + name + ", x]");
     }
 
     @Test
-    void twoGraphsGetTwoSyntheticIris() {
-        assertThat(ProfileVersionIris.syntheticFor("http://ex.org/EQ"))
-                .isNotEqualTo(ProfileVersionIris.syntheticFor("http://ex.org/TP"));
+    void twoSchemasGetTwoSyntheticIris() {
+        assertThat(ProfileVersionIris.syntheticFor("EQ"))
+                .isNotEqualTo(ProfileVersionIris.syntheticFor("TP"));
     }
 
     @Test

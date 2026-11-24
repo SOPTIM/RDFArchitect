@@ -49,7 +49,7 @@ import java.util.UUID;
  * variant needs a request body.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/shacl/validate")
+@RequestMapping("api/workspaces/{workspaceName}/shacl/validate")
 @RequiredArgsConstructor
 public class ShapesValidationRESTController {
 
@@ -86,17 +86,17 @@ public class ShapesValidationRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "A single constraints document to validate.")
                     @RequestParam(required = false)
                     UUID documentId) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/shacl/validate\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/shacl/validate\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        return shapesValidationUseCase.validateShapes(datasetName, documentId);
+        return shapesValidationUseCase.validateShapes(workspaceName, documentId);
     }
 
     @Operation(
@@ -129,8 +129,8 @@ public class ShapesValidationRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+            @Parameter(description = "The name of the workspace.") @PathVariable
+                    String workspaceName,
             @Parameter(description = "What to call the document in the report.")
                     @RequestParam(required = false, defaultValue = "unsaved")
                     String name,
@@ -145,10 +145,10 @@ public class ShapesValidationRESTController {
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/shacl/validate/text\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/shacl/validate/text\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        return shapesValidationUseCase.validateTurtle(datasetName, name, turtle, documentId);
+        return shapesValidationUseCase.validateTurtle(workspaceName, name, turtle, documentId);
     }
 }
