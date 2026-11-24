@@ -66,13 +66,31 @@ const REPORT = {
 };
 
 function fakeServer(overrides = {}) {
-    const server = { requests: [], report: REPORT, status: 200, ...overrides };
+    const server = {
+        requests: [],
+        report: REPORT,
+        status: 200,
+        /** Answers held back, per schema, until `release` is called. */
+        held: new Map(),
+        holding: new Set(),
+        ...overrides,
+    };
+    server.hold = schema => server.holding.add(schema);
+    server.release = schema => {
+        server.holding.delete(schema);
+        server.held.get(schema)?.();
+        server.held.delete(schema);
+    };
     server.fetch = async request => {
         const url = new URL(request.url);
-        server.requests.push({
-            path: url.pathname,
-            schema: url.searchParams.get("schema"),
-        });
+        const schema = url.searchParams.get("schema");
+        server.requests.push({ path: url.pathname, schema });
+        if (server.holding.has(schema)) {
+            await new Promise(resolve => server.held.set(schema, resolve));
+        }
+        if (server.failing) {
+            throw new TypeError("Failed to fetch");
+        }
         return new Response(JSON.stringify(server.report), {
             status: server.status,
             headers: { "content-type": "application/json" },
@@ -160,8 +178,8 @@ describe("ConformanceView", () => {
 
         expect(await view.run(SCHEMA)).toBeNull();
 
-        expect(view.error).toBeTruthy();
-        expect(view.failedOn).toBe(SCHEMA);
+        expect(view.errorFor(SCHEMA)).toBeTruthy();
+        expect(view.errorFor("other")).toBeNull();
         expect(view.reportFor(SCHEMA)).toBeNull();
     });
 
@@ -173,10 +191,61 @@ describe("ConformanceView", () => {
 
         await view.run(SCHEMA);
 
-        expect(view.error).toBeNull();
-        expect(view.failedOn).toBeNull();
+        expect(view.errorFor(SCHEMA)).toBeNull();
         expect(view.reportFor(SCHEMA)).toEqual(REPORT);
         expect(view.reportFor("other")).toBeNull();
+    });
+
+    test("drops an answer about documents as they were before a change", async () => {
+        server.hold(SCHEMA);
+        const running = view.run(SCHEMA);
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+
+        view.forget();
+        server.release(SCHEMA);
+
+        expect(await running).toBeNull();
+        expect(view.reportFor(SCHEMA)).toBeNull();
+        expect(view.isRunning(SCHEMA)).toBe(false);
+    });
+
+    test("compares another schema while one is still running", async () => {
+        server.hold(SCHEMA);
+        const first = view.run(SCHEMA);
+        await vi.waitFor(() => expect(view.isRunning(SCHEMA)).toBe(true));
+
+        expect(await view.run("SSH")).toEqual(REPORT);
+        expect(view.isRunning("SSH")).toBe(false);
+        expect(view.isRunning(SCHEMA)).toBe(true);
+        expect(await view.run(SCHEMA)).toBeNull();
+        expect(server.requests.map(request => request.schema)).toEqual([
+            SCHEMA,
+            "SSH",
+        ]);
+
+        server.release(SCHEMA);
+        await first;
+        expect(view.reportFor(SCHEMA)).toEqual(REPORT);
+    });
+
+    test("says so when the request gets no answer at all", async () => {
+        server.failing = true;
+
+        expect(await view.run(SCHEMA)).toBeNull();
+
+        expect(view.errorFor(SCHEMA)).toBe("The schema could not be compared.");
+        expect(view.isRunning(SCHEMA)).toBe(false);
+    });
+
+    test("names what the server said went wrong", async () => {
+        server.status = 404;
+        server.report = { detail: "No schema named EQ." };
+
+        await view.run(SCHEMA);
+
+        expect(view.errorFor(SCHEMA)).toBe(
+            "The schema could not be compared: No schema named EQ.",
+        );
     });
 
     test("forgetting drops every report", async () => {
@@ -219,9 +288,8 @@ describe("ConformanceReportView", () => {
         reportedOn = SCHEMA,
         ...overrides
     } = {}) => ({
-        running: false,
-        error: null,
-        failedOn: null,
+        isRunning: () => false,
+        errorFor: () => null,
         reportFor: id => (id && id === reportedOn ? report : null),
         run: vi.fn(),
         forget: vi.fn(),
@@ -447,6 +515,21 @@ describe("ConformanceReportView", () => {
         );
         expect(examples).toHaveLength(2);
         examples.forEach(example => expect(example).toMatch(/^For example: /));
+    });
+
+    test("shows progress only for the schema being compared", () => {
+        const state = conformance({
+            report: null,
+            reportedOn: null,
+            isRunning: name => name === "other",
+        });
+        const view = render({ conformance: state });
+
+        expect(
+            [...view.querySelectorAll("button")].find(button =>
+                button.textContent.includes("Compare"),
+            ).disabled,
+        ).toBe(false);
     });
 
     test("says unsaved edits are not part of the comparison", () => {

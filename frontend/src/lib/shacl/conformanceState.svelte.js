@@ -114,6 +114,20 @@ export function foldFindings(findings) {
     return [...folded.values()];
 }
 
+/** `entries` without `key`. */
+function without(entries, key) {
+    return Object.fromEntries(
+        Object.entries(entries).filter(([name]) => name !== key),
+    );
+}
+
+function failureOf(error) {
+    const detail = typeof error?.detail === "string" ? error.detail : null;
+    return detail
+        ? `The schema could not be compared: ${detail}`
+        : "The schema could not be compared.";
+}
+
 /**
  * Whether a schema and the documents applying to it still agree.
  *
@@ -127,13 +141,15 @@ export function foldFindings(findings) {
 export class ConformanceView {
     /** The last report per schema, so coming back shows it instead of asking again. */
     reports = $state({});
-    running = $state(false);
-    error = $state(null);
-    /** The schema a failed comparison was about, so its message stays with it. */
-    failedOn = $state(null);
+    /** Per schema being compared, the comparison running for it. */
+    running = $state({});
+    /** Per schema, why its last comparison failed. */
+    errors = $state({});
 
     #workspaceName;
     #requestOptions;
+    /** Moved by `forget`, so an answer about documents as they were is not taken for a report. */
+    #generation = 0;
 
     constructor({ workspaceName, requestOptions = {} }) {
         this.#workspaceName = workspaceName;
@@ -145,35 +161,63 @@ export class ConformanceView {
         return schemaName ? (this.reports[schemaName] ?? null) : null;
     }
 
+    /** Whether `schemaName` is being compared. Each schema is compared on its own. */
+    isRunning(schemaName) {
+        return Boolean(schemaName && this.running[schemaName]);
+    }
+
+    /** Why the last comparison of `schemaName` failed, or null. */
+    errorFor(schemaName) {
+        return schemaName ? (this.errors[schemaName] ?? null) : null;
+    }
+
     async run(schemaName) {
-        if (!schemaName || this.running) {
+        if (!schemaName || this.isRunning(schemaName)) {
             return null;
         }
-        this.running = true;
+        const generation = this.#generation;
+        const comparison = Symbol(schemaName);
+        this.running = { ...this.running, [schemaName]: comparison };
         try {
-            const { data, error } = await compare({
-                ...this.#requestOptions,
-                path: { workspaceName: this.#workspaceName },
-                query: { schema: schemaName },
-            });
-            if (error) {
-                this.error = "The schema could not be compared.";
-                this.failedOn = schemaName;
+            let answer;
+            try {
+                answer = await compare({
+                    ...this.#requestOptions,
+                    path: { workspaceName: this.#workspaceName },
+                    query: { schema: schemaName },
+                });
+            } catch {
+                answer = { error: {} };
+            }
+            if (generation !== this.#generation) {
+                // The documents changed while it ran, so it answers for what is no longer there.
                 return null;
             }
-            this.reports = { ...this.reports, [schemaName]: data };
-            this.error = null;
-            this.failedOn = null;
-            return data;
+            if (answer.error) {
+                this.errors = {
+                    ...this.errors,
+                    [schemaName]: failureOf(answer.error),
+                };
+                return null;
+            }
+            this.reports = { ...this.reports, [schemaName]: answer.data };
+            this.errors = without(this.errors, schemaName);
+            return answer.data;
         } finally {
-            this.running = false;
+            if (this.running[schemaName] === comparison) {
+                this.running = without(this.running, schemaName);
+            }
         }
     }
 
-    /** Drops every report, for when a save or a change to a schema can change the answers. */
+    /**
+     * Drops every report, for when a save or a change to a schema can change the answers. A
+     * comparison still running is left to finish, and its answer is dropped too.
+     */
     forget() {
+        this.#generation++;
         this.reports = {};
-        this.error = null;
-        this.failedOn = null;
+        this.running = {};
+        this.errors = {};
     }
 }

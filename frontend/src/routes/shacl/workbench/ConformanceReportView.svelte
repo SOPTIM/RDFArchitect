@@ -109,9 +109,8 @@
     const CLASSES_SHOWN = 3;
 
     const report = $derived(conformance.reportFor(schemaName));
-    const error = $derived(
-        conformance.failedOn === schemaName ? conformance.error : null,
-    );
+    const error = $derived(conformance.errorFor(schemaName));
+    const running = $derived(conformance.isRunning(schemaName));
 
     const verdict = $derived(conformanceVerdict(report));
 
@@ -174,7 +173,7 @@
             <ButtonControl
                 height={7}
                 variant="inline"
-                disabled={conformance.running || documents.length === 0}
+                disabled={running || documents.length === 0}
                 callOnClick={() => conformance.run(schemaName)}
             >
                 <span class="flex items-center gap-2 text-sm">
@@ -224,7 +223,7 @@
                 title="Nothing to compare"
                 description="Tick this schema under “Applies to” in a document's inspector, or import a constraints file for it."
             />
-        {:else if conformance.running}
+        {:else if running}
             <div class="flex justify-center py-12">
                 <LoadingSpinner />
             </div>
