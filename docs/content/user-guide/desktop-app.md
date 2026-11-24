@@ -62,6 +62,7 @@ A copy is removed as soon as its workspace is saved or deleted. If RDFArchitect 
 
 - **Share Snapshot** is not available: there is no shared server to keep a snapshot on. Send the workspace file instead.
 - RDFArchitect listens on `127.0.0.1` only, so it cannot be reached from other computers. It answers only its own windows.
+- Only the user who started RDFArchitect can use it. Other users of the same computer, for example on a shared Windows server, cannot open its windows or reach its workspaces and files. Each of them runs an RDFArchitect of their own.
 
 ## Options and files
 
@@ -69,7 +70,7 @@ The app can be started from a terminal with options, for example `RDFArchitect -
 
 | Option | Environment variable | Meaning |
 | --- | --- | --- |
-| `--browser=app` | `RDFARCHITECT_BROWSER` | Window of its own (default). `default` opens a tab of the default browser, `none` opens nothing and prints the address. |
+| `--browser=app` | `RDFARCHITECT_BROWSER` | Window of its own (default). `default` opens a tab of the default browser, `none` opens nothing and prints an address to open in a browser. The address contains the key to the running app: do not share it. |
 | `--port=17407` | `RDFARCHITECT_PORT` | Port on `127.0.0.1` (default `17407`). When it is taken, any free port is used. `0` always picks a free one. |
 | `--data-dir=<dir>` | `RDFARCHITECT_DATA_DIR` | Where to keep logs and the window's browser profile. |
 | `--help` | | Lists the options. |
@@ -83,4 +84,4 @@ The app keeps its log files, the window's browser profile and the copies of unsa
 - macOS: `~/Library/Application Support/RDFArchitect`
 - Linux: `~/.local/share/rdfarchitect` (or `$XDG_DATA_HOME/rdfarchitect`)
 
-The log is `logs/rdfarchitect.log` there, the copies of unsaved workspaces are in `recovery/`. Deleting the directory resets the window's size and browser settings and drops those copies; your own workspace files are not in it.
+The log is `logs/rdfarchitect.log` there, the copies of unsaved workspaces are in `recovery/`. `run/` holds the key that lets the windows of the running app in; on macOS and Linux only you can read the directory. Deleting the directory resets the window's size and browser settings and drops those copies; your own workspace files are not in it.

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.rdfarchitect.api.controller.desktop.DesktopRESTController;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
@@ -53,6 +54,8 @@ class DesktopApplicationTest {
 
     @LocalServerPort private int port;
 
+    @Autowired private DesktopAccessToken token;
+
     private HttpClient client;
 
     @BeforeEach
@@ -64,7 +67,18 @@ class DesktopApplicationTest {
         return "http://127.0.0.1:" + port + path;
     }
 
+    /** A request as the launcher sends it, with the token in its header. */
+    private HttpRequest.Builder request(String path) {
+        return HttpRequest.newBuilder(URI.create(url(path)))
+                .header(DesktopAccessFilter.TOKEN_HEADER, token.value());
+    }
+
     private HttpResponse<String> get(String path) throws IOException, InterruptedException {
+        return client.send(request(path).GET().build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> getWithoutToken(String path)
+            throws IOException, InterruptedException {
         return client.send(
                 HttpRequest.newBuilder(URI.create(url(path))).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
@@ -72,9 +86,7 @@ class DesktopApplicationTest {
 
     private HttpResponse<String> send(String method, String path, String origin)
             throws IOException, InterruptedException {
-        var request =
-                HttpRequest.newBuilder(URI.create(url(path)))
-                        .method(method, HttpRequest.BodyPublishers.noBody());
+        var request = request(path).method(method, HttpRequest.BodyPublishers.noBody());
         if (origin != null) {
             request.header("Origin", origin);
         }
@@ -84,7 +96,7 @@ class DesktopApplicationTest {
     @Test
     void servesTheUserInterfaceForEveryRoute() throws Exception {
         for (var route : new String[] {"/", "/mainpage", "/shacl/workbench"}) {
-            var response = get(route);
+            var response = getWithoutToken(route);
 
             assertThat(response.statusCode()).as(route).isEqualTo(200);
             assertThat(response.body()).as(route).contains("fixture");
@@ -112,7 +124,7 @@ class DesktopApplicationTest {
 
     @Test
     void configuresTheUserInterfaceForThisBackend() throws Exception {
-        var response = get("/env.js");
+        var response = getWithoutToken("/env.js");
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.headers().firstValue("Content-Type").orElseThrow())
@@ -155,9 +167,7 @@ class DesktopApplicationTest {
 
         var file =
                 client.send(
-                        HttpRequest.newBuilder(
-                                        URI.create(url("/api/desktop/workspaces/Draft%20One/file")))
-                                .build(),
+                        request("/api/desktop/workspaces/Draft%20One/file").build(),
                         HttpResponse.BodyHandlers.ofByteArray());
 
         assertThat(file.statusCode()).isEqualTo(200);
@@ -173,7 +183,7 @@ class DesktopApplicationTest {
     private HttpResponse<String> postJson(String path, String json)
             throws IOException, InterruptedException {
         return client.send(
-                HttpRequest.newBuilder(URI.create(url(path)))
+                request(path)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(json))
                         .build(),
@@ -186,9 +196,7 @@ class DesktopApplicationTest {
         assertThat(send("PUT", "/api/workspaces/Handed", null).statusCode()).isEqualTo(200);
         var file =
                 client.send(
-                        HttpRequest.newBuilder(
-                                        URI.create(url("/api/desktop/workspaces/Handed/file")))
-                                .build(),
+                        request("/api/desktop/workspaces/Handed/file").build(),
                         HttpResponse.BodyHandlers.ofByteArray());
         var onDisk = Files.write(directory.resolve("Handed.rdfa"), file.body());
 
@@ -246,6 +254,61 @@ class DesktopApplicationTest {
         assertThat(get("/api/desktop/recovery/missing.rdfa").statusCode()).isEqualTo(404);
         assertThat(send("DELETE", "/api/desktop/recovery/missing.rdfa", null).statusCode())
                 .isEqualTo(404);
+    }
+
+    @Test
+    void api_withoutToken_answersUnauthorized() throws Exception {
+        for (var path : new String[] {"/api/desktop", "/api/desktop/recovery", "/api/session"}) {
+            assertThat(getWithoutToken(path).statusCode()).as(path).isEqualTo(401);
+        }
+        var postWithoutToken =
+                client.send(
+                        HttpRequest.newBuilder(URI.create(url("/api/desktop/open-requests")))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString("{\"path\":\"/x.rdfa\"}"))
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(postWithoutToken.statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void session_rightToken_letsTheBrowserInByCookie() throws Exception {
+        var session =
+                getWithoutToken("/desktop/session?token=" + token.value() + "&next=%2Fmainpage");
+
+        assertThat(session.statusCode()).isEqualTo(303);
+        assertThat(session.headers().firstValue("Location")).hasValue("/mainpage");
+        assertThat(session.headers().firstValue("Set-Cookie").orElseThrow())
+                .startsWith("RDFA_DESKTOP_ACCESS_" + port + "=")
+                .contains("HttpOnly", "SameSite=Strict");
+        assertThat(getWithoutToken("/api/desktop").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void session_wrongToken_answersUnauthorized() throws Exception {
+        var session = getWithoutToken("/desktop/session?token=wrong&next=%2Fmainpage");
+
+        assertThat(session.statusCode()).isEqualTo(401);
+        assertThat(session.headers().firstValue("Set-Cookie")).isEmpty();
+        assertThat(getWithoutToken("/api/desktop").statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void api_challengeWithoutToken_provesToHoldTheToken() throws Exception {
+        var challenge = DesktopAccessToken.challenge();
+
+        var response =
+                client.send(
+                        HttpRequest.newBuilder(URI.create(url("/api/desktop")))
+                                .header(DesktopAccessFilter.CHALLENGE_HEADER, challenge)
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.headers().firstValue(DesktopAccessFilter.PROOF_HEADER))
+                .hasValue(token.proof(challenge));
+        assertThat(LocalPorts.provenVersion(port, token)).isPresent();
+        assertThat(LocalPorts.provenVersion(port, DesktopAccessToken.generate())).isEmpty();
     }
 
     @Test

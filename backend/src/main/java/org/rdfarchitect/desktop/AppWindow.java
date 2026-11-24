@@ -42,7 +42,8 @@ import java.util.function.Predicate;
  * every Windows 10 and 11, so on Windows there practically always is one. The browser gets a
  * profile of its own in the app's data directory, which keeps the app's storage apart from the
  * user's browsing and lets the window open even when that browser is already running. Without such
- * a browser, the page opens in a tab of the default browser.
+ * a browser, the page opens in a tab of the default browser. Either way the browser starts with a
+ * page in the app's data directory, which lets it in (see {@link LaunchPages}).
  */
 final class AppWindow {
 
@@ -53,15 +54,22 @@ final class AppWindow {
     private AppWindow() {}
 
     /**
-     * Opens the page.
+     * Opens a page of the app, by way of a launch page (see {@link LaunchPages}). With {@link
+     * DesktopOptions.BrowserMode#NONE} it prints the address to open instead, with the token in it.
      *
-     * @param url the page to show
+     * @param pages the launch pages of the app
+     * @param next the path of the page to show, such as {@code /mainpage}
      * @param mode how to show it
      * @param browserProfile the profile directory for a window of its own
      * @return whether a browser was started
+     * @throws IOException if the launch page cannot be written
      */
-    static boolean open(String url, DesktopOptions.BrowserMode mode, Path browserProfile) {
+    static boolean open(
+            LaunchPages pages, String next, DesktopOptions.BrowserMode mode, Path browserProfile)
+            throws IOException {
         if (mode == DesktopOptions.BrowserMode.NONE) {
+            // Standard output, not the log: only the user who started the app sees it.
+            System.out.println("RDFArchitect is running at " + pages.sessionUrl(next));
             return false;
         }
         if (mode == DesktopOptions.BrowserMode.APP) {
@@ -69,7 +77,8 @@ final class AppWindow {
             var browser =
                     findAppBrowser(os, System.getenv(), Path.of(System.getProperty("user.home")));
             if (browser.isPresent()) {
-                var command = appWindowCommand(os, browser.get(), url, browserProfile);
+                var page = pages.appWindowPage(next).toASCIIString();
+                var command = appWindowCommand(os, browser.get(), page, browserProfile);
                 try {
                     start(command);
                     logger.info("Opened the window with {}.", browser.get());
@@ -81,7 +90,7 @@ final class AppWindow {
                 logger.info("No Chromium-based browser found, using the default browser.");
             }
         }
-        return openInDefaultBrowser(url);
+        return openInDefaultBrowser(pages.windowPage(next).toASCIIString());
     }
 
     /** Returns the first Chromium-based browser installed, in order of preference. */

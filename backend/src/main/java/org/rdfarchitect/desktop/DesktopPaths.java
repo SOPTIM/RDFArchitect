@@ -21,8 +21,9 @@ import java.nio.file.Path;
 import java.util.Map;
 
 /**
- * Where the desktop app keeps its files: logs and the profile of its browser window. One directory
- * per user, where each operating system expects application data:
+ * Where the desktop app keeps its files: logs, the profile of its browser window and, in {@code
+ * run/}, what lets a browser and a later start of the app in. One directory per user, where each
+ * operating system expects application data:
  *
  * <ul>
  *   <li>Windows: {@code %LOCALAPPDATA%\RDFArchitect}
@@ -63,6 +64,10 @@ final class DesktopPaths {
 
     static Path browserProfile(Path dataDirectory) {
         return dataDirectory.resolve("browser");
+    }
+
+    static Path runDirectory(Path dataDirectory) {
+        return dataDirectory.resolve("run");
     }
 
     private static boolean isAbsolute(String path) {

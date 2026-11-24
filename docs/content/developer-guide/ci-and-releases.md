@@ -87,6 +87,27 @@ mvn -B exec:java -Dexec.mainClass=org.rdfarchitect.desktop.DesktopLauncher \
   -Dexec.args="--browser=none --desktop.user-interface=file:../frontend/build/"
 ```
 
+With `--browser=none` the launcher prints `RDFArchitect is running at http://127.0.0.1:<port>/desktop/session?token=…`. Opening that address sets the access cookie and shows the editor.
+
+Only the user who started the app can use its API:
+
+- Every request under `/api/` needs the run's access token, a new one per start. Without it the answer is `401`. The user interface and `/env.js` need none.
+- The browser sends the token as the cookie `RDFA_DESKTOP_ACCESS_<port>`, which `GET /desktop/session?token=<token>&next=<path>` sets.
+- Other clients send it in the header `X-RDFA-Desktop-Token`.
+- `run/instance.json` in the data directory holds `port`, `token` and `version` of the running app. Only the user can read it.
+- A request with the header `X-RDFA-Desktop-Challenge: <nonce>` gets `X-RDFA-Desktop-Proof: <base64url(HMAC-SHA256(token, nonce))>` in its answer, also with `401`. A second start checks it before it sends the token to the port named in `instance.json`.
+- The launcher opens a window with `run/launch.html` (the default browser with `run/open-<id>.html`), which forwards to the session address. So the token is not on the browser's command line.
+
+To call the API by hand, for example on Linux with the default data directory:
+
+```bash
+TOKEN=$(jq -r .token ~/.local/share/rdfarchitect/run/instance.json)
+PORT=$(jq -r .port ~/.local/share/rdfarchitect/run/instance.json)
+curl -H "X-RDFA-Desktop-Token: $TOKEN" http://127.0.0.1:$PORT/api/desktop
+```
+
+Workspaces belong to an HTTP session as on the server, so keep the session cookie between calls (`curl -b jar -c jar`).
+
 `desktop/icons/generate.py` renders the icons and the splash screen in `desktop/icons/` and the icons in `frontend/static/icons/`. It draws the mark itself, as a copy of `frontend/static/favicon.svg`, so a change to the mark has to be made in both.
 
 ## Docker images

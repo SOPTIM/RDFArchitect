@@ -43,11 +43,8 @@ class DesktopLauncherTest {
 
     @Test
     void opensTheEditor() {
-        assertThat(DesktopLauncher.startPage(17407)).isEqualTo("http://127.0.0.1:17407/mainpage");
-        assertThat(DesktopLauncher.startPage(17407, List.of()))
-                .isEqualTo("http://127.0.0.1:17407/mainpage");
-        assertThat(DesktopLauncher.startPage(17407, List.of("a", "b")))
-                .isEqualTo("http://127.0.0.1:17407/mainpage?open=a,b");
+        assertThat(DesktopLauncher.startPath(List.of())).isEqualTo("/mainpage");
+        assertThat(DesktopLauncher.startPath(List.of("a", "b"))).isEqualTo("/mainpage?open=a,b");
     }
 
     @Test

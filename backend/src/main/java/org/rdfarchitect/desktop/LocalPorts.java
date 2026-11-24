@@ -66,10 +66,11 @@ final class LocalPorts {
      * Asks the desktop app listening on the port to open a workspace file.
      *
      * @param port the port of the app
+     * @param token the access token of the app
      * @param file the file to open
      * @return the id of the request, for the window to name
      */
-    static Optional<String> requestOpen(int port, Path file) {
+    static Optional<String> requestOpen(int port, DesktopAccessToken token, Path file) {
         var client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
         try {
             var mapper = new ObjectMapper();
@@ -80,6 +81,7 @@ final class LocalPorts {
                     HttpRequest.newBuilder(URI.create(baseUrl(port) + "/api/desktop/open-requests"))
                             .timeout(TIMEOUT)
                             .header("Content-Type", "application/json")
+                            .header(DesktopAccessFilter.TOKEN_HEADER, token.value())
                             .POST(HttpRequest.BodyPublishers.ofString(body))
                             .build();
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -99,21 +101,34 @@ final class LocalPorts {
     }
 
     /**
-     * Returns the version of the desktop app listening on the port, if it is one.
+     * Returns the version of the desktop app listening on the port, if it proves to hold the token.
+     * Sends the token only after that: whatever listens on the port may be another user's program,
+     * waiting for it.
      *
      * @param port the port to ask
+     * @param token the access token the app has to hold
      * @return its version, empty if something else listens there or nothing answers
      */
-    static Optional<String> desktopAppVersion(int port) {
+    static Optional<String> provenVersion(int port, DesktopAccessToken token) {
         var client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
-        var request =
-                HttpRequest.newBuilder(URI.create(baseUrl(port) + "/api/desktop"))
-                        .timeout(TIMEOUT)
-                        .header("Accept", "application/json")
-                        .GET()
-                        .build();
+        var challenge = DesktopAccessToken.challenge();
         try {
-            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            var challenged =
+                    client.send(
+                            infoRequest(port)
+                                    .header(DesktopAccessFilter.CHALLENGE_HEADER, challenge)
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding());
+            var proof = challenged.headers().firstValue(DesktopAccessFilter.PROOF_HEADER);
+            if (proof.isEmpty() || !token.isProof(challenge, proof.get())) {
+                return Optional.empty();
+            }
+            var response =
+                    client.send(
+                            infoRequest(port)
+                                    .header(DesktopAccessFilter.TOKEN_HEADER, token.value())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 return Optional.empty();
             }
@@ -129,5 +144,12 @@ final class LocalPorts {
         } finally {
             client.close();
         }
+    }
+
+    private static HttpRequest.Builder infoRequest(int port) {
+        return HttpRequest.newBuilder(URI.create(baseUrl(port) + "/api/desktop"))
+                .timeout(TIMEOUT)
+                .header("Accept", "application/json")
+                .GET();
     }
 }

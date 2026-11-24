@@ -43,7 +43,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Wires the desktop app (profile {@code desktop}): the backend serves the built user interface
- * itself, answers only the app's own pages, and shuts down when its last window has closed.
+ * itself, answers only the app's own pages and the user who started it, and shuts down when its
+ * last window has closed.
  */
 @Configuration
 @Profile("desktop")
@@ -90,6 +91,22 @@ public class DesktopConfiguration implements WebMvcConfigurer {
     public FilterRegistrationBean<LocalRequestFilter> localRequestFilterRegistration() {
         var registration = new FilterRegistrationBean<>(new LocalRequestFilter());
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.addUrlPatterns("/*");
+        return registration;
+    }
+
+    @Bean
+    public DesktopAccessToken desktopAccessToken() {
+        return DesktopAccessToken.generate();
+    }
+
+    /** After {@link LocalRequestFilter}, which refuses requests from other sites first. */
+    @Bean
+    public FilterRegistrationBean<DesktopAccessFilter> desktopAccessFilterRegistration(
+            DesktopAccessToken desktopAccessToken) {
+        var registration =
+                new FilterRegistrationBean<>(new DesktopAccessFilter(desktopAccessToken));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
         registration.addUrlPatterns("/*");
         return registration;
     }

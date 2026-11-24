@@ -24,6 +24,7 @@ import org.rdfarchitect.config.AppVersionResolver;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.event.ContextClosedEvent;
 
 import java.awt.GraphicsEnvironment;
 import java.awt.SplashScreen;
@@ -46,8 +47,9 @@ import javax.swing.JOptionPane;
  * machine, serving the user interface, which then opens in a window of its own (see {@link
  * AppWindow}). The main class of the desktop build, see the {@code desktop} Maven profile.
  *
- * <p>Only one app runs per user and version: if the same version already listens on the port, a
- * second start just opens another window of it.
+ * <p>Only one app runs per data directory and version: if the same version already runs, a second
+ * start just opens another window of it. Only the user who started the app can use it, see {@link
+ * DesktopAccessToken}.
  */
 public final class DesktopLauncher {
 
@@ -102,6 +104,7 @@ public final class DesktopLauncher {
 
         var logger = LogManager.getLogger(DesktopLauncher.class);
         try {
+            PrivateFiles.createDirectory(dataDirectory);
             Files.createDirectories(logDirectory);
             if (!run(options, dataDirectory, logger)) {
                 // Another instance shows the window; nothing is left to do here.
@@ -128,18 +131,26 @@ public final class DesktopLauncher {
             throws IOException {
         var version = new AppVersionResolver(configuredVersion()).resolveVersion();
         var browserProfile = DesktopPaths.browserProfile(dataDirectory);
-        var port = options.port();
-        if (port != 0 && !LocalPorts.isFree(port)) {
-            var running = LocalPorts.desktopAppVersion(port);
-            if (running.isPresent() && running.get().equals(version)) {
+        var runDirectory = PrivateFiles.createDirectory(DesktopPaths.runDirectory(dataDirectory));
+        var running = RunningInstance.read(runDirectory);
+        if (running.isPresent()) {
+            var runningVersion =
+                    LocalPorts.provenVersion(running.get().port(), running.get().accessToken());
+            if (runningVersion.isPresent() && runningVersion.get().equals(version)) {
                 logger.info("RDFArchitect {} is running already, opening a window.", version);
-                handOver(port, options, browserProfile, logger);
+                handOver(running.get(), options, runDirectory, browserProfile, logger);
                 return false;
             }
-            logger.info(
-                    "Port {} is taken by {}, using another one.",
-                    port,
-                    running.map(v -> "RDFArchitect " + v).orElse("another program"));
+            runningVersion.ifPresent(
+                    other ->
+                            logger.info(
+                                    "RDFArchitect {} is running already, starting {} as well.",
+                                    other,
+                                    version));
+        }
+        var port = options.port();
+        if (port != 0 && !LocalPorts.isFree(port)) {
+            logger.info("Port {} is taken, using another one.", port);
             port = LocalPorts.anyFreePort();
         } else if (port == 0) {
             port = LocalPorts.anyFreePort();
@@ -158,44 +169,73 @@ public final class DesktopLauncher {
                 throw new IllegalStateException(rootMessage(e), e);
             }
             // Started twice in quick succession: both found the port free, the other one got it.
-            if (awaitDesktopApp(port, version).isEmpty()) {
+            var other = awaitDesktopApp(runDirectory, version);
+            if (other.isEmpty()) {
                 throw new IllegalStateException("Port " + port + " is in use.", e);
             }
             logger.info("RDFArchitect {} started meanwhile, opening a window.", version);
-            handOver(port, options, browserProfile, logger);
+            handOver(other.get(), options, runDirectory, browserProfile, logger);
             return false;
         }
 
+        var token = context.getBean(DesktopAccessToken.class);
+        var instance = new RunningInstance(port, token.value(), version);
+        instance.write(runDirectory);
+        context.addApplicationListener(
+                event -> {
+                    if (event instanceof ContextClosedEvent) {
+                        instance.deleteFrom(runDirectory);
+                    }
+                });
+
+        var pages = new LaunchPages(runDirectory, port, token);
         var openRequests = context.getBean(OpenRequests.class);
-        var appPort = port;
         Consumer<List<Path>> openInNewWindow =
-                files ->
+                files -> {
+                    try {
                         AppWindow.open(
-                                startPage(appPort, register(files, openRequests, logger)),
+                                pages,
+                                startPath(register(files, openRequests, logger)),
                                 options.browser(),
                                 browserProfile);
+                    } catch (IOException e) {
+                        logger.error("Could not open a window for {}.", files, e);
+                    }
+                };
         var files = new ArrayList<>(options.files());
         files.addAll(OpenFileEvents.takeAndForward(openInNewWindow));
 
-        var url = startPage(port, register(files, openRequests, logger));
-        logger.info("RDFArchitect {} is running at {}", version, startPage(port));
-        System.out.println("RDFArchitect is running at " + startPage(port));
-        AppWindow.open(url, options.browser(), browserProfile);
+        logger.info("RDFArchitect {} is running at {}", version, LocalPorts.baseUrl(port));
+        AppWindow.open(
+                pages,
+                startPath(register(files, openRequests, logger)),
+                options.browser(),
+                browserProfile);
         closeSplash();
         return true;
     }
 
-    /** Opens a window of the app already running on the port, with the files to open in it. */
+    /** Opens a window of the app already running, with the files to open in it. */
     private static void handOver(
-            int port, DesktopOptions options, Path browserProfile, Logger logger) {
+            RunningInstance running,
+            DesktopOptions options,
+            Path runDirectory,
+            Path browserProfile,
+            Logger logger)
+            throws IOException {
+        var token = running.accessToken();
         var ids = new ArrayList<String>();
         for (var file : options.files()) {
-            LocalPorts.requestOpen(port, file)
+            LocalPorts.requestOpen(running.port(), token, file)
                     .ifPresentOrElse(
                             ids::add, () -> logger.warn("Could not hand over {} to open.", file));
         }
         closeSplash();
-        AppWindow.open(startPage(port, ids), options.browser(), browserProfile);
+        AppWindow.open(
+                new LaunchPages(runDirectory, running.port(), token),
+                startPath(ids),
+                options.browser(),
+                browserProfile);
     }
 
     private static List<String> register(
@@ -240,10 +280,18 @@ public final class DesktopLauncher {
         return false;
     }
 
-    private static Optional<String> awaitDesktopApp(int port, String version) {
+    /** Waits for the app another start is starting for the data directory. */
+    private static Optional<RunningInstance> awaitDesktopApp(Path runDirectory, String version) {
         var deadline = Instant.now().plus(STARTUP_OF_ANOTHER_INSTANCE);
         while (Instant.now().isBefore(deadline)) {
-            var running = LocalPorts.desktopAppVersion(port).filter(version::equals);
+            var running =
+                    RunningInstance.read(runDirectory)
+                            .filter(
+                                    instance ->
+                                            LocalPorts.provenVersion(
+                                                            instance.port(), instance.accessToken())
+                                                    .filter(version::equals)
+                                                    .isPresent());
             if (running.isPresent()) {
                 return running;
             }
@@ -289,15 +337,11 @@ public final class DesktopLauncher {
         }
     }
 
-    static String startPage(int port) {
-        return LocalPorts.baseUrl(port) + "/mainpage";
-    }
-
-    /** The editor, told to open the files of the given open requests. */
-    static String startPage(int port, List<String> openRequestIds) {
+    /** The path of the editor, told to open the files of the given open requests. */
+    static String startPath(List<String> openRequestIds) {
         return openRequestIds.isEmpty()
-                ? startPage(port)
-                : startPage(port) + "?open=" + String.join(",", openRequestIds);
+                ? DesktopAccessFilter.START_PAGE
+                : DesktopAccessFilter.START_PAGE + "?open=" + String.join(",", openRequestIds);
     }
 
     static String[] springArguments(DesktopOptions options, int port, Path dataDirectory) {
