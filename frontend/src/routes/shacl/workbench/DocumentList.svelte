@@ -270,7 +270,7 @@
                 >
                     <div
                         class="shrink-0"
-                        title={document.enabled ? "Enabled" : "Disabled"}
+                        title="Take part in validation and export"
                     >
                         <CheckBoxEditControl
                             value={document.enabled}
@@ -417,7 +417,9 @@
                             )}
                         faIcon={document.enabled ? faBan : faCheck}
                     >
-                        {document.enabled ? "Disable" : "Enable"}
+                        {document.enabled
+                            ? "Exclude from validation"
+                            : "Include in validation"}
                     </ContextMenu.Item.Button>
                     <ContextMenu.Separator />
                     <ContextMenu.Item.Button
@@ -596,7 +598,7 @@
             <li>
                 <div
                     class="flex items-center gap-1 px-1 py-1"
-                    title="These documents apply to no schema of this workspace."
+                    title="These documents apply to no schema of this workspace. They are still validated."
                 >
                     {@render groupToggle("not-assigned", "Not assigned")}
                     <span class="text-sm font-semibold">Not assigned</span>

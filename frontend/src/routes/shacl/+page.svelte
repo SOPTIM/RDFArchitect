@@ -377,8 +377,8 @@
 
 <!--
   @component
-  The constraints workbench: the workspace's schemas and SHACL documents, and an editor for the
-  open one.
+  The constraints workbench: the workspace's schemas and SHACL documents, an editor for the open
+  one, and everything validation has to say about them.
 
   A schema's constraints normally arrive as several official files plus whatever the user adds, and
   a file can be about several schemas; every enabled one applies and none overrides another, so the
