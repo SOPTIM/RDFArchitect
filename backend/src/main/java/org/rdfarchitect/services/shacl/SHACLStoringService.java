@@ -165,7 +165,7 @@ public class SHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var customSHACL = readEnabledShapes(transaction, graphIdentifier.schemaName());
+            var customSHACL = readEnabledShapes(transaction);
             try (var outStream = new ByteArrayOutputStream()) {
                 var prefixModel = ModelFactory.createDefaultModel();
                 prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());

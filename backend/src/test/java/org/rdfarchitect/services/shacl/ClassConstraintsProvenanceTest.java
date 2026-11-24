@@ -23,6 +23,7 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +42,7 @@ import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
 import org.rdfarchitect.shacl.dto.ShapeOrigin;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -198,6 +200,23 @@ class ClassConstraintsProvenanceTest {
                                 assertThat(shape.getOrigins())
                                         .extracting(ShapeOrigin::getDocumentName)
                                         .containsExactly("simple.ttl"));
+    }
+
+    @Test
+    void aPropertysRulesComeWithThePrefixesOfTheDocumentsTheyAreReadFrom() {
+        // A document applying to no schema still constrains the classes its rules target.
+        var official = service.listShapesDocuments(GRAPH.workspaceName()).getFirst();
+        service.updateShapesDocument(
+                GRAPH.workspaceName(), official.getId(), null, null, null, List.of());
+        var property = uuidOf(DIAGRAM + ".x1InitialView");
+
+        var shapes = service.getPropertyShapesForAttribute(GRAPH, property).getCustom();
+        var prefixes =
+                service.exportCustomSHACLNamespaces(GRAPH, RDFFormat.TURTLE)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(shapes).isNotEmpty();
+        assertThat(prefixes).contains("<http://iec.ch/TC57/ns/CIM/DiagramLayout-EU/Constraints#>");
     }
 
     @Test

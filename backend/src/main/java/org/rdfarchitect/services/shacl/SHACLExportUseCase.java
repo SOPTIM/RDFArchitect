@@ -71,9 +71,10 @@ public interface SHACLExportUseCase {
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**
-     * Export the custom SHACL namespaces for a given graph identifier.
+     * Exports the prefixes of the enabled shapes documents: of every one, as the constraints of a
+     * schema's classes and properties are read from every one.
      *
-     * @param graphIdentifier The identifier of the graph to export SHACL namespaces for.
+     * @param graphIdentifier The schema whose constraints are shown.
      * @param format The format to export the SHACL namespaces in.
      * @return A ByteArrayOutputStream containing the exported SHACL namespaces.
      */

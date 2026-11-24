@@ -9715,7 +9715,7 @@
     },
     "/api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/namespaces/ttl" : {
       "get" : {
-        "description" : "Export the namespaces of the custom SHACL graph for a given graph identifier.",
+        "description" : "Export the prefixes of the enabled constraints documents, which the constraints of the schema's classes and properties are read from.",
         "operationId" : "getCustomSHACLNamespacesAsString",
         "parameters" : [
           {
