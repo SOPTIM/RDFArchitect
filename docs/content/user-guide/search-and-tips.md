@@ -11,7 +11,7 @@ The search bar at the top of the editor searches across **classes, attributes, a
 
 Search is the fastest way to find, for example, every class with `Terminal` in its name across all profiles in a workspace, or every association whose role contains a given fragment.
 
-In a narrow window the search bar folds into a magnifier button so that the menu bar keeps its room. Click it or press **Ctrl+F** to open the field below the toolbar, and press **Esc** to close it again.
+In a window narrower than 768 pixels, the search bar folds into a magnifier button so that the menu bar keeps its room. Click it or press **Ctrl+F** to open the field below the toolbar, and press **Esc** to close it again.
 
 ## Tips & keyboard shortcuts
 

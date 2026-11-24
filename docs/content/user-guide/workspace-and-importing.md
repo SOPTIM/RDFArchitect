@@ -15,6 +15,12 @@ The main editor, reachable from the **Open Editor** button on the homepage or vi
 
 Across the top there is a **menu bar** (File, Edit, View, Help), a **workspace tab bar** for switching between open workspaces, a **search bar** for finding classes/attributes/packages, and indicators for read-only status and unsaved changes.
 
+In a narrow window the toolbar makes room for the menu bar:
+
+- Below a window width of 1024 pixels, **Enable Editing** shows only a lock icon. Its tooltip reads *The workspace is read-only. Enable editing*.
+- Below 768 pixels, the search bar folds into a magnifier button, see [Search](./search-and-tips#search).
+- Below 640 pixels, the logo shows only **RDFA**.
+
 A colour legend and classic diagram conventions are used throughout: stereotypes like `«enumeration»` or `«Primitive»` appear above the class name, cardinalities are shown on association ends, and inheritance uses a hollow triangle.
 
 ![Editor overview](/img/screenshots/editor.png)
