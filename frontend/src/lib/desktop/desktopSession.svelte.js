@@ -67,6 +67,7 @@ let missedHeartbeats = 0;
 let instanceId = null;
 let refreshTimer = null;
 let stopListeningToWrites = () => {};
+let releaseWindowLock = () => {};
 
 /**
  * Registers a check for edits this window holds that no request has sent yet, such as those of
@@ -103,9 +104,33 @@ export function startDesktopSession() {
             scheduleRefresh();
         }
     });
+    releaseWindowLock = holdWindowLock(windowId);
     void heartbeat();
     timer = setInterval(heartbeat, PUBLIC_DESKTOP_HEARTBEAT_SECONDS * 1000);
     return stopDesktopSession;
+}
+
+/**
+ * Holds a Web Lock for as long as the window reports itself. Browsers do not freeze a hidden page
+ * that holds one, and a frozen page sends no heartbeats.
+ *
+ * @param {string} id the window
+ * @returns {() => void} releases the lock
+ */
+function holdWindowLock(id) {
+    if (!navigator.locks) {
+        return () => {};
+    }
+    let release;
+    const released = new Promise(resolve => {
+        release = resolve;
+    });
+    navigator.locks
+        .request(`rdfarchitect-window-${id}`, () => released)
+        .catch(error =>
+            console.warn("[desktopSession] No lock for this window", error),
+        );
+    return release;
 }
 
 /** Stops reporting this window to the desktop backend and says goodbye to it. */
@@ -118,6 +143,7 @@ export function stopDesktopSession() {
     clearTimeout(refreshTimer);
     refreshTimer = null;
     stopListeningToWrites();
+    releaseWindowLock();
     window.removeEventListener("beforeunload", warnBeforeUnload);
     window.removeEventListener("pagehide", sayGoodbye);
     document.removeEventListener("visibilitychange", heartbeatWhenShown);

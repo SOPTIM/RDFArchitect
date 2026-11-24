@@ -56,6 +56,7 @@ describe("desktopSession", () => {
 
     afterEach(() => {
         stopDesktopSession();
+        vi.unstubAllGlobals();
         vi.useRealTimers();
     });
 
@@ -70,6 +71,38 @@ describe("desktopSession", () => {
             vi.mocked(sendHeartbeat).mock.calls.map(([id]) => id),
         );
         expect(windowIds.size).toBe(1);
+    });
+
+    test("startDesktopSession_browserWithWebLocks_holdsOneUntilStopped", async () => {
+        const held = new Map();
+        const request = vi.fn((name, callback) => {
+            const holding = callback().then(() => held.delete(name));
+            held.set(name, holding);
+            return holding;
+        });
+        vi.stubGlobal("navigator", { locks: { request } });
+
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(30_000);
+        const [[windowId]] = vi.mocked(sendHeartbeat).mock.calls;
+        expect([...held.keys()]).toEqual([`rdfarchitect-window-${windowId}`]);
+
+        stopDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(held.size).toBe(0);
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    test("startDesktopSession_lockRefused_stillReportsTheWindow", async () => {
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.stubGlobal("navigator", {
+            locks: { request: () => Promise.reject(new Error("refused")) },
+        });
+
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(sendHeartbeat).toHaveBeenCalledTimes(1);
     });
 
     test("heartbeat_answer_learnsUnsavedWorkspacesAndIds", async () => {

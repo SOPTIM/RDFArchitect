@@ -26,6 +26,6 @@ springdoc:
 desktop:
   exit-when-closed: true
   heartbeat-interval: 10s
-  client-timeout: 150s
+  client-timeout: 30m
   close-grace: 15s
   startup-timeout: 5m

@@ -45,7 +45,7 @@ While the workspace you are working on has changes that are not saved yet, the t
 
 ## Closing
 
-RDFArchitect stops by itself once its last window is closed; there is nothing else to quit. If a workspace has unsaved changes, closing or reloading the window asks first. The question comes from the browser, so its wording is the browser's.
+RDFArchitect stops by itself once its last window is closed; there is nothing else to quit. After a browser crash it keeps running for another 30 minutes; starting RDFArchitect again in that time shows the same workspaces. If a workspace has unsaved changes, closing or reloading the window asks first. The question comes from the browser, so its wording is the browser's.
 
 A window whose RDFArchitect has stopped (for example after a crash, or because its process was ended) says so and offers to reload. Start RDFArchitect again first.
 

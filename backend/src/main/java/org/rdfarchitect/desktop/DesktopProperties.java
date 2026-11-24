@@ -59,10 +59,10 @@ public class DesktopProperties {
     private Duration heartbeatInterval = Duration.ofSeconds(10);
 
     /**
-     * How long a window may stay silent before it counts as closed. Well above the heartbeat
-     * interval, because browsers throttle the timers of a hidden window to one run a minute.
+     * How long a window may stay silent before it counts as closed. Long, because a window that
+     * closes says goodbye, and a browser may throttle or freeze the timers of a hidden one.
      */
-    private Duration clientTimeout = Duration.ofSeconds(150);
+    private Duration clientTimeout = Duration.ofMinutes(30);
 
     /**
      * How long the backend waits after the last window said goodbye. A reloaded window says goodbye
