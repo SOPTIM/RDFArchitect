@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.UncarriedItem;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
 import org.springframework.mock.web.MockMultipartFile;
@@ -99,7 +100,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        workspaceName, List.of(file1, file2), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file1, file2), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("graph", "graph-2");
@@ -123,7 +124,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+                        "ds", List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.importedSchemaNames()).containsExactly("my-profile v2");
     }
@@ -143,7 +144,7 @@ class ImportGraphsServiceTest {
                         "ds",
                         List.of(file),
                         List.of("  Équipement-Core "),
-                        ImportProgressListener.NOOP);
+                        GraphImportListener.NOOP);
 
         assertThat(result.importedSchemaNames()).containsExactly("Équipement-Core");
     }
@@ -160,10 +161,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds",
-                        List.of(file),
-                        List.of("http://graph#x"),
-                        ImportProgressListener.NOOP);
+                        "ds", List.of(file), List.of("http://graph#x"), GraphImportListener.NOOP);
 
         assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(result.failedFileNames()).containsExactly("graph.ttl");
@@ -182,7 +180,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+                        "ds", List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("EQ#2");
@@ -197,7 +195,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(zip), null, ImportProgressListener.NOOP);
+                        "ds", List.of(zip), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("EQ#2");
@@ -214,7 +212,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(zip), null, ImportProgressListener.NOOP);
+                        "ds", List.of(zip), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("a_b", "what_", "CON_");
@@ -232,7 +230,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+                        "ds", List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.importedSchemaNames()).containsExactly("EQ_v2");
     }
@@ -253,7 +251,7 @@ class ImportGraphsServiceTest {
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         importGraphsUseCase.importGraphs(
-                workspaceName, List.of(file), null, ImportProgressListener.NOOP);
+                workspaceName, List.of(file), null, GraphImportListener.NOOP);
 
         var inOrder = inOrder(databasePortMock, transaction);
         inOrder.verify(databasePortMock).createWorkspaceIfAbsent(workspaceName);
@@ -276,7 +274,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.importedSchemaNames()).isEmpty();
         verify(databasePortMock, never()).createWorkspaceIfAbsent(workspaceName);
@@ -331,7 +329,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("schema");
@@ -339,7 +337,12 @@ class ImportGraphsServiceTest {
 
         var warning = result.warnings().getFirst();
         assertThat(warning.fileName()).isEqualTo("schema.ttl");
-        assertThat(warning.undisplayableProperties()).containsExactlyInAnyOrder("color", "owner");
+        // Each item carries its own reason: an import has several of them and a caller groups
+        // by what they have in common.
+        assertThat(warning.items())
+                .allSatisfy(item -> assertThat(item.reason()).contains("no CIM stereotype"))
+                .extracting(UncarriedItem::resource)
+                .containsExactlyInAnyOrder("color", "owner");
     }
 
     private MockMultipartFile schemaFile(String fileName, String cimNamespace) {
@@ -402,7 +405,7 @@ class ImportGraphsServiceTest {
     /**
      * Answers the prefix question with a fixed set of decisions and remembers what it was asked.
      */
-    private final class RecordingListener implements ImportProgressListener {
+    private final class RecordingListener implements GraphImportListener {
 
         private final List<PrefixResolutionDTO> resolutions;
         private final Map<Integer, String> plannedFileNames = new LinkedHashMap<>();
@@ -689,7 +692,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactly("schema");

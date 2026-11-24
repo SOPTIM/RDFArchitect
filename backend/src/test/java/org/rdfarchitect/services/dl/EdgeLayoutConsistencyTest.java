@@ -63,8 +63,8 @@ import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionS
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.rdfarchitect.services.update.graph.DeleteGraphService;
+import org.rdfarchitect.services.update.graph.GraphImportListener;
 import org.rdfarchitect.services.update.graph.ImportGraphsService;
-import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
@@ -279,7 +279,7 @@ class EdgeLayoutConsistencyTest {
         var file = new MockMultipartFile("files", fileName, "application/rdf+xml", content);
         var result =
                 new ImportGraphsService(databasePort)
-                        .importGraphs(DATASET, List.of(file), null, ImportProgressListener.NOOP);
+                        .importGraphs(DATASET, List.of(file), null, GraphImportListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
         return new GraphIdentifier(DATASET, result.importedSchemaNames().getFirst());
     }

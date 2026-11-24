@@ -27,7 +27,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.rdf.RDFFileLanguages;
@@ -71,7 +70,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String workspaceName,
             List<MultipartFile> files,
             List<String> schemaNames,
-            ImportProgressListener listener) {
+            GraphImportListener listener) {
         var sources = planSources(files, schemaNames);
         listener.planned(
                 sources.stream()
@@ -104,7 +103,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private PrefixNegotiation negotiatePrefixes(
             String workspaceName,
             List<PlannedSource> sources,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ImportResult result) {
         if (listener.isCancelled()) {
             return PrefixNegotiation.none();
@@ -130,7 +129,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     /** Reports the files the scan could not parse and returns where they sit in the plan. */
     private Set<Integer> failUnreadable(
-            List<ScanResult> scanned, ImportResult result, ImportProgressListener listener) {
+            List<ScanResult> scanned, ImportResult result, GraphImportListener listener) {
         var unreadableIndices = new HashSet<Integer>();
         for (var scanResult : scanned) {
             if (scanResult.scanned().readable()) {
@@ -354,7 +353,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             List<ParsedGraph> parsed,
             PlannedSource source,
             Set<String> reservedSchemaNames,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         if (source.unreadableReason() != null) {
             failRemaining(result, source.plannedFiles(), listener, negotiation);
@@ -411,7 +410,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             PlannedFile plannedFile,
             MultipartFile file,
             Set<String> reservedSchemaNames,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
             listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
@@ -420,8 +419,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         listener.started(plannedFile.index());
         try {
             var schemaName =
-                    ensureUniqueSchemaName(
-                            normalizeSchemaName(
+                    ImportedSchemaNames.ensureUnique(
+                            ImportedSchemaNames.normalize(
                                     plannedFile.requestedSchemaName(), plannedFile.fileName()),
                             reservedSchemaNames);
 
@@ -450,7 +449,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private void failRemaining(
             ImportResult result,
             List<PlannedFile> plannedFiles,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         for (var plannedFile : plannedFiles) {
             if (negotiation.isUnreadable(plannedFile)) {
@@ -477,7 +476,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String workspaceName,
             List<ParsedGraph> parsed,
             ResolvedPrefixes resolved,
-            ImportProgressListener listener) {
+            GraphImportListener listener) {
         if (parsed.isEmpty()) {
             return;
         }
@@ -505,7 +504,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             result.importedSchemaNames().add(graph.uri());
             if (!graph.undisplayableProperties().isEmpty()) {
                 result.warnings()
-                        .add(new ImportWarning(graph.fileName(), graph.undisplayableProperties()));
+                        .add(
+                                new ImportWarning(
+                                        graph.fileName(),
+                                        graph.uri(),
+                                        graph.undisplayableProperties()));
             }
             listener.finished(graph.index(), Outcome.IMPORTED, graph.uri());
         }
@@ -523,7 +526,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             Graph graph,
             int index,
             String fileName,
-            List<String> undisplayableProperties) {}
+            List<UncarriedItem> undisplayableProperties) {}
+
+    /** Why such a property stays invisible, which the warning carries as its reason. */
+    private static final String NOT_DISPLAYABLE =
+            "stored, but carries no CIM stereotype or association use";
 
     /**
      * Finds properties that are imported but will not be displayed in the editor. RDFArchitect only
@@ -533,18 +540,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * invisible, so we surface it as a warning instead of dropping it silently.
      *
      * @param graph the parsed graph to inspect
-     * @return the names (labels, falling back to URIs) of properties that will not be displayed
+     * @return one item per such property, each saying which it is and why it stays invisible
      */
-    private List<String> findUndisplayableProperties(Graph graph) {
+    private List<UncarriedItem> findUndisplayableProperties(Graph graph) {
         var model = ModelFactory.createModelForGraph(graph);
-        var undisplayableProperties = new ArrayList<String>();
+        var undisplayableProperties = new ArrayList<UncarriedItem>();
         model.listSubjectsWithProperty(RDF.type, RDF.Property)
                 .filterKeep(Resource::isURIResource)
                 .filterKeep(property -> property.hasProperty(RDFS.domain))
                 .filterDrop(
                         property -> property.hasProperty(CIMS.stereotype, CIMStereotypes.attribute))
                 .filterDrop(property -> property.hasProperty(CIMS.associationUsed))
-                .forEachRemaining(property -> undisplayableProperties.add(propertyName(property)));
+                .forEachRemaining(
+                        property ->
+                                undisplayableProperties.add(
+                                        new UncarriedItem(
+                                                propertyName(property), NOT_DISPLAYABLE)));
         return undisplayableProperties;
     }
 
@@ -571,37 +582,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                 .setGraphName(schemaName)
                 .build()
                 .graph();
-    }
-
-    private String ensureUniqueSchemaName(String schemaName, Set<String> reservedSchemaNames) {
-        var candidate = SchemaNames.unique(schemaName, reservedSchemaNames);
-        reservedSchemaNames.add(candidate);
-        return candidate;
-    }
-
-    private String buildSchemaNameFromFileName(String fileName) {
-        var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        // Not Paths.get: a name such as a:b.ttl is no valid path on Windows, but a valid file
-        // name elsewhere, and the zip entry may well come from there.
-        var lastSeparator = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
-        var lastPathSegment = name.substring(lastSeparator + 1);
-        var lastDotIndex = lastPathSegment.lastIndexOf(".");
-        var baseName =
-                lastPathSegment.substring(
-                        0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex);
-        return baseName.isBlank() ? FALL_BACK_NAME : baseName;
-    }
-
-    /**
-     * A name the user asked for has to be valid as it is. One taken from a file name is made valid
-     * instead: the entries of a zip cannot be renamed before they are imported.
-     */
-    private String normalizeSchemaName(String requestedName, String fallbackFileName) {
-        if (requestedName == null || requestedName.isBlank()) {
-            return SchemaNames.fromFileName(
-                    buildSchemaNameFromFileName(fallbackFileName), FALL_BACK_NAME);
-        }
-        return SchemaNames.validate(requestedName);
     }
 
     private boolean isZipFile(MultipartFile file) {

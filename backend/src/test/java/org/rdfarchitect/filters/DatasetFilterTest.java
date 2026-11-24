@@ -134,11 +134,28 @@ class DatasetFilterTest {
     }
 
     @Test
+    void doFilter_startingAnImport_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(
+                request("POST", "/api/workspaces/brandNew/schemas/content/imports"),
+                response,
+                chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
     void doFilter_importProgress_isAllowedForAnUnknownName() throws Exception {
         filter.doFilter(
                 request("GET", "/api/workspaces/brandNew/schemas/content/imports/42"),
                 response,
                 chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_readingAnXmiExport_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("POST", "/api/workspaces/brandNew/imports/xmi"), response, chain);
 
         assertThat(chain.getRequest()).isNotNull();
     }
@@ -155,6 +172,20 @@ class DatasetFilterTest {
         filter.doFilter(request("GET", "/api/workspaces/brandNew/imports/42"), response, chain);
 
         assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_followingUpAnImport_isAllowedForAnUnknownName() throws Exception {
+        var resolutionChain = new MockFilterChain();
+
+        filter.doFilter(request("DELETE", "/api/workspaces/brandNew/imports/42"), response, chain);
+        filter.doFilter(
+                request("PUT", "/api/workspaces/brandNew/imports/42/prefix-resolutions"),
+                response,
+                resolutionChain);
+
+        assertThat(chain.getRequest()).isNotNull();
+        assertThat(resolutionChain.getRequest()).isNotNull();
     }
 
     @Test

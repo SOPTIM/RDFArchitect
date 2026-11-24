@@ -126,7 +126,7 @@ public class ImportJobRESTController {
     @Operation(
             summary = "Cancel an import",
             description =
-                    "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+                    "Asks a running import to stop after the file it is currently importing. An import of files keeps the graphs it stored up to that point; an import of packages stores nothing.",
             tags = {"dataset"},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Cancellation requested"),

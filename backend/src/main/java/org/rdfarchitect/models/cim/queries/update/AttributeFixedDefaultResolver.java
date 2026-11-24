@@ -42,8 +42,8 @@ import java.util.UUID;
 
 /**
  * Resolves the {@code blankNode} flag and the XSD {@code dataType} for an attribute's fixed/default
- * value before it is written to the graph. Used internally by {@link CIMUpdates} so callers don't
- * have to invoke the resolver themselves.
+ * value before it is written to the graph. Used by {@link CIMUpdates} and by {@code
+ * CIMModelWriter}, so that an edit and an import type a value alike.
  *
  * <p>Resolution rules:
  *
@@ -62,9 +62,9 @@ import java.util.UUID;
  * opening one.
  */
 @UtilityClass
-class AttributeFixedDefaultResolver {
+public class AttributeFixedDefaultResolver {
 
-    void resolve(Graph graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
+    public void resolve(Graph graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
         if (graph == null || attribute == null) {
             return;
         }

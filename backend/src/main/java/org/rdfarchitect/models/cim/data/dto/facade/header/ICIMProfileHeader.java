@@ -21,7 +21,7 @@ import java.util.Set;
 
 /**
  * The header of a schema, read lazily from the graph behind an {@link
- * org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade}. It is the block that says which
+ * org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader}. It is the block that says which
  * profile the schema is and which version of it: an {@code owl:Ontology} entry in CGMES 3.0, a
  * {@code Package_FileHeaderProfile} category or an ENTSO-E {@code …Version} class in CGMES 2.4.15.
  *

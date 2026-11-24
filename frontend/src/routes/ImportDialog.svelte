@@ -16,27 +16,15 @@
   -->
 
 <script>
-    import { faMinus } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import FileDropZone from "$lib/components/FileDropZone.svelte";
+    import GraphFilePicker from "$lib/components/GraphFilePicker.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
-    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
+    import SkippedFilesNotice from "$lib/components/SkippedFilesNotice.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import {
-        isInvalidSchemaName,
-        schemaNameFromFileName,
-    } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import {
-        isSupportedGraphFile,
-        isZipFile,
-        supportedRDFMediaTypes,
-    } from "$lib/utils/fileUtils";
     import {
         ImportJobRunner,
         newWorkspaceNameError as nameErrorOfNewWorkspace,
@@ -53,15 +41,9 @@
     } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
-    const DEFAULT_GRAPH_NAME = "graph";
-    const supportedFileExtensions = supportedRDFMediaTypes.map(
-        type => type.fileExtension,
-    );
-    const allowedFileExtensions = supportedFileExtensions.join(", ");
     const uniqueId = uuidv4();
     const workspaceInputId = `workspaceNameImport-${uniqueId}`;
     const workspaceListId = `workspaceNamesImport-${uniqueId}`;
-    const fileInputId = `actual-file-input-${uniqueId}`;
     const job = new ImportJobRunner(progress => {
         if (!progress.awaitingPrefixResolution) {
             submittingResolutions = false;
@@ -69,8 +51,7 @@
     });
     let workspaceNameUserInput = $state("");
     let files = $state([]);
-    let fileInputValue = $state("");
-    let rejectedFiles = $state([]);
+    let filesValid = $state(true);
 
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
@@ -114,14 +95,11 @@
               ])
             : "",
     );
-    let fileNameViolations = $derived(
-        files.map((_, index) => schemaNameViolations(index)),
-    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
             !newWorkspaceNameError &&
-            fileNameViolations.every(violations => violations.length === 0) &&
+            filesValid &&
             progress === null,
     );
 
@@ -132,9 +110,6 @@
         workspaceNameUserInput = forNewWorkspace
             ? ""
             : (lockedWorkspaceName ?? editorState.selectedWorkspace.getValue());
-        if (droppedItems) {
-            addFiles(droppedItems.files, droppedItems.directoryNames);
-        }
 
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         for (const workspace of workspaces) {
@@ -154,8 +129,6 @@
     function clearInputs() {
         workspaceNameUserInput = "";
         files = [];
-        fileInputValue = "";
-        rejectedFiles = [];
         modifiableWorkspaces = [];
         readOnlyWorkspaces = [];
         prefixResolutions = [];
@@ -166,76 +139,6 @@
     function isWorkspaceReadOnly(workspaceName) {
         const targetWorkspace = workspaceName || DEFAULT_WORKSPACE_NAME;
         return readOnlyWorkspaces.includes(targetWorkspace);
-    }
-
-    /**
-     * The file name without its extension, made a valid schema name, which is how the backend names
-     * the entries of a zip as well.
-     */
-    function buildSchemaName(fileName) {
-        if (!fileName) {
-            return DEFAULT_GRAPH_NAME;
-        }
-        const normalized = fileName.split(/[\\/]/).pop() ?? fileName;
-        const lastDotIndex = normalized.lastIndexOf(".");
-        const baseName =
-            lastDotIndex === -1
-                ? normalized
-                : normalized.substring(0, lastDotIndex);
-        return schemaNameFromFileName(baseName, DEFAULT_GRAPH_NAME);
-    }
-
-    /**
-     * What is wrong with the name a file is to be imported under. Two files of the upload may not
-     * share a name, but one may take the name of an existing schema: the backend then imports it
-     * under that name with a number appended.
-     */
-    function schemaNameViolations(index) {
-        const entry = files[index];
-        if (entry.isZip) {
-            return [];
-        }
-        const otherNames = files
-            .filter((other, idx) => idx !== index && !other.isZip)
-            .map(other => other.schemaName.trim());
-        return isInvalidSchemaName(entry.schemaName, otherNames);
-    }
-
-    function addFiles(newFiles, directoryNames = []) {
-        rejectedFiles = directoryNames.map(name => `${name} (folder)`);
-        const mappedFiles = Array.from(newFiles)
-            .map(file => {
-                if (!isZipFile(file.name) && !isSupportedGraphFile(file.name)) {
-                    rejectedFiles.push(file.name);
-                    return null;
-                }
-                return {
-                    file,
-                    schemaName: isZipFile(file.name)
-                        ? ""
-                        : buildSchemaName(file.name),
-                    isZip: isZipFile(file.name),
-                };
-            })
-            .filter(Boolean);
-
-        if (mappedFiles.length > 0) {
-            files = [...files, ...mappedFiles];
-        }
-        fileInputValue = "";
-    }
-
-    function removeFile(index) {
-        files = files.filter((_, idx) => idx !== index);
-    }
-
-    function updateSchemaName(index, schemaName) {
-        if (files[index]?.isZip) {
-            return;
-        }
-        files = files.map((entry, idx) =>
-            idx === index ? { ...entry, schemaName } : entry,
-        );
     }
 
     function getUserInputWorkspaceName() {
@@ -310,20 +213,11 @@
     size={resolvingPrefixes ? "w-1/2" : "w-1/3"}
 >
     {#if resolvingPrefixes}
-        {#if unreadableFiles.length > 0}
-            <div
-                class="bg-red-background text-red-text border-red-border mx-2 mt-2 rounded border px-3 py-2 text-xs"
-            >
-                <p class="font-semibold">
-                    These files could not be read and will not be imported:
-                </p>
-                <ul class="list-disc pl-5">
-                    {#each unreadableFiles as file (file.index)}
-                        <li>{file.fileName}</li>
-                    {/each}
-                </ul>
-            </div>
-        {/if}
+        <SkippedFilesNotice
+            heading="These files could not be read and will not be imported:"
+            names={unreadableFiles.map(file => file.fileName)}
+            placement="mx-2 mt-2"
+        />
         <NamespacePrefixComparison
             comparison={progress.prefixComparison}
             bind:resolutions={prefixResolutions}
@@ -370,119 +264,11 @@
                     Cannot import into read-only workspace
                 </div>
             {/if}
-            <div class="mt-4">
-                <input
-                    class="hidden"
-                    type="file"
-                    id={fileInputId}
-                    multiple
-                    accept={`${supportedFileExtensions.join(",")},.zip`}
-                    onchange={event => {
-                        addFiles(event.target.files);
-                        event.target.value = "";
-                    }}
-                    bind:value={fileInputValue}
-                />
-                <FileDropZone
-                    class="hover:border-blue flex w-full flex-col px-4 py-6"
-                    onFiles={items =>
-                        addFiles(items.files, items.directoryNames)}
-                >
-                    <div
-                        class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
-                    >
-                        <div class="h-9 w-24">
-                            <ButtonControl
-                                height={9}
-                                callOnClick={() => {
-                                    document
-                                        .getElementById(fileInputId)
-                                        .click();
-                                }}
-                            >
-                                Select File
-                            </ButtonControl>
-                        </div>
-                        <p class="text-font-secondary text-sm">
-                            or drag and drop files or a .zip archive
-                        </p>
-                    </div>
-                    <p class="text-font-secondary mt-2 text-xs">
-                        Each file becomes a schema named after the file. ZIP
-                        files are unpacked and imported automatically.
-                        <br />
-                        Supported file extensions:
-                        <b>{allowedFileExtensions}</b>
-                        . In ZIP files, schemas must be located at the root level;
-                        folders are ignored.
-                        <br />
-                        Dropped folders are skipped; pack them into a ZIP.
-                    </p>
-                    {#if rejectedFiles.length > 0}
-                        <div
-                            class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
-                        >
-                            <p class="font-semibold">
-                                Skipped, these will not be imported:
-                            </p>
-                            <ul class="list-disc pl-5">
-                                {#each rejectedFiles as fileName}
-                                    <li>{fileName}</li>
-                                {/each}
-                            </ul>
-                        </div>
-                    {/if}
-                </FileDropZone>
-
-                {#if files.length > 0}
-                    <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
-                        {#each files as fileEntry, index}
-                            <div
-                                class="border-border flex items-center space-x-3 rounded border px-3 py-2"
-                            >
-                                <div class="flex-1">
-                                    <input
-                                        id={`graph-name-${index}`}
-                                        class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
-                                        type="text"
-                                        value={fileEntry.isZip
-                                            ? fileEntry.file.name
-                                            : fileEntry.schemaName}
-                                        disabled={fileEntry.isZip}
-                                        oninput={event =>
-                                            updateSchemaName(
-                                                index,
-                                                event.target.value,
-                                            )}
-                                    />
-                                    <ViolationMessages
-                                        violations={fileNameViolations[index] ??
-                                            []}
-                                    />
-                                </div>
-                                <div
-                                    class="flex size-10 items-center justify-center p-0"
-                                >
-                                    <ButtonControl
-                                        height={10}
-                                        callOnClick={() => removeFile(index)}
-                                        title="Remove file"
-                                    >
-                                        <Fa
-                                            icon={faMinus}
-                                            ariaLabel="Remove file"
-                                        />
-                                    </ButtonControl>
-                                </div>
-                            </div>
-                        {/each}
-                    </div>
-                {:else}
-                    <p class="text-font-secondary mt-2 text-sm">
-                        No files selected yet.
-                    </p>
-                {/if}
-            </div>
+            <GraphFilePicker
+                bind:files
+                bind:isValid={filesValid}
+                {droppedItems}
+            />
         </div>
     {/if}
 </ActionDialog>

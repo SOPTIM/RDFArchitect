@@ -31,6 +31,11 @@
         disabled = false,
         readonly = false,
         buttons = [],
+        /**
+         * How one option reads in the list, for a list whose entries say more than their value.
+         * Left out, an option is its own text.
+         */
+        item = undefined,
     } = $props();
 
     const listId = crypto.randomUUID();
@@ -227,7 +232,11 @@
                 class:menu-item--highlighted={index === highlightedIndex}
                 onclick={() => selectSuggestion(option)}
             >
-                {option}
+                {#if item}
+                    {@render item(option)}
+                {:else}
+                    {option}
+                {/if}
             </li>
         {/each}
     </ul>

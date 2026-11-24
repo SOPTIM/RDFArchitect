@@ -21,7 +21,9 @@ import {
     FileState,
     ImportPhase,
     ImportProgress,
+    importedSchemaNamesOf,
     JobState,
+    OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
 
 function file(overrides) {
@@ -41,10 +43,22 @@ function running(status) {
         workspaceName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedSchemaNames: [],
-        failedImports: [],
-        warnings: [],
+        outcome: null,
         ...status,
+    };
+}
+
+/** The outcome a finished graph import reports. */
+function graphsImported({
+    schemaNames = [],
+    failedFileNames = [],
+    warnings = [],
+}) {
+    return {
+        kind: OutcomeKind.GRAPHS_IMPORTED,
+        schemaNames,
+        failedFileNames,
+        warnings,
     };
 }
 
@@ -92,6 +106,29 @@ describe("ImportProgress", () => {
         expect(progress.finishedCount).toBe(1);
     });
 
+    test("uses the share a step reports instead of guessing at it", () => {
+        // Reading an export is one long step that says how far it is; without that the bar
+        // would jump from a quarter to two thirds and then to done.
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                files: [
+                    file({
+                        index: 0,
+                        sizeBytes: -1,
+                        state: FileState.RUNNING,
+                        done: 40,
+                        total: 200,
+                    }),
+                ],
+            }),
+        );
+
+        expect(progress.percent).toBe(25 + 75 * 0.2);
+    });
+
     test("counts the file it is on as half done and names it", () => {
         const progress = new ImportProgress();
         progress.uploaded();
@@ -135,7 +172,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedSchemaNames: ["http://graph#first"],
+                outcome: graphsImported({ schemaNames: ["first"] }),
             }),
         );
 
@@ -150,8 +187,10 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedSchemaNames: ["http://graph#first"],
-                failedImports: ["broken.ttl"],
+                outcome: graphsImported({
+                    schemaNames: ["first"],
+                    failedFileNames: ["broken.ttl"],
+                }),
             }),
         );
 
@@ -164,10 +203,9 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedSchemaNames: [
-                    "http://graph#first",
-                    "http://graph#second",
-                ],
+                outcome: graphsImported({
+                    schemaNames: ["first", "second"],
+                }),
             }),
         );
 
@@ -181,7 +219,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedSchemaNames: ["http://graph#first"],
+                outcome: graphsImported({ schemaNames: ["first"] }),
             }),
         );
 
@@ -333,6 +371,64 @@ describe("ImportProgress", () => {
         expect(progress.prefixComparison).toBe(shown);
     });
 
+    test("a read reports what the export holds, prefix table included", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.PACKAGES_SCANNED,
+                    packages: [{ id: "EAPK_TOPOLOGY", name: "Topology" }],
+                    diagrams: [{ id: "EAID_DIAG_TP" }],
+                    supplierGroups: [{ fileIndex: 0, index: 0 }],
+                    classNames: ["Terminal"],
+                    prefixes: [
+                        {
+                            fileIndex: 0,
+                            prefix: "cim",
+                            namespace: "http://cim#",
+                        },
+                    ],
+                },
+            }),
+        );
+
+        expect(progress.packages).toHaveLength(1);
+        expect(progress.prefixes).toEqual([
+            { fileIndex: 0, prefix: "cim", namespace: "http://cim#" },
+        ]);
+    });
+
+    test("an import of rdf files carries no prefix table over from a read", () => {
+        const progress = new ImportProgress();
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.PACKAGES_SCANNED,
+                    prefixes: [
+                        {
+                            fileIndex: 0,
+                            prefix: "cim",
+                            namespace: "http://cim#",
+                        },
+                    ],
+                },
+            }),
+        );
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: graphsImported({ schemaNames: ["first"] }),
+            }),
+        );
+
+        expect(progress.prefixes).toEqual([]);
+    });
+
     test("a failure to start is shown as a finished, failed import", () => {
         const progress = new ImportProgress();
 
@@ -343,7 +439,7 @@ describe("ImportProgress", () => {
         expect(progress.errorMessage).toBe("Another import is still running.");
     });
 
-    test("takes over the problems and notices of a workspace import", () => {
+    test("takes over the problems of a rejected workspace file", () => {
         const progress = new ImportProgress();
 
         progress.apply(
@@ -351,15 +447,32 @@ describe("ImportProgress", () => {
                 state: JobState.FAILED,
                 errorMessage: "The workspace file cannot be imported.",
                 problems: ["manifest.json is missing."],
-                notices: ["Written by a newer version."],
             }),
         );
 
         expect(progress.problems).toEqual(["manifest.json is missing."]);
-        expect(progress.notices).toEqual(["Written by a newer version."]);
         expect(progress.errorMessage).toBe(
             "The workspace file cannot be imported.",
         );
+    });
+
+    test("takes over the notices and schemas of an imported workspace file", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.WORKSPACE_IMPORTED,
+                    schemaNames: ["core"],
+                    notices: ["Written by a newer version."],
+                    cancelled: false,
+                },
+            }),
+        );
+
+        expect(progress.notices).toEqual(["Written by a newer version."]);
+        expect(progress.importedSchemaNames).toEqual(["core"]);
     });
 
     test("has neither problems nor notices for a schema import", () => {
@@ -369,5 +482,38 @@ describe("ImportProgress", () => {
 
         expect(progress.problems).toEqual([]);
         expect(progress.notices).toEqual([]);
+    });
+});
+
+describe("importedSchemaNamesOf", () => {
+    test("takes the schemas the outcome names once the job has ended", () => {
+        expect(
+            importedSchemaNamesOf({
+                state: JobState.CANCELLED,
+                outcome: {
+                    kind: OutcomeKind.GRAPHS_IMPORTED,
+                    schemaNames: ["A"],
+                },
+            }),
+        ).toEqual(["A"]);
+    });
+
+    test("takes the files imported so far while a cancelled job has not stopped yet", () => {
+        expect(
+            importedSchemaNamesOf({
+                state: JobState.RUNNING,
+                files: [
+                    file({
+                        state: FileState.IMPORTED,
+                        schemaName: "A",
+                    }),
+                    file({ index: 1, state: FileState.RUNNING }),
+                ],
+            }),
+        ).toEqual(["A"]);
+    });
+
+    test("finds nothing without a status", () => {
+        expect(importedSchemaNamesOf(undefined)).toEqual([]);
     });
 });

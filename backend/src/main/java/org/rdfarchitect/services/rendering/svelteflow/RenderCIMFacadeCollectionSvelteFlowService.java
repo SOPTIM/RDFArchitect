@@ -32,7 +32,7 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -59,7 +59,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Converts a {@link ICIMModelFacade} to a DTO Record that contains two JSON arrays with nodes and
+ * Converts a {@link ICIMModelReader} to a DTO Record that contains two JSON arrays with nodes and
  * edges used to render a UML diagram using the JavaScript library SvelteFlow.
  */
 @Service
@@ -89,7 +89,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     @Override
     public RenderingDataDTO renderUML(
-            ICIMModelFacade cimModel,
+            ICIMModelReader cimModel,
             GraphFilter filter,
             RenderingLayoutData layoutData,
             List<CIMProfileModel> otherProfiles,
