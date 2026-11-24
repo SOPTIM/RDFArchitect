@@ -18,14 +18,22 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
     discardRecoveredWorkspace,
-    listRecoveredWorkspaces,
+    fetchRecoveredWorkspace,
+} from "$lib/desktop/desktopApi.js";
+import {
+    RecoveredWorkspaceGoneError,
     restoreRecoveredWorkspace,
     restoredName,
 } from "$lib/desktop/recovery.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { openImportedWorkspace } from "$lib/utils/importJob.svelte.js";
 
-vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
+const KEPT = { id: "Draft-1.rdfa", workspaceName: "Draft" };
+
+vi.mock("$lib/desktop/desktopApi.js", () => ({
+    discardRecoveredWorkspace: vi.fn(),
+    fetchRecoveredWorkspace: vi.fn(),
+}));
 vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: {
         startWorkspaceImport: vi.fn(),
@@ -38,11 +46,11 @@ vi.mock("$lib/utils/importJob.svelte.js", () => ({
 }));
 
 describe("restoredName", () => {
-    test("keeps the name while it is free", () => {
+    test("restoredName_free_keepsTheName", () => {
         expect(restoredName("Draft", ["Other"])).toBe("Draft");
     });
 
-    test("finds a name of its own when it is taken", () => {
+    test("restoredName_taken_findsANameOfItsOwn", () => {
         expect(restoredName("Draft", ["Draft"])).toBe("Draft (recovered)");
         expect(restoredName("Draft", ["Draft", "Draft (recovered)"])).toBe(
             "Draft (recovered 2)",
@@ -50,62 +58,37 @@ describe("restoredName", () => {
     });
 });
 
-describe("recovery", () => {
-    let fetchMock;
-
+describe("restoreRecoveredWorkspace", () => {
     beforeEach(() => {
         vi.useFakeTimers();
-        fetchMock = vi.fn();
-        vi.stubGlobal("fetch", fetchMock);
+        vi.mocked(fetchRecoveredWorkspace).mockReset();
+        vi.mocked(fetchRecoveredWorkspace).mockResolvedValue(new Blob(["zip"]));
+        vi.mocked(discardRecoveredWorkspace).mockReset();
+        vi.mocked(discardRecoveredWorkspace).mockResolvedValue();
         vi.mocked(graphStore.startWorkspaceImport).mockReset();
+        vi.mocked(graphStore.startWorkspaceImport).mockResolvedValue({
+            error: null,
+            data: { jobId: "job" },
+        });
         vi.mocked(graphStore.getImportStatus).mockReset();
         vi.mocked(graphStore.cancelImport).mockReset();
         vi.mocked(openImportedWorkspace).mockReset();
     });
 
     afterEach(() => {
-        vi.unstubAllGlobals();
         vi.useRealTimers();
     });
 
-    test("lists the kept workspaces", async () => {
-        fetchMock.mockResolvedValue(
-            new Response(
-                JSON.stringify([
-                    { id: "Draft-1.rdfa", workspaceName: "Draft" },
-                ]),
-            ),
-        );
-
-        expect(await listRecoveredWorkspaces()).toEqual([
-            { id: "Draft-1.rdfa", workspaceName: "Draft" },
-        ]);
-        expect(fetchMock).toHaveBeenCalledWith("/api/desktop/recovery", {
-            credentials: "include",
-        });
-    });
-
-    test("restores a kept workspace under a free name and then discards the copy", async () => {
-        fetchMock.mockImplementation(async (url, init) =>
-            init?.method === "DELETE"
-                ? new Response(null, { status: 204 })
-                : new Response("zip"),
-        );
-        vi.mocked(graphStore.startWorkspaceImport).mockResolvedValue({
-            error: null,
-            data: { jobId: "job" },
-        });
+    function importEndsAs(data) {
         vi.mocked(graphStore.getImportStatus)
             .mockResolvedValueOnce({ error: null, data: { state: "RUNNING" } })
-            .mockResolvedValueOnce({
-                error: null,
-                data: { state: "COMPLETED", importedSchemaNames: ["g"] },
-            });
+            .mockResolvedValue({ error: null, data });
+    }
 
-        const restoring = restoreRecoveredWorkspace(
-            { id: "Draft-1.rdfa", workspaceName: "Draft" },
-            ["Draft"],
-        );
+    test("restoreRecoveredWorkspace_nameTaken_restoresUnderAFreeNameAndDiscardsTheCopy", async () => {
+        importEndsAs({ state: "COMPLETED", importedSchemaNames: ["g"] });
+
+        const restoring = restoreRecoveredWorkspace(KEPT, ["Draft"]);
         await vi.advanceTimersByTimeAsync(1000);
         const name = await restoring;
 
@@ -118,41 +101,39 @@ describe("recovery", () => {
             "Draft (recovered)",
             ["g"],
         );
-        expect(fetchMock).toHaveBeenLastCalledWith(
-            "/api/desktop/recovery/Draft-1.rdfa",
-            { method: "DELETE", credentials: "include" },
-        );
+        expect(discardRecoveredWorkspace).toHaveBeenCalledWith("Draft-1.rdfa");
     });
 
-    test("keeps the copy when the import fails", async () => {
-        fetchMock.mockResolvedValue(new Response("zip"));
-        vi.mocked(graphStore.startWorkspaceImport).mockResolvedValue({
-            error: null,
-            data: { jobId: "job" },
-        });
-        vi.mocked(graphStore.getImportStatus).mockResolvedValue({
-            error: null,
-            data: { state: "FAILED", errorMessage: "broken file" },
-        });
+    test("restoreRecoveredWorkspace_importFails_keepsTheCopy", async () => {
+        importEndsAs({ state: "FAILED", errorMessage: "broken file" });
 
-        const restoring = restoreRecoveredWorkspace(
-            { id: "Draft-1.rdfa", workspaceName: "Draft" },
-            [],
-        );
+        const restoring = restoreRecoveredWorkspace(KEPT, []);
         const outcome = expect(restoring).rejects.toThrow("broken file");
         await vi.advanceTimersByTimeAsync(1000);
         await outcome;
 
-        expect(
-            fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE"),
-        ).toBe(false);
+        expect(discardRecoveredWorkspace).not.toHaveBeenCalled();
     });
 
-    test("discards a copy that is gone already without complaint", async () => {
-        fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
+    test("restoreRecoveredWorkspace_copyCannotBeRemoved_stillReportsTheRestore", async () => {
+        importEndsAs({ state: "COMPLETED", importedSchemaNames: ["g"] });
+        vi.mocked(discardRecoveredWorkspace).mockRejectedValue(
+            new Error("500"),
+        );
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        const restoring = restoreRecoveredWorkspace(KEPT, []);
+        await vi.advanceTimersByTimeAsync(1000);
+
+        await expect(restoring).resolves.toBe("Draft");
+    });
+
+    test("restoreRecoveredWorkspace_copyGone_throwsWithoutImporting", async () => {
+        vi.mocked(fetchRecoveredWorkspace).mockResolvedValue(null);
 
         await expect(
-            discardRecoveredWorkspace("Draft-1.rdfa"),
-        ).resolves.toBeUndefined();
+            restoreRecoveredWorkspace(KEPT, []),
+        ).rejects.toBeInstanceOf(RecoveredWorkspaceGoneError);
+        expect(graphStore.startWorkspaceImport).not.toHaveBeenCalled();
     });
 });

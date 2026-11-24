@@ -27,6 +27,9 @@
     import {
         discardRecoveredWorkspace,
         listRecoveredWorkspaces,
+    } from "./desktopApi.js";
+    import {
+        RecoveredWorkspaceGoneError,
         restoreRecoveredWorkspace,
     } from "./recovery.js";
 
@@ -71,6 +74,14 @@
             );
             forget(entry);
         } catch (error) {
+            if (error instanceof RecoveredWorkspaceGoneError) {
+                toastStore.info(
+                    "Already restored",
+                    `"${entry.workspaceName}" was restored or discarded in another window.`,
+                );
+                forget(entry);
+                return;
+            }
             console.error("[RecoveryDialog] Restoring failed", error);
             toastStore.error(
                 "Restore failed",

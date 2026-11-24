@@ -14,10 +14,13 @@
  *    limitations under the License.
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import * as api from "$lib/api/generated/index.ts";
 import {
+    discardRecoveredWorkspace,
     fetchOpenRequest,
+    fetchRecoveredWorkspace,
     fetchWorkspaceFile,
     fileNameOfContentDisposition,
     markOpenedFrom,
@@ -26,7 +29,24 @@ import {
     sendHeartbeat,
 } from "$lib/desktop/desktopApi.js";
 
-vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
+/** What the generated client answers: data and response, or the error body and response. */
+function answer(status, { data, headers, error } = {}) {
+    const response = new Response(null, { status, headers });
+    return status < 400 ? { data, response } : { error, response };
+}
+
+vi.mock("$lib/api/generated/index.ts", () => ({
+    discardRecoveredWorkspace: vi.fn(),
+    getOpenRequestFile: vi.fn(),
+    getRecoveredWorkspace: vi.fn(),
+    getWorkspaceFile: vi.fn(),
+    listRecoveredWorkspaces: vi.fn(),
+    markOpenedFromRequest: vi.fn(),
+    markWorkspaceSaved: vi.fn(),
+    reportWindowClosed: vi.fn(),
+    reportWindowOpen: vi.fn(),
+    saveWorkspaceToFile: vi.fn(),
+}));
 
 describe("fileNameOfContentDisposition", () => {
     test.each([
@@ -38,29 +58,25 @@ describe("fileNameOfContentDisposition", () => {
         ],
         ["", null],
         [null, null],
-    ])("reads %s", (header, expected) => {
+    ])("fileNameOfContentDisposition_%s_returnsTheName", (header, expected) => {
         expect(fileNameOfContentDisposition(header)).toBe(expected);
     });
 });
 
 describe("desktop API", () => {
-    let fetchMock;
-
     beforeEach(() => {
-        fetchMock = vi.fn();
-        vi.stubGlobal("fetch", fetchMock);
+        vi.useRealTimers();
+        Object.values(api).forEach(fn => fn.mockReset?.());
     });
 
-    afterEach(() => {
-        vi.unstubAllGlobals();
-    });
-
-    test("reads the workspace file with the version it holds", async () => {
-        fetchMock.mockResolvedValue(
-            new Response("zip", {
-                status: 200,
+    test("fetchWorkspaceFile_answer_returnsBlobVersionIdAndName", async () => {
+        const blob = new Blob(["zip"]);
+        vi.mocked(api.getWorkspaceFile).mockResolvedValue(
+            answer(200, {
+                data: blob,
                 headers: {
-                    "X-Workspace-Version": "v-1",
+                    "X-Workspace-Version": "v-1:editable",
+                    "X-Workspace-Id": "id-1",
                     "Content-Disposition": `attachment; filename="A B.rdfa"`,
                 },
             }),
@@ -68,17 +84,22 @@ describe("desktop API", () => {
 
         const file = await fetchWorkspaceFile("A B");
 
-        expect(fetchMock).toHaveBeenCalledWith(
-            "/api/desktop/workspaces/A%20B/file",
-            { credentials: "include" },
-        );
-        expect(file.version).toBe("v-1");
-        expect(file.fileName).toBe("A B.rdfa");
-        expect(await file.blob.text()).toBe("zip");
+        expect(api.getWorkspaceFile).toHaveBeenCalledWith({
+            path: { workspaceName: "A B" },
+            parseAs: "blob",
+        });
+        expect(file).toEqual({
+            blob,
+            version: "v-1:editable",
+            workspaceId: "id-1",
+            fileName: "A B.rdfa",
+        });
     });
 
-    test("names a file the backend did not name after the workspace", async () => {
-        fetchMock.mockResolvedValue(new Response("zip", { status: 200 }));
+    test("fetchWorkspaceFile_noFileName_namesItAfterTheWorkspace", async () => {
+        vi.mocked(api.getWorkspaceFile).mockResolvedValue(
+            answer(200, { data: new Blob(["zip"]) }),
+        );
 
         const file = await fetchWorkspaceFile("Draft");
 
@@ -86,32 +107,43 @@ describe("desktop API", () => {
         expect(file.version).toBeNull();
     });
 
-    test("records the version that was saved", async () => {
-        fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    test("markWorkspaceSaved_version_sendsIt", async () => {
+        vi.mocked(api.markWorkspaceSaved).mockResolvedValue(answer(204));
 
-        await markWorkspaceSaved("Draft", "v-2");
+        await markWorkspaceSaved("Draft", "v-2:editable");
 
-        const [url, init] = fetchMock.mock.calls[0];
-        expect(url).toBe("/api/desktop/workspaces/Draft/saved");
-        expect(init.method).toBe("PUT");
-        expect(JSON.parse(init.body)).toEqual({ version: "v-2" });
+        expect(api.markWorkspaceSaved).toHaveBeenCalledWith({
+            path: { workspaceName: "Draft" },
+            body: { version: "v-2:editable" },
+        });
     });
 
-    test("tells whether the backend had a file to save to", async () => {
-        fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-        fetchMock.mockResolvedValueOnce(new Response("none", { status: 409 }));
+    test("markWorkspaceSaved_workspaceBeingWritten_asksAgain", async () => {
+        vi.useFakeTimers();
+        vi.mocked(api.markWorkspaceSaved)
+            .mockResolvedValueOnce(answer(409))
+            .mockResolvedValueOnce(answer(204));
+
+        const saved = markWorkspaceSaved("Draft");
+        await vi.runAllTimersAsync();
+        await saved;
+
+        expect(api.markWorkspaceSaved).toHaveBeenCalledTimes(2);
+    });
+
+    test("saveWorkspaceToItsFile_answer_tellsWhetherThereWasAFile", async () => {
+        vi.mocked(api.saveWorkspaceToFile)
+            .mockResolvedValueOnce(answer(204))
+            .mockResolvedValueOnce(answer(409, { error: "none" }));
 
         expect(await saveWorkspaceToItsFile("Draft")).toBe(true);
         expect(await saveWorkspaceToItsFile("Draft")).toBe(false);
-        expect(fetchMock).toHaveBeenCalledWith(
-            "/api/desktop/workspaces/Draft/file",
-            { method: "POST", credentials: "include" },
-        );
     });
 
-    test("reads a file the operating system handed over", async () => {
-        fetchMock.mockResolvedValue(
-            new Response("zip", {
+    test("fetchOpenRequest_answer_returnsANamedFile", async () => {
+        vi.mocked(api.getOpenRequestFile).mockResolvedValue(
+            answer(200, {
+                data: new Blob(["zip"]),
                 headers: {
                     "Content-Disposition": `attachment; filename="Model.rdfa"`,
                 },
@@ -120,29 +152,57 @@ describe("desktop API", () => {
 
         const file = await fetchOpenRequest("request-1");
 
-        expect(fetchMock).toHaveBeenCalledWith(
-            "/api/desktop/open-requests/request-1",
-            { credentials: "include" },
-        );
+        expect(api.getOpenRequestFile).toHaveBeenCalledWith({
+            path: { requestId: "request-1" },
+            parseAs: "blob",
+        });
         expect(file.name).toBe("Model.rdfa");
     });
 
-    test("records where an opened workspace came from", async () => {
-        fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    test("markOpenedFrom_workspaceBeingWritten_asksAgainWithTheSameRequest", async () => {
+        vi.useFakeTimers();
+        vi.mocked(api.markOpenedFromRequest)
+            .mockResolvedValueOnce(answer(409))
+            .mockResolvedValueOnce(answer(204));
 
-        await markOpenedFrom("My Draft", "request-1");
+        const marked = markOpenedFrom("My Draft", "request-1");
+        await vi.runAllTimersAsync();
+        await marked;
 
-        expect(fetchMock).toHaveBeenCalledWith(
-            "/api/desktop/workspaces/My%20Draft/opened-from/request-1",
-            { method: "PUT", credentials: "include" },
-        );
+        expect(api.markOpenedFromRequest).toHaveBeenCalledTimes(2);
+        expect(api.markOpenedFromRequest).toHaveBeenLastCalledWith({
+            path: { workspaceName: "My Draft", requestId: "request-1" },
+        });
     });
 
-    test("reports a failed heartbeat with its status", async () => {
-        fetchMock.mockResolvedValue(
-            new Response("busy", { status: 503, statusText: "Unavailable" }),
+    test("sendHeartbeat_errorAnswer_throwsWithTheStatus", async () => {
+        vi.mocked(api.reportWindowOpen).mockResolvedValue(
+            answer(503, { error: "busy" }),
         );
 
-        await expect(sendHeartbeat("w")).rejects.toThrow("503");
+        await expect(sendHeartbeat("w")).rejects.toMatchObject({
+            status: 503,
+        });
+    });
+
+    test("sendHeartbeat_noBackend_throwsTheNetworkError", async () => {
+        const failure = new TypeError("Failed to fetch");
+        vi.mocked(api.reportWindowOpen).mockResolvedValue({ error: failure });
+
+        await expect(sendHeartbeat("w")).rejects.toBe(failure);
+    });
+
+    test("fetchRecoveredWorkspace_gone_returnsNull", async () => {
+        vi.mocked(api.getRecoveredWorkspace).mockResolvedValue(answer(404));
+
+        expect(await fetchRecoveredWorkspace("Draft-1.rdfa")).toBeNull();
+    });
+
+    test("discardRecoveredWorkspace_goneAlready_doesNotComplain", async () => {
+        vi.mocked(api.discardRecoveredWorkspace).mockResolvedValue(answer(404));
+
+        await expect(
+            discardRecoveredWorkspace("Draft-1.rdfa"),
+        ).resolves.toBeUndefined();
     });
 });
