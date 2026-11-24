@@ -77,25 +77,8 @@ public class ShapesValidationService implements ShapesValidationUseCase {
 
     private final SchemaIndexCache schemaIndexCache;
 
-    /** Identifies a workspace's committed documents, within the session whose database holds it. */
-    private record ComparisonKey(String sessionId, String workspaceName, UUID version) {}
-
-    private record Comparison(ComparisonKey key, List<ShapesConflictAnalyzer.Document> documents) {}
-
-    /**
-     * The stored documents an unsaved buffer is compared against, held until a document changes.
-     *
-     * <p>The editor asks for this on every debounced keystroke, and answering it copies every
-     * shapes document of the workspace — tens of thousands of triples for a full ENTSO-E set — to
-     * compare them against a buffer that is the only thing that moved. Every commit, undo or redo
-     * that touches a document moves the workspace's documents version, so keying on it is enough to
-     * notice a change — renaming or switching a document off included — without the write path
-     * having to know this exists.
-     *
-     * <p>One entry, because typing happens in one document of one workspace at a time and a second
-     * would only pin copies nothing is going to ask for again.
-     */
-    private final AtomicReference<Comparison> comparison = new AtomicReference<>();
+    /** The stored documents an unsaved buffer is compared against, until a document changes. */
+    private final ComparisonCache comparisons = new ComparisonCache();
 
     /**
      * A document's content as validation needs it, detached from the transaction it came from.
@@ -203,17 +186,14 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         }
     }
 
-    /** The enabled documents, from {@link #comparison} unless a document has changed. */
+    /** The enabled documents, from {@link #comparisons} unless a document has changed. */
     private List<ShapesConflictAnalyzer.Document> storedForComparison(String workspaceName) {
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            var key =
-                    new ComparisonKey(
-                            SessionContext.getSessionId(),
-                            workspaceName,
-                            transaction.shapesDocumentsVersion());
-            var cached = comparison.get();
-            if (cached != null && cached.key().equals(key)) {
-                return cached.documents();
+            var key = new ComparisonCache.Key(SessionContext.getSessionId(), workspaceName);
+            var version = transaction.shapesDocumentsVersion();
+            var cached = comparisons.get(key, version);
+            if (cached != null) {
+                return cached;
             }
             var documents =
                     transaction.shapesDocuments().values().stream()
@@ -222,7 +202,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                             .map(ShapesValidationService::snapshot)
                             .map(ShapesValidationService::asDocument)
                             .toList();
-            comparison.set(new Comparison(key, documents));
+            comparisons.put(key, version, documents);
             return documents;
         }
     }

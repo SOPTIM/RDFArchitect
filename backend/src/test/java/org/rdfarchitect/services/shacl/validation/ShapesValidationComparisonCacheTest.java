@@ -28,15 +28,19 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseFixtures;
+import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.shacl.dto.ShapesDocumentValidationResult;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The stored documents an unsaved buffer is compared against are cached; every change to them has
@@ -127,6 +131,51 @@ class ShapesValidationComparisonCacheTest {
         documents.updateShapesDocument(SCHEMA_ID.workspaceName(), custom, null, false, null, null);
 
         assertThat(bufferCollides(draft)).isFalse();
+    }
+
+    /** The port, counting how often a transaction hands out the workspace's documents. */
+    private DatabasePort counting(AtomicInteger reads) {
+        return (DatabasePort)
+                Proxy.newProxyInstance(
+                        getClass().getClassLoader(),
+                        new Class<?>[] {DatabasePort.class},
+                        (proxy, method, args) -> {
+                            var result = method.invoke(databasePort, args);
+                            if (!(result instanceof WorkspaceTransaction transaction)) {
+                                return result;
+                            }
+                            return Proxy.newProxyInstance(
+                                    getClass().getClassLoader(),
+                                    new Class<?>[] {WorkspaceTransaction.class},
+                                    (inner, call, callArgs) -> {
+                                        if (call.getName().equals("shapesDocuments")) {
+                                            reads.incrementAndGet();
+                                        }
+                                        return call.invoke(transaction, callArgs);
+                                    });
+                        });
+    }
+
+    @Test
+    void sessionsTypingAtOnceKeepTheirOwnCopy() {
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, SHAPES);
+        var reads = new AtomicInteger();
+        var port = counting(reads);
+        service = new ShapesValidationService(port, new SchemaIndexCache(port));
+        var first = SessionContext.getSessionId();
+        var second = UUID.randomUUID().toString();
+        bufferCollides(custom);
+        SessionContext.setSessionId(second);
+        databasePort.createDataset(WORKSPACE);
+        DatabaseFixtures.createGraph(databasePort, SCHEMA_ID, GraphFactory.createDefaultGraph());
+        bufferCollides(UUID.randomUUID());
+        SessionContext.setSessionId(first);
+        reads.set(0);
+
+        bufferCollides(custom);
+
+        // One read for the schemas the document applies to, none for the copies to compare with.
+        assertThat(reads).hasValue(1);
     }
 
     @Test
