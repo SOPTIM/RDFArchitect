@@ -47,7 +47,7 @@ The frontend is described in `docs/content/developer-guide/frontend-architecture
 - Comments MUST NOT contain ticket, PR or author references.
 - Decorative comments (banners, separators, `} // end if`) SHOULD NOT be used.
 - Commented-out code MUST NOT be committed. Delete unused code.
-- When code changes, its comments and JavaDoc MUST be updated or removed in the same change.
+- When code changes, its comments, JavaDoc and JSDoc MUST be updated or removed in the same change.
 - Tests MAY use `// given`, `// when`, `// then` as structure markers.
 
 ```java
@@ -56,9 +56,16 @@ The frontend is described in `docs/content/developer-guide/frontend-architecture
 // Bad:  Changed to a map because the list was too slow.
 ```
 
-### JavaDoc and SPARQL
+#### JavaDoc
 
 - In the backend, every new or changed method of an interface MUST have JavaDoc: one summary sentence, `@param` for each parameter, `@return` unless `void`, and `@throws` for exceptions the caller has to handle.
+
+#### JSDoc
+
+- In the frontend, every new or changed exported function SHOULD have JSDoc: one summary sentence, `@param` with type for each parameter, and `@returns` with type unless it returns nothing.
+
+#### SPARQL
+
 - New `.sparql` files MUST start with a short `#` comment stating what the query does and which parameters it expects.
 
 ## Generated files
@@ -93,6 +100,8 @@ These files are generated and MUST NOT be edited by hand. When the trigger appli
 
 ### Running tests
 
+- While working, only the tests of the changed code SHOULD be run.
+- Before pushing, the full suite of each changed part (backend, frontend) MUST pass. After fixing a failure, only the failing tests SHOULD be run again before the final full run.
 - Backend, in `backend/`: `mvn -B test -Dtest=<ClassName>`, all unit tests with `mvn -B test`.
 - Frontend, in `frontend/`: `npm run test -- <path>`, all tests with `npm run test`.
 
