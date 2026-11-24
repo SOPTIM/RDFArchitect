@@ -21,8 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
-import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -278,12 +276,13 @@ public class SHACLStoringService
         var lines =
                 TurtleSubjectLines.linesBySubject(
                         document.getRawText(), ShapesDocument.BASE_IRI, model);
-        var scope = blankNodeScope(document);
         var seen = new HashSet<String>();
         model.listSubjects()
                 .forEachRemaining(
                         subject -> {
-                            var id = model.asRDFNode(scoped(subject.asNode(), scope)).toString();
+                            var id =
+                                    model.asRDFNode(ShapesUnion.scoped(subject.asNode(), document))
+                                            .toString();
                             if (!seen.add(id)) {
                                 return;
                             }
@@ -716,90 +715,19 @@ public class SHACLStoringService
         }
     }
 
-    /**
-     * All enabled shapes documents of the workspace, read as one model.
-     *
-     * <p>SHACL is conjunctive: shapes targeting the same focus node all apply, and the language has
-     * no notion of one shape overriding another. Documents are therefore unioned, never resolved
-     * against each other — a precedence rule here would disagree with the file the user exports and
-     * with every SHACL engine that validates it. Where two documents genuinely cannot both hold (an
-     * unsatisfiable pair, or the same shape IRI defined twice), that is reported as a validation
-     * finding rather than silently decided.
-     *
-     * <p>Documents are added in {@link ShapesDocument#getOrder()} order so serialisation is stable.
-     * Disabled documents are left out: switching a document off is how a user takes its constraints
-     * out of validation and export.
-     *
-     * <p>Must be called inside a transaction. The result is detached from the stored graphs, so
-     * writes to it are not persisted.
-     */
     private static Model readEnabledShapes(WorkspaceTransaction transaction) {
-        var union = ModelFactory.createDefaultModel();
-        transaction.shapesDocuments().values().stream()
-                .filter(ShapesDocument::isEnabled)
-                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(document -> addWithPrefixes(union, document));
-        return union;
+        return ShapesUnion.enabled(transaction.shapesDocuments().values());
     }
 
-    /** The enabled documents that apply to one schema, read as one model. */
-    private static Model readEnabledShapes(WorkspaceTransaction transaction, String schema) {
-        var union = ModelFactory.createDefaultModel();
-        transaction.shapesDocuments().values().stream()
-                .filter(ShapesDocument::isEnabled)
-                .filter(document -> document.getSchemas().contains(schema))
-                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(document -> addWithPrefixes(union, document));
-        return union;
+    private static Model readEnabledShapes(WorkspaceTransaction transaction, String schemaName) {
+        return ShapesUnion.enabledFor(transaction.shapesDocuments().values(), schemaName);
     }
 
     /** The named documents merged in the workspace's own order, whether enabled or not. */
     private static Model readShapesOf(WorkspaceTransaction transaction, Set<UUID> documentIds) {
-        var union = ModelFactory.createDefaultModel();
-        transaction.shapesDocuments().values().stream()
-                .filter(document -> documentIds.contains(document.getId()))
-                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(document -> addWithPrefixes(union, document));
-        return union;
-    }
-
-    /**
-     * Adds a document's triples. The first document to declare a prefix keeps it, so a later
-     * document rebinding it cannot change what earlier shapes mean.
-     *
-     * <p>Blank nodes stay apart per document: a label only identifies a node within the document it
-     * was normalised in, and merging on it would fold together two lists that merely look alike.
-     */
-    private static void addWithPrefixes(Model union, ShapesDocument document) {
-        var model = ModelFactory.createModelForGraph(document.getGraph());
-        model.getNsPrefixMap()
-                .forEach(
-                        (prefix, uri) -> {
-                            if (union.getNsPrefixURI(prefix) == null) {
-                                union.setNsPrefix(prefix, uri);
-                            }
-                        });
-        var scope = blankNodeScope(document);
-        document.getGraph()
-                .find()
-                .forEach(
-                        triple ->
-                                union.getGraph()
-                                        .add(
-                                                Triple.create(
-                                                        scoped(triple.getSubject(), scope),
-                                                        triple.getPredicate(),
-                                                        scoped(triple.getObject(), scope))));
-    }
-
-    private static String blankNodeScope(ShapesDocument document) {
-        return document.getId() + ":";
-    }
-
-    private static Node scoped(Node node, String scope) {
-        return node.isBlank()
-                ? NodeFactory.createBlankNode(scope + node.getBlankNodeLabel())
-                : node;
+        return ShapesUnion.of(
+                transaction.shapesDocuments().values(),
+                document -> documentIds.contains(document.getId()));
     }
 
     /**

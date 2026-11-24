@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.Lang;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -29,6 +29,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
@@ -38,6 +39,7 @@ import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
+import org.rdfarchitect.services.shacl.ShapesDocumentReader;
 import org.rdfarchitect.services.update.graph.ImportGraphsService;
 import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.springframework.mock.web.MockMultipartFile;
@@ -111,10 +113,18 @@ final class CgmesWorkspace {
         var workspaceDiagram =
                 new CustomDiagram(UUID.randomUUID(), "Workspace diagram", shownClasses);
         try (var transaction = databasePort.beginTransaction(workspace, ReadWrite.WRITE)) {
-            var shacl =
-                    ModelFactory.createModelForGraph(
-                            transaction.graph(firstGraph).getCustomSHACL());
-            RDFDataMgr.read(shacl, CGMES.resolve(TOPOLOGY_SHACL).toString());
+            var shaclFile = CGMES.resolve(TOPOLOGY_SHACL);
+            var text = read(shaclFile);
+            var document =
+                    transaction.createShapesDocument(
+                            shaclFile.getFileName().toString(),
+                            ShapesDocument.Origin.IMPORTED,
+                            List.of(firstGraph));
+            var shapes = ModelFactory.createModelForGraph(document.getGraph());
+            var parsed = ShapesDocumentReader.read(text, Lang.TURTLE);
+            shapes.add(parsed);
+            shapes.setNsPrefixes(parsed);
+            document.setRawText(text);
             transaction
                     .graph(firstGraph)
                     .getCustomDiagrams()
@@ -176,6 +186,14 @@ final class CgmesWorkspace {
             positions.add(position);
         }
         send.accept(positions);
+    }
+
+    private static String read(Path path) {
+        try {
+            return Files.readString(path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static MockMultipartFile file(String profile) {

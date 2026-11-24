@@ -184,8 +184,27 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_reportsEveryProblemAtOnce() {
+    void read_aSchemaWithoutItsShaclFile_isReadFromFormat11On() {
         archive.remove("schemas/" + CORE + "/shacl.ttl");
+
+        assertThat(read(archive).graphs()).hasSize(2);
+    }
+
+    @Test
+    void read_aSchemaWithoutItsShaclFile_isRefusedInFormat10() {
+        archive.remove("schemas/" + CORE + "/shacl.ttl");
+        archive.remove("shacl/documents.json");
+        var manifest = ArchiveFiles.json(archive.get(WorkspaceArchiveFormat.MANIFEST));
+        manifest.put("formatVersion", "1.0");
+        archive.put(WorkspaceArchiveFormat.MANIFEST, ArchiveFiles.json(manifest));
+
+        assertThat(problemsOf(zip(archive)))
+                .containsExactly("schemas/" + CORE + "/shacl.ttl is missing.");
+    }
+
+    @Test
+    void read_reportsEveryProblemAtOnce() {
+        archive.remove("schemas/" + CORE + "/layout.ttl");
         archive.put("schemas/" + EXTENSION + "/schema.ttl", "<http://a> <http://b> .");
         archive.put("colors.json", "{\"gone\": \"#000000\"}");
         archive.put(
@@ -202,7 +221,7 @@ class WorkspaceArchiveReaderTest {
                 .anySatisfy(
                         problem ->
                                 assertThat(problem)
-                                        .isEqualTo("schemas/" + CORE + "/shacl.ttl is missing."))
+                                        .isEqualTo("schemas/" + CORE + "/layout.ttl is missing."))
                 .anySatisfy(
                         problem ->
                                 assertThat(problem)

@@ -26,9 +26,11 @@ import static org.rdfarchitect.services.archive.ArchiveFiles.zip;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,12 @@ class WorkspaceArchiveShapesDocumentsTest {
             """
             @prefix sh: <http://www.w3.org/ns/shacl#> .
             <http://example.org/core#OtherShape> a sh:NodeShape .
+            """;
+
+    private static final String OTHER =
+            """
+            @prefix sh: <http://www.w3.org/ns/shacl#> .
+            <http://example.org/core#ThirdShape> a sh:NodeShape .
             """;
 
     private DatabasePort databasePort;
@@ -236,14 +244,61 @@ class WorkspaceArchiveShapesDocumentsTest {
         assertThat(ArchiveFiles.tree(files.get("shacl/documents.json"))).isEmpty();
     }
 
-    @Test
-    void aFileOfFormat10HoldsNoDocumentsAndImportsWithoutThem() {
-        create("official.ttl", null, List.of(CORE), OFFICIAL);
-        var files = unzip(exportService.exportWorkspace("original"));
+    /** The file as a reader of format 1.0 sees it: without {@code shacl/}. */
+    private static Map<String, String> asFormat10(Map<String, String> files) {
         files.keySet().removeIf(path -> path.startsWith("shacl/"));
         var manifest = json(files.get(WorkspaceArchiveFormat.MANIFEST));
         manifest.put("formatVersion", "1.0");
         files.put(WorkspaceArchiveFormat.MANIFEST, ArchiveFiles.json(manifest));
+        return files;
+    }
+
+    private static Graph shaclOf(Map<String, String> files, String schemaName) {
+        return ArchiveFiles.turtle(files.get("schemas/" + schemaName + "/shacl.ttl"));
+    }
+
+    private static Graph parsed(String... texts) {
+        var graph = GraphFactory.createDefaultGraph();
+        for (var text : texts) {
+            RDFParser.fromString(text, Lang.TURTLE).parse(graph);
+        }
+        return graph;
+    }
+
+    @Test
+    void eachSchemasShaclFileHoldsTheEnabledDocumentsApplyingToIt() {
+        create("official.ttl", null, List.of(CORE), OFFICIAL);
+        create("both.ttl", null, List.of(CORE, EXTENSION), AUTHORED);
+        var off = create("off.ttl", null, List.of(CORE), OTHER);
+        shacl.updateShapesDocument("original", off, null, false, null, null);
+        create("none.ttl", null, List.of(), OTHER);
+
+        var files = unzip(exportService.exportWorkspace("original"));
+
+        assertThat(shaclOf(files, CORE).isIsomorphicWith(parsed(OFFICIAL, AUTHORED))).isTrue();
+        assertThat(shaclOf(files, EXTENSION).isIsomorphicWith(parsed(AUTHORED))).isTrue();
+        assertThat(shaclOf(files, "gone").isEmpty()).isTrue();
+    }
+
+    @Test
+    void listsThatLookAlikeInTwoDocumentsStayTwoListsInTheShaclFile() {
+        var list =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                <http://example.org/core#%s> sh:in ( <http://example.org/core#Thing> ) .
+                """;
+        create("a.ttl", null, List.of(CORE), list.formatted("A"));
+        create("b.ttl", null, List.of(CORE), list.formatted("B"));
+
+        var files = unzip(exportService.exportWorkspace("original"));
+
+        assertThat(shaclOf(files, CORE).size()).isEqualTo(6);
+    }
+
+    @Test
+    void aFileOfFormat10BringsEachSchemasConstraintsAsADocument() {
+        create("official.ttl", null, List.of(CORE), OFFICIAL);
+        var files = asFormat10(unzip(exportService.exportWorkspace("original")));
 
         var result =
                 importService.importWorkspace(
@@ -253,7 +308,61 @@ class WorkspaceArchiveShapesDocumentsTest {
 
         assertThat(result.notices()).isEmpty();
         assertThat(result.importedSchemaNames()).containsExactlyInAnyOrder(CORE, EXTENSION, "gone");
+        assertThat(documentsOf("imported"))
+                .singleElement()
+                .satisfies(
+                        document -> {
+                            assertThat(document.name()).isEqualTo("core-shacl.ttl");
+                            assertThat(document.origin()).isEqualTo(ShapesDocument.Origin.IMPORTED);
+                            assertThat(document.sourceFileName())
+                                    .isEqualTo("schemas/core/shacl.ttl");
+                            assertThat(document.enabled()).isTrue();
+                            assertThat(document.order()).isZero();
+                            assertThat(document.schemas()).containsExactly(CORE);
+                            assertThat(new String(document.text(), StandardCharsets.UTF_8))
+                                    .isEqualTo(files.get("schemas/core/shacl.ttl"));
+                        });
+        try (var transaction = databasePort.beginTransaction("imported", ReadWrite.READ)) {
+            var document = transaction.shapesDocuments().values().iterator().next();
+            assertThat(document.getGraph().isIsomorphicWith(parsed(OFFICIAL))).isTrue();
+        }
+    }
+
+    @Test
+    void aFileOfFormat10GivesSchemasWithoutConstraintsNoDocument() {
+        var files = asFormat10(unzip(exportService.exportWorkspace("original")));
+
+        importArchive(zip(files));
+
         assertThat(documentsOf("imported")).isEmpty();
+    }
+
+    @Test
+    void aFileOfFormat10WhoseConstraintsCannotBeSavedIsRefused() {
+        var files = asFormat10(unzip(exportService.exportWorkspace("original")));
+        files.put(
+                "schemas/core/shacl.ttl",
+                "<http://example.org/a|b> a <http://www.w3.org/ns/shacl#NodeShape> .\n");
+
+        assertThat(problemsOf(files))
+                .singleElement()
+                .asString()
+                .startsWith("schemas/core/shacl.ttl: ")
+                .contains("http://example.org/a|b");
+    }
+
+    @Test
+    void aFileOfFormat11TakesItsDocumentsFromTheListAndNotFromTheShaclFiles() {
+        create("official.ttl", null, List.of(CORE), OFFICIAL);
+        var files = unzip(exportService.exportWorkspace("original"));
+        files.put("schemas/core/shacl.ttl", OTHER);
+        files.remove("schemas/" + EXTENSION + "/shacl.ttl");
+
+        importArchive(zip(files));
+
+        assertThat(documentsOf("imported"))
+                .usingRecursiveFieldByFieldElementComparator()
+                .containsExactlyElementsOf(documentsOf("original"));
     }
 
     @Test
