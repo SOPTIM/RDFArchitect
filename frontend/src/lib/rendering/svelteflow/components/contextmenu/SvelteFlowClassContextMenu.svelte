@@ -42,17 +42,17 @@
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
+    import {
+        getContextMenuTriggerStyle,
+        handleContextMenuOpenChange,
+        syncContextMenuTrigger,
+    } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import AddToWorkspaceDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import ExtendSchemaSubMenu from "../../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
     import SHACLClassSpecificPopUp from "../../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
-    import {
-        getContextMenuTriggerStyle,
-        handleContextMenuOpenChange,
-        syncContextMenuTrigger,
-    } from "./contextMenuUtils.js";
 
     let {
         request = null,

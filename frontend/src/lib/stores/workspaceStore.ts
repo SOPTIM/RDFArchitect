@@ -17,6 +17,9 @@
 
 import { writable } from "svelte/store";
 
+import { loadSlot } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 import {
     listDatasets,
     deleteDataset,
@@ -28,9 +31,6 @@ import {
     renameDataset,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
-import { loadSlot } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 
 export type WorkspaceInfo = {
     label: string;

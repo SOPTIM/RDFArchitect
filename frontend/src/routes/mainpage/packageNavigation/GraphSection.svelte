@@ -47,20 +47,7 @@
     import { editorState, SelectionLevel } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
 
-    import CompareDialog from "../../compare/CompareDialog.svelte";
-    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
-    import ExportDialog from "../../ExportDialog.svelte";
-    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
-    import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
-    import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
-    import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
-    import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
-    import ValidationDialog from "../../validate/ValidationDialog.svelte";
-    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
-    import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import PackageButton from "./PackageButton.svelte";
     import {
         graphHighlight,
@@ -68,6 +55,19 @@
     } from "./packageNavigationUtils.svelte.js";
     import PickSchemaColorDialog from "./PickSchemaColorDialog.svelte";
     import SchemaColorsDialog from "./SchemaColorsDialog.svelte";
+    import CompareDialog from "../../compare/CompareDialog.svelte";
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
+    import ExportDialog from "../../ExportDialog.svelte";
+    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
+    import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
+    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
+    import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
+    import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
+    import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
+    import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
+    import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
     import { goto } from "$app/navigation";
 

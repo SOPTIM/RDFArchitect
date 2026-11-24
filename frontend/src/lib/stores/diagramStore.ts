@@ -17,6 +17,13 @@
 
 import { writable } from "svelte/store";
 
+import { loadSlot, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import {
+    type AsyncListSlot,
+    createEmptyListSlot,
+    type Result,
+} from "./storeTypes";
 import {
     getCustomDatasetDiagramList,
     getCustomGraphDiagramList,
@@ -31,13 +38,6 @@ import {
     removeFromDiagram,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
-import { loadSlot, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import {
-    type AsyncListSlot,
-    createEmptyListSlot,
-    type Result,
-} from "./storeTypes";
 
 type StoreState = {
     // key: workspace
