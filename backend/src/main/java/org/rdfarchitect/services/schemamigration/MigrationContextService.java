@@ -78,8 +78,8 @@ public class MigrationContextService
 
     private Graph loadGraph(GraphIdentifier schema) {
         try (var transaction =
-                databasePort.beginTransaction(schema.datasetName(), ReadWrite.READ)) {
-            return GraphUtils.deepCopy(transaction.graph(schema.graphUri()).getRdfGraph());
+                databasePort.beginTransaction(schema.workspaceName(), ReadWrite.READ)) {
+            return GraphUtils.deepCopy(transaction.graph(schema.schemaName()).getRdfGraph());
         }
     }
 
