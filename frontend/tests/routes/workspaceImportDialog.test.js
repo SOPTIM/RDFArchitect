@@ -102,7 +102,7 @@ afterEach(() => {
     target.remove();
 });
 
-test("keeps the file of the chosen workspace when another file is refused", async () => {
+test("selectArchive_anotherFileRefused_keepsFileOfChosenWorkspace", async () => {
     vi.mocked(chooseWorkspaceFile)
         .mockResolvedValueOnce({
             file: new File(["zip"], "Draft.rdfa"),

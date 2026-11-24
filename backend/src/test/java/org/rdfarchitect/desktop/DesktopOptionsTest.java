@@ -28,7 +28,7 @@ import java.util.Map;
 class DesktopOptionsTest {
 
     @Test
-    void defaultsToAWindowOfItsOwnOnTheFixedPort() {
+    void parse_noArguments_defaultsToAppWindowOnFixedPort() {
         var options = DesktopOptions.parse(new String[0], Map.of());
 
         assertThat(options.port()).isEqualTo(DesktopOptions.DEFAULT_PORT);
@@ -40,7 +40,7 @@ class DesktopOptionsTest {
     }
 
     @Test
-    void readsItsOwnOptionsAndPassesTheRestToSpring() {
+    void parse_mixedArguments_readsOwnOptionsAndPassesRestToSpring() {
         var options =
                 DesktopOptions.parse(
                         new String[] {
@@ -60,7 +60,7 @@ class DesktopOptionsTest {
     }
 
     @Test
-    void theCommandLineWinsOverTheEnvironment() {
+    void parse_optionInArgumentsAndEnvironment_commandLineWins() {
         var env =
                 Map.of(
                         "RDFARCHITECT_PORT", "9000",
@@ -78,7 +78,7 @@ class DesktopOptionsTest {
     }
 
     @Test
-    void takesFilesAsPathsOrAsFileUris() {
+    void parse_pathsAndFileUris_takesBothAsFiles() {
         var options =
                 DesktopOptions.parse(
                         new String[] {"/tmp/a.rdfa", "file:///tmp/My%20Draft.rdfa"}, Map.of());
@@ -88,14 +88,14 @@ class DesktopOptionsTest {
     }
 
     @Test
-    void ignoresTheProcessSerialNumberFinderPasses() {
+    void parse_processSerialNumberFromFinder_ignoresIt() {
         var options = DesktopOptions.parse(new String[] {"-psn_0_123456"}, Map.of());
 
         assertThat(options.files()).isEmpty();
     }
 
     @Test
-    void rejectsWhatItCannotRead() {
+    void parse_unreadableArgument_throwsIllegalArgumentException() {
         assertThatThrownBy(() -> DesktopOptions.parse(new String[] {"--port=x"}, Map.of()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DesktopOptions.parse(new String[] {"--port=70000"}, Map.of()))
@@ -107,7 +107,7 @@ class DesktopOptionsTest {
     }
 
     @Test
-    void asksForHelp() {
+    void parse_helpOption_setsHelp() {
         assertThat(DesktopOptions.parse(new String[] {"--help"}, Map.of()).help()).isTrue();
         assertThat(DesktopOptions.USAGE).contains("--browser=<mode>");
     }

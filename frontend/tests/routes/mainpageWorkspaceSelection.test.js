@@ -78,7 +78,7 @@ afterEach(() => {
 });
 
 describe("main page with workspaces but none selected", () => {
-    test("activates a workspace instead of waiting for one", async () => {
+    test("render_noWorkspaceSelected_activatesOneInsteadOfWaiting", async () => {
         target = document.createElement("div");
         document.body.appendChild(target);
         mounted = mount(MainPage, { target });
@@ -95,7 +95,7 @@ describe("main page with workspaces but none selected", () => {
         expect(target.querySelector(".mm-spinner")).toBeNull();
     });
 
-    test("leaves the selection empty in a session without workspaces", async () => {
+    test("render_sessionWithoutWorkspaces_leavesSelectionEmpty", async () => {
         workspaceStore.set({ data: [], loading: false, error: null });
         vi.mocked(workspaceStore.getWorkspaces).mockResolvedValue([]);
         target = document.createElement("div");

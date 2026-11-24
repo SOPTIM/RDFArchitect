@@ -29,7 +29,7 @@ class DesktopPathsTest {
     private static final Path HOME = Path.of("/home/someone");
 
     @Test
-    void keepsItsFilesWhereEachOperatingSystemExpectsThem() {
+    void dataDirectory_eachOperatingSystem_returnsWhereItExpectsFiles() {
         assertThat(DesktopPaths.dataDirectory(OperatingSystem.MAC, Map.of(), HOME))
                 .isEqualTo(HOME.resolve("Library/Application Support/RDFArchitect"));
         assertThat(DesktopPaths.dataDirectory(OperatingSystem.LINUX, Map.of(), HOME))
@@ -43,7 +43,7 @@ class DesktopPathsTest {
     }
 
     @Test
-    void ignoresARelativeOverride() {
+    void dataDirectory_relativeXdgDataHome_ignoresOverride() {
         assertThat(
                         DesktopPaths.dataDirectory(
                                 OperatingSystem.LINUX, Map.of("XDG_DATA_HOME", "relative"), HOME))
@@ -51,7 +51,7 @@ class DesktopPathsTest {
     }
 
     @Test
-    void keepsLogsAndTheBrowserProfileInside() {
+    void logDirectoryAndBrowserProfile_dataDirectory_resolveInsideIt() {
         var data = Path.of("/data/rdfarchitect");
 
         assertThat(DesktopPaths.logDirectory(data)).isEqualTo(data.resolve("logs"));
@@ -59,7 +59,7 @@ class DesktopPathsTest {
     }
 
     @Test
-    void recognisesTheOperatingSystem() {
+    void of_osName_returnsMatchingOperatingSystem() {
         assertThat(OperatingSystem.of("Windows 11")).isEqualTo(OperatingSystem.WINDOWS);
         assertThat(OperatingSystem.of("Mac OS X")).isEqualTo(OperatingSystem.MAC);
         assertThat(OperatingSystem.of("Linux")).isEqualTo(OperatingSystem.LINUX);

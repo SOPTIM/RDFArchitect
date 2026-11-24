@@ -47,7 +47,7 @@ describe("backendConnectionMonitor on the backend's own origin", () => {
         backendConnection.isOffline = false;
     });
 
-    test("reports requests that may change something", async () => {
+    test("installBackendFetchInterceptor_requestMayChangeSomething_reportsIt", async () => {
         await window.fetch("/api/workspaces/Draft/undo", { method: "POST" });
         await window.fetch("/api/workspaces/Draft", {
             method: "delete",
@@ -65,7 +65,7 @@ describe("backendConnectionMonitor on the backend's own origin", () => {
         ]);
     });
 
-    test("does not report reads or requests elsewhere", async () => {
+    test("installBackendFetchInterceptor_readOrRequestElsewhere_doesNotReportIt", async () => {
         await window.fetch("/api/workspaces");
         await window.fetch("/env.js", { method: "POST" });
         await window.fetch("https://example.org/api/x", { method: "POST" });
@@ -73,7 +73,7 @@ describe("backendConnectionMonitor on the backend's own origin", () => {
         expect(writes).toEqual([]);
     });
 
-    test("notices a backend that does not answer", async () => {
+    test("installBackendFetchInterceptor_backendDoesNotAnswer_marksBackendOffline", async () => {
         fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
         await expect(window.fetch("/api/workspaces")).rejects.toThrow();

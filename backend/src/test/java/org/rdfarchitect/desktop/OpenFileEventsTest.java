@@ -34,7 +34,7 @@ class OpenFileEventsTest {
     }
 
     @Test
-    void keepsFilesUntilTheAppIsReadyAndHandsOnLaterOnes() {
+    void takeAndForward_filesBeforeAndAfterAppIsReady_keepsEarlyOnesAndHandsOnLaterOnes() {
         OpenFileEvents.receive(List.of(Path.of("a.rdfa")));
         var later = new ArrayList<Path>();
 

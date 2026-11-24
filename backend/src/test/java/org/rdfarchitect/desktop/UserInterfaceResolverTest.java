@@ -37,7 +37,8 @@ class UserInterfaceResolverTest {
         "api, false",
         "v3/api-docs, false",
     })
-    void answersRoutesWithTheIndexOnly(String path, boolean route) {
+    void isRoute_resourcePath_returnsTrueOnlyForRoutesAnsweredWithIndex(
+            String path, boolean route) {
         assertThat(UserInterfaceResolver.isRoute(path)).isEqualTo(route);
     }
 }

@@ -35,7 +35,7 @@ class DatasetSessionListenerTest {
     private final DatabaseConnection databaseConnection = mock(DatabaseConnection.class);
 
     @Test
-    void fillsANewSessionFromTheDatabase() {
+    void sessionCreated_databaseEnabled_fillsSessionFromDatabase() {
         new DatasetSessionListener(databasePort, databaseConnection, true)
                 .sessionCreated(new HttpSessionEvent(new MockHttpSession()));
 
@@ -43,7 +43,7 @@ class DatasetSessionListenerTest {
     }
 
     @Test
-    void leavesANewSessionEmptyWithoutADatabase() {
+    void sessionCreated_databaseDisabled_leavesSessionEmpty() {
         new DatasetSessionListener(databasePort, databaseConnection, false)
                 .sessionCreated(new HttpSessionEvent(new MockHttpSession()));
 

@@ -59,7 +59,7 @@ class FusekiHttpAdminProtocolTest {
     }
 
     @Test
-    void listsTheDatasetsByName() throws IOException {
+    void listDatasets_datasetsPresent_returnsTheirNames() throws IOException {
         var fuseki =
                 fusekiAnswering(
                         """
@@ -73,12 +73,12 @@ class FusekiHttpAdminProtocolTest {
     }
 
     @Test
-    void listsNoDatasetsOfAnEmptyFuseki() throws IOException {
+    void listDatasets_emptyFuseki_returnsEmptyList() throws IOException {
         assertThat(fusekiAnswering("{\"datasets\": []}").listDatasets()).isEmpty();
     }
 
     @Test
-    void reportsAnAnswerItCannotRead() throws IOException {
+    void listDatasets_unreadableAnswer_throwsDataAccessException() throws IOException {
         assertThatThrownBy(() -> fusekiAnswering("not json").listDatasets())
                 .isInstanceOf(DataAccessException.class);
         tearDown();

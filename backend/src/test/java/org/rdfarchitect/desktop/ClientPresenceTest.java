@@ -50,7 +50,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void anOpenWindowKeepsTheAppRunning() {
+    void check_windowKeepsSendingHeartbeats_keepsAppRunning() {
         presence.heartbeat("a");
         for (int i = 0; i < 60; i++) {
             runFor(Duration.ofSeconds(10));
@@ -62,7 +62,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void closesAfterTheGraceOnceTheLastWindowSaidGoodbye() {
+    void check_lastWindowSaidGoodbye_closesAfterGrace() {
         presence.heartbeat("a");
         presence.goodbye("a");
 
@@ -75,7 +75,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void aReloadWithinTheGraceKeepsTheAppRunning() {
+    void check_reloadWithinGrace_keepsAppRunning() {
         presence.heartbeat("before-reload");
         presence.goodbye("before-reload");
         runFor(Duration.ofSeconds(3));
@@ -87,7 +87,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void anotherWindowStillOpenKeepsTheAppRunning() {
+    void check_anotherWindowStillOpen_keepsAppRunning() {
         presence.heartbeat("a");
         presence.heartbeat("b");
         presence.goodbye("a");
@@ -99,7 +99,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void aWindowThatWentSilentIsGivenUpAfterTheTimeout() {
+    void check_windowWentSilent_givesItUpAfterTimeout() {
         presence.heartbeat("crashed");
 
         runFor(Duration.ofSeconds(150));
@@ -110,7 +110,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void aSuspendDoesNotCountAsSilence() {
+    void check_machineWasSuspended_doesNotCountAsSilence() {
         presence.heartbeat("a");
         runFor(Duration.ofSeconds(5));
 
@@ -127,7 +127,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void givesUpWhenNoWindowEverConnects() {
+    void check_noWindowEverConnects_givesUpAfterStartupTimeout() {
         runFor(Duration.ofMinutes(5));
         assertThat(closings).hasValue(0);
 
@@ -136,7 +136,7 @@ class ClientPresenceTest {
     }
 
     @Test
-    void closesOnlyOnce() {
+    void check_windowConnectsAfterClose_closesOnlyOnce() {
         presence.heartbeat("a");
         presence.goodbye("a");
         runFor(Duration.ofSeconds(40));

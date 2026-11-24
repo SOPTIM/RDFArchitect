@@ -69,12 +69,12 @@ class SavedWorkspacesTest {
     }
 
     @Test
-    void anEmptyWorkspaceHasNothingToLose() {
+    void unsavedWorkspaces_emptyWorkspace_returnsEmptyList() {
         assertThat(savedWorkspaces.unsavedWorkspaces()).isEmpty();
     }
 
     @Test
-    void aChangedWorkspaceIsUnsavedUntilItIsSaved() {
+    void unsavedWorkspaces_changedWorkspace_containsItUntilSaved() {
         addSchema("a");
         assertThat(savedWorkspaces.unsavedWorkspaces()).containsExactly(WORKSPACE);
 
@@ -86,7 +86,7 @@ class SavedWorkspacesTest {
     }
 
     @Test
-    void undoingBackToTheSavedVersionMakesItSavedAgain() {
+    void unsavedWorkspaces_undoneToSavedVersion_countsItAsSavedAgain() {
         addSchema("a");
         assertThat(savedWorkspaces.markSavedNow(WORKSPACE)).isTrue();
         addSchema("b");
@@ -99,7 +99,7 @@ class SavedWorkspacesTest {
     }
 
     @Test
-    void disablingEditingIsAChangeTheFileDoesNotHave() {
+    void unsavedWorkspaces_editingDisabledAfterSave_countsItAsChange() {
         addSchema("a");
         savedWorkspaces.markSaved(WORKSPACE, WorkspaceRevision.current(databasePort, WORKSPACE));
 
@@ -111,7 +111,7 @@ class SavedWorkspacesTest {
     }
 
     @Test
-    void aSaveCountsInItsOwnSessionOnly() {
+    void markSavedNow_sameWorkspaceInAnotherSession_countsInOwnSessionOnly() {
         addSchema("a");
         savedWorkspaces.markSavedNow(WORKSPACE);
 
@@ -123,7 +123,8 @@ class SavedWorkspacesTest {
     }
 
     @Test
-    void aWorkspaceBeingWrittenToCountsAsUnsavedWithoutWaiting() throws Exception {
+    void unsavedWorkspaces_workspaceBeingWrittenTo_countsItAsUnsavedWithoutWaiting()
+            throws Exception {
         addSchema("a");
         savedWorkspaces.markSavedNow(WORKSPACE);
 

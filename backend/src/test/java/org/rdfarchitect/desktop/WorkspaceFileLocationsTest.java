@@ -69,7 +69,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void keepsTheFileWhileTheWorkspaceGoesOn() {
+    void locationOf_workspaceChangedAndUndone_keepsFile() {
         addSchema("a");
         locations.remember("Draft", FILE);
 
@@ -82,7 +82,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void doesNotHandTheFileToAWorkspaceCreatedAnewUnderTheSameName() {
+    void locationOf_workspaceRecreatedUnderSameName_returnsEmpty() {
         addSchema("a");
         locations.remember("Draft", FILE);
 
@@ -94,7 +94,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void keepsTheFileThroughARename() {
+    void locationOf_workspaceRenamed_keepsFileUnderNewName() {
         locations.remember("Draft", FILE);
 
         databasePort.renameDataset("Draft", "Final");
@@ -105,7 +105,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void keepsTheFileWhenAnUndoneChangeIsReplacedByAnother() {
+    void locationOf_undoneChangeReplacedByAnother_keepsFile() {
         addSchema("a");
         locations.remember("Draft", FILE);
 
@@ -116,7 +116,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void keepsTheFileOnceTheHistoryNoLongerReachesBackToIt() {
+    void locationOf_historyNoLongerReachesBackToFile_keepsFile() {
         var maxVersions = GraphCompressionConfig.getMaxVersions();
         new GraphCompressionConfig().setMaxVersions(3);
         try {
@@ -137,7 +137,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void forgetsTheFileOfADeletedWorkspace() {
+    void locationOf_workspaceDeleted_returnsEmpty() {
         locations.remember("Draft", FILE);
 
         databasePort.deleteDataset("Draft");
@@ -146,7 +146,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void forgetsAFileReplacedByAnother() {
+    void forget_fileReplacedByAnother_forgetsFile() {
         locations.remember("Draft", FILE);
 
         locations.forget("Draft");
@@ -156,7 +156,7 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
-    void keepsFilesPerSession() {
+    void locationOf_anotherSession_returnsEmpty() {
         locations.remember("Draft", FILE);
 
         SessionContext.setSessionId("another session");

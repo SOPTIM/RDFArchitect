@@ -107,7 +107,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void keepsACopyOfAnUnsavedWorkspaceOnly() throws Exception {
+    void writeUnsaved_unsavedAndEmptyWorkspace_keepsCopyOfUnsavedOnly() throws Exception {
         var recovery = recovery();
         addSchema("Draft", "a");
         databasePort.createDataset("Empty");
@@ -124,7 +124,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void writesAgainOnlyAfterAChange() throws Exception {
+    void writeUnsaved_calledAgain_writesAgainOnlyAfterChange() throws Exception {
         var recovery = recovery();
         addSchema("Draft", "a");
         writeFromAnotherThread(recovery);
@@ -140,7 +140,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void writesAgainOnceEditingIsDisabled() throws Exception {
+    void writeUnsaved_editingDisabled_writesAgain() throws Exception {
         var recovery = recovery();
         addSchema("Draft", "a");
         writeFromAnotherThread(recovery);
@@ -154,7 +154,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void dropsTheCopyOnceTheWorkspaceIsSavedOrGone() throws Exception {
+    void writeUnsaved_workspaceSavedOrDeleted_dropsCopy() throws Exception {
         var recovery = recovery();
         addSchema("Draft", "a");
         addSchema("Other", "a");
@@ -169,7 +169,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void keepsNothingOfASessionWithoutAWindow() throws Exception {
+    void writeUnsaved_sessionWithoutWindow_keepsNothing() throws Exception {
         var recovery = new WorkspaceRecovery(directory, databasePort, savedWorkspaces, export);
         addSchema("Draft", "a");
 
@@ -179,7 +179,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void offersWhatThePreviousRunKept() throws Exception {
+    void previousRun_previousRunKeptCopy_offersIt() throws Exception {
         var previous = recovery();
         addSchema("Draft One", "a");
         previous.close();
@@ -202,7 +202,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void readsNothingOutsideItsDirectory() throws Exception {
+    void read_idOutsideDirectory_readsNothing() throws Exception {
         Files.createDirectories(directory);
         Files.writeString(dataDirectory.resolve("secret.rdfa"), "secret");
         var recovery = recovery();
@@ -293,7 +293,7 @@ class WorkspaceRecoveryTest {
     }
 
     @Test
-    void keepsNothingWithoutADirectory() {
+    void writeUnsaved_noDirectory_keepsNothing() {
         var recovery = new WorkspaceRecovery(null, databasePort, savedWorkspaces, export);
         recovery.noteSession();
         addSchema("Draft", "a");

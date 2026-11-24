@@ -31,7 +31,7 @@ describe("workspaceState", () => {
         workspaceState.activate(null);
     });
 
-    test("activates the first workspace when none is active", async () => {
+    test("load_noneActive_activatesFirstWorkspace", async () => {
         vi.mocked(workspaceStore.getWorkspaces).mockResolvedValue([
             { label: "Draft" },
             { label: "Other" },
@@ -42,7 +42,7 @@ describe("workspaceState", () => {
         expect(editorState.selectedWorkspace.getValue()).toBe("Draft");
     });
 
-    test("copes with a session that holds no workspace", async () => {
+    test("load_sessionWithoutWorkspaces_leavesSelectionEmpty", async () => {
         vi.mocked(workspaceStore.getWorkspaces).mockResolvedValue([]);
 
         await workspaceState.load();
@@ -50,7 +50,7 @@ describe("workspaceState", () => {
         expect(editorState.selectedWorkspace.getValue()).toBeNull();
     });
 
-    test("moves on to the next workspace by name after removing the active one", async () => {
+    test("remove_activeWorkspace_activatesNextWorkspaceByName", async () => {
         workspaceState.activate("Draft");
         vi.mocked(workspaceStore.remove).mockResolvedValue({ error: null });
         vi.mocked(workspaceStore.getWorkspaces).mockResolvedValue([

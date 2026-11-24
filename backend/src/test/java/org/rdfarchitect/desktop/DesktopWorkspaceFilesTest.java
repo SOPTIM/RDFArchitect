@@ -70,7 +70,7 @@ class DesktopWorkspaceFilesTest {
     }
 
     @Test
-    void replacesTheFileAndLeavesNothingElseBehind() throws IOException {
+    void writeTo_existingFile_replacesItAndLeavesNothingElseBehind() throws IOException {
         var file = directory.resolve("Draft.rdfa");
         Files.writeString(file, "old");
 
@@ -82,7 +82,7 @@ class DesktopWorkspaceFilesTest {
     }
 
     @Test
-    void leavesNothingBehindWhenTheFileCannotBeReplaced() throws IOException {
+    void writeTo_fileCannotBeReplaced_throwsAndLeavesNothingBehind() throws IOException {
         var file = directory.resolve("Draft.rdfa");
         Files.createDirectories(file.resolve("in the way"));
 

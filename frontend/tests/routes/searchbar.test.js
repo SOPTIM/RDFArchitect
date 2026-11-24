@@ -103,7 +103,7 @@ afterEach(() => {
 });
 
 describe("Searchbar folded into a button", () => {
-    test("opens on its button with the field focused, and Esc closes it again", async () => {
+    test("openSearch_buttonClickedThenEscape_focusesFieldAndClosesAgain", async () => {
         render();
         expect(toggle().getAttribute("aria-expanded")).toBe("false");
 
@@ -122,7 +122,7 @@ describe("Searchbar folded into a button", () => {
         expect(document.activeElement).toBe(toggle());
     });
 
-    test("Ctrl+F opens it", async () => {
+    test("openSearch_ctrlF_opensWithFieldFocused", async () => {
         render();
 
         shortcutStore.handleEvent(
@@ -139,7 +139,7 @@ describe("Searchbar folded into a button", () => {
         expect(document.activeElement).toBe(input());
     });
 
-    test("Esc takes back the results before the field", async () => {
+    test("handleKeydown_escapeWithResults_takesBackResultsBeforeField", async () => {
         render();
         toggle().click();
         flushSync();
@@ -156,7 +156,7 @@ describe("Searchbar folded into a button", () => {
         expect(toggle().getAttribute("aria-expanded")).toBe("false");
     });
 
-    test("closes once a result is chosen", async () => {
+    test("chooseResult_resultClicked_closesSearchbar", async () => {
         render();
         toggle().click();
         flushSync();
@@ -173,7 +173,7 @@ describe("Searchbar folded into a button", () => {
 });
 
 describe("Searchbar field", () => {
-    test("leaves Esc to the editor while it has nothing to take back", () => {
+    test("handleKeydown_escapeWithNothingToTakeBack_leavesEscToTheEditor", () => {
         render();
 
         expect(pressEscape(input()).defaultPrevented).toBe(false);
@@ -201,7 +201,7 @@ describe("Searchbar field", () => {
         }
     });
 
-    test("names its scope briefly and searches within the one chosen", async () => {
+    test("chooseFilter_currentSchemaChosen_namesScopeBrieflyAndSearchesWithinIt", async () => {
         editorState.selectGraph("Draft", "Core");
         render();
         expect(scopeButton().textContent.trim()).toBe("All");

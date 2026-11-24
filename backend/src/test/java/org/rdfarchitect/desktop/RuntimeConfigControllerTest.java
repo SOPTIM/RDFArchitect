@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 class RuntimeConfigControllerTest {
 
     @Test
-    void writesTheConfigurationTheUserInterfaceReads() {
+    void render_configEntries_writesScriptTheUserInterfaceReads() {
         var config = new LinkedHashMap<String, String>();
         config.put("PUBLIC_BACKEND_URL", "");
         config.put("PUBLIC_DESKTOP", "true");
@@ -42,7 +42,7 @@ class RuntimeConfigControllerTest {
     }
 
     @Test
-    void quotesEveryValueAsAStringLiteral() {
+    void jsString_anyValue_quotesItAsStringLiteral() {
         assertThat(RuntimeConfigController.jsString("1.2.3")).isEqualTo("\"1.2.3\"");
         assertThat(RuntimeConfigController.jsString("a\"b\\c")).isEqualTo("\"a\\\"b\\\\c\"");
         assertThat(RuntimeConfigController.jsString("</script>\n"))
