@@ -53,7 +53,8 @@ export const workspaceState = {
 
         const active = this.getActive();
         if (!active || !workspaces.some(ws => ws.label === active)) {
-            this.activate(workspaces[0].label ?? null);
+            // A session can hold no workspace at all.
+            this.activate(workspaces[0]?.label ?? null);
         }
     },
 
@@ -122,7 +123,7 @@ export const workspaceState = {
         if (this.getActive() === name) {
             const workspaces = await workspaceStore.getWorkspaces();
             editorState.reset();
-            this.activate(workspaces[0] ?? null);
+            this.activate(workspaces?.[0]?.label ?? null);
         }
         return true;
     },
