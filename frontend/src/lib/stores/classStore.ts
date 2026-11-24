@@ -17,10 +17,6 @@
 
 import { writable, get } from "svelte/store";
 
-import { graphStore } from "./graphStore";
-import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     // class list & details
     getClassList,
@@ -49,6 +45,10 @@ import {
     type CopyClassResponseDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { graphStore } from "./graphStore";
+import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 
 // Two cache slots per graph: the list endpoint may be called with or without
 // external classes; keep both so toggling the flag does not invalidate the

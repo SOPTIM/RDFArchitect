@@ -29,13 +29,13 @@
     import { labelHighlight } from "$lib/rendering/svelteflow/interaction/labelHighlight.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
+    import { labelsOf } from "../../diagram/labelNodes.js";
     import EdgePointHandles from "./EdgePointHandles.svelte";
     import {
         getEdgeParams,
         getPolylinePath,
         getRoundedCornerPolylinePath,
     } from "./edgeUtils.ts";
-    import { labelsOf } from "../../diagram/labelNodes.js";
 
     let { id, source, target, data, selected, children } = $props();
 
