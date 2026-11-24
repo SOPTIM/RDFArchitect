@@ -34,7 +34,7 @@ class AppWindowTest {
     private static final Path HOME = Path.of("/home/someone");
 
     @Test
-    void prefersChromeAndFallsBackToEdgeOnWindows() {
+    void appBrowserCandidates_windows_prefersChromeThenEdge() {
         var env =
                 Map.of(
                         "ProgramFiles", "C:\\Program Files",
@@ -64,7 +64,7 @@ class AppWindowTest {
     }
 
     @Test
-    void looksInBothApplicationFoldersOnMac() {
+    void findAppBrowser_mac_looksInBothApplicationFolders() {
         var chrome = HOME.resolve("Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
 
         assertThat(
@@ -74,7 +74,7 @@ class AppWindowTest {
     }
 
     @Test
-    void searchesThePathOnLinux() {
+    void findAppBrowser_linux_searchesThePath() {
         var chromium = Path.of("/opt/bin/chromium");
 
         assertThat(
@@ -94,7 +94,7 @@ class AppWindowTest {
     }
 
     @Test
-    void opensAWindowOfItsOwnInAProfileOfItsOwn(@TempDir Path data) {
+    void appWindowCommand_newProfile_opensAWindowInAProfileOfItsOwn(@TempDir Path data) {
         var profile = data.resolve("browser");
 
         var command =
@@ -110,7 +110,7 @@ class AppWindowTest {
     }
 
     @Test
-    void leavesTheWindowSizeToTheBrowserOnceItHasAProfile(@TempDir Path profile) {
+    void appWindowCommand_existingProfile_leavesTheWindowSizeToTheBrowser(@TempDir Path profile) {
         var command =
                 AppWindow.appWindowCommand(
                         OperatingSystem.MAC, Path.of("chrome"), "http://x", profile);
@@ -119,7 +119,8 @@ class AppWindowTest {
     }
 
     @Test
-    void letsASnapUseItsOwnProfile(@TempDir Path dir) throws IOException {
+    void appWindowCommand_snapBrowser_leavesTheProfileToTheSnap(@TempDir Path dir)
+            throws IOException {
         // Ubuntu's /usr/bin/chromium-browser is a script handing over to the snap.
         var wrapper =
                 Files.writeString(
@@ -207,7 +208,7 @@ class AppWindowTest {
     }
 
     @Test
-    void opensTheDefaultBrowserTheWayEachSystemDoes() {
+    void defaultBrowserCommand_eachSystem_usesItsOwnOpener() {
         assertThat(AppWindow.defaultBrowserCommand(OperatingSystem.MAC, "http://x"))
                 .containsExactly("open", "http://x");
         assertThat(AppWindow.defaultBrowserCommand(OperatingSystem.LINUX, "http://x"))

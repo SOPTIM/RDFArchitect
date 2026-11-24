@@ -94,7 +94,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void servesTheUserInterfaceForEveryRoute() throws Exception {
+    void userInterface_anyRoute_servesIndex() throws Exception {
         for (var route : new String[] {"/", "/mainpage", "/shacl/workbench"}) {
             var response = getWithoutToken(route);
 
@@ -107,14 +107,14 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void answersMissingFilesAndUnknownApiPathsWithNotFound() throws Exception {
+    void userInterface_missingFileOrUnknownApiPath_answersNotFound() throws Exception {
         assertThat(get("/_app/immutable/missing.js").statusCode()).isEqualTo(404);
         assertThat(get("/missing.png").statusCode()).isEqualTo(404);
         assertThat(get("/api/missing").statusCode()).isEqualTo(404);
     }
 
     @Test
-    void letsTheBrowserKeepVersionedFilesForGood() throws Exception {
+    void userInterface_versionedFile_isCachedForGood() throws Exception {
         var response = get("/_app/immutable/start.js");
 
         assertThat(response.statusCode()).isEqualTo(200);
@@ -123,7 +123,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void configuresTheUserInterfaceForThisBackend() throws Exception {
+    void runtimeConfig_desktop_configuresTheUserInterfaceForThisBackend() throws Exception {
         var response = getWithoutToken("/env.js");
 
         assertThat(response.statusCode()).isEqualTo(200);
@@ -137,13 +137,13 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void hasNoShareSnapshot() throws Exception {
+    void snapshots_desktop_areNotOffered() throws Exception {
         assertThat(send("POST", "/api/snapshots", null).statusCode()).isEqualTo(404);
         assertThat(get("/api/snapshots/token").statusCode()).isEqualTo(404);
     }
 
     @Test
-    void refusesChangesRequestedByOtherPages() throws Exception {
+    void reportWindowOpen_otherOrigin_isRefused() throws Exception {
         var foreign = send("POST", "/api/desktop/windows/w/heartbeat", "http://evil.example");
         var own = send("POST", "/api/desktop/windows/w/heartbeat", url(""));
 
@@ -152,7 +152,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void identifiesItself() throws Exception {
+    void getDesktopInfo_running_identifiesTheApp() throws Exception {
         var response = get("/api/desktop");
 
         assertThat(response.statusCode()).isEqualTo(200);
@@ -160,7 +160,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void savesAWorkspaceToAFileNamingItsVersion() throws Exception {
+    void getWorkspaceFile_workspace_namesItsVersion() throws Exception {
         assertThat(send("PUT", "/api/workspaces/Draft%20One", null).statusCode()).isEqualTo(200);
         assertThat(send("POST", "/api/desktop/windows/w/heartbeat", null).body())
                 .contains("\"unsavedWorkspaces\":[]");
@@ -191,7 +191,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void opensAFileTheOperatingSystemHandsOverAndSavesBackToIt(@TempDir Path directory)
+    void requestOpenFile_handedOverFile_opensAndSavesBackToIt(@TempDir Path directory)
             throws Exception {
         assertThat(send("PUT", "/api/workspaces/Handed", null).statusCode()).isEqualTo(200);
         var file =
@@ -231,7 +231,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void refusesToOpenWhatIsNoWorkspaceFile(@TempDir Path directory) throws Exception {
+    void requestOpenFile_noWorkspaceFile_isRefused(@TempDir Path directory) throws Exception {
         var text = Files.writeString(directory.resolve("notes.txt"), "text");
 
         assertThat(
@@ -246,7 +246,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void offersNoWorkspacesFromAPreviousRunThatKeptNone() throws Exception {
+    void listRecoveredWorkspaces_nothingKept_isEmpty() throws Exception {
         var listed = get("/api/desktop/recovery");
 
         assertThat(listed.statusCode()).isEqualTo(200);
@@ -312,7 +312,7 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void answersNotFoundForAWorkspaceThatDoesNotExist() throws Exception {
+    void getWorkspaceFile_unknownWorkspace_answersNotFound() throws Exception {
         assertThat(get("/api/desktop/workspaces/missing/file").statusCode()).isEqualTo(404);
         assertThat(send("PUT", "/api/desktop/workspaces/missing/saved", null).statusCode())
                 .isEqualTo(404);

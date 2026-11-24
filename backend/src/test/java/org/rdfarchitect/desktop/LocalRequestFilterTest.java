@@ -41,7 +41,7 @@ class LocalRequestFilterTest {
         "rebound.example:17407, false",
         "127.0.0.1.rebound.example:17407, false",
     })
-    void acceptsOnlyTheLoopbackAddressItListensOn(String host, boolean accepted) {
+    void isLoopbackAuthority_host_acceptsOnlyItsOwnLoopbackAddress(String host, boolean accepted) {
         assertThat(LocalRequestFilter.isLoopbackAuthority(host, PORT)).isEqualTo(accepted);
     }
 
@@ -54,26 +54,26 @@ class LocalRequestFilterTest {
         "http://evil.example, false",
         "null, false",
     })
-    void recognisesItsOwnOrigin(String origin, boolean accepted) {
+    void isLoopbackOrigin_origin_acceptsOnlyItsOwn(String origin, boolean accepted) {
         assertThat(LocalRequestFilter.isLoopbackOrigin(origin, PORT)).isEqualTo(accepted);
     }
 
     @Test
-    void refusesARequestForAnotherHost() throws Exception {
+    void doFilter_anotherHost_isRefused() throws Exception {
         var response = filter(request("GET", "rebound.example:" + PORT, null));
 
         assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
-    void refusesAChangeRequestedByAnotherPage() throws Exception {
+    void doFilter_changeFromAnotherOrigin_isRefused() throws Exception {
         var response = filter(request("POST", "127.0.0.1:" + PORT, "http://evil.example"));
 
         assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
-    void leavesCrossOriginReadsToTheBrowser() throws Exception {
+    void doFilter_readFromAnotherOrigin_passes() throws Exception {
         // Reading is up to the browser: without CORS headers it does not hand the answer over.
         var response = filter(request("GET", "127.0.0.1:" + PORT, "http://evil.example"));
 
@@ -81,14 +81,14 @@ class LocalRequestFilterTest {
     }
 
     @Test
-    void passesTheAppsOwnRequests() throws Exception {
+    void doFilter_ownOrigin_passes() throws Exception {
         var response = filter(request("PUT", "127.0.0.1:" + PORT, "http://127.0.0.1:" + PORT));
 
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
-    void passesARequestWithoutOrigin() throws Exception {
+    void doFilter_noOrigin_passes() throws Exception {
         // Tools such as curl send none, and a browser always sends one with a cross-origin change.
         var response = filter(request("DELETE", "localhost:" + PORT, null));
 

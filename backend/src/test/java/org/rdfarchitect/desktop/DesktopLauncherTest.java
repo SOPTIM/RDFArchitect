@@ -30,7 +30,7 @@ import java.util.Map;
 class DesktopLauncherTest {
 
     @Test
-    void namesTheSessionCookieAfterThePort() {
+    void springArguments_port_namesTheSessionCookieAfterIt() {
         var options = DesktopOptions.parse(new String[] {"--desktop.close-grace=30s"}, Map.of());
 
         assertThat(DesktopLauncher.springArguments(options, 17407, Path.of("/data/rdfa")))
@@ -42,13 +42,13 @@ class DesktopLauncherTest {
     }
 
     @Test
-    void opensTheEditor() {
+    void startPath_openRequests_opensTheEditorWithThem() {
         assertThat(DesktopLauncher.startPath(List.of())).isEqualTo("/mainpage");
         assertThat(DesktopLauncher.startPath(List.of("a", "b"))).isEqualTo("/mainpage?open=a,b");
     }
 
     @Test
-    void keepsTheDisplayWhereThereIsOne() {
+    void hasDisplay_systemWithDisplay_isTrue() {
         assertThat(DesktopLauncher.hasDisplay(OperatingSystem.WINDOWS, Map.of())).isTrue();
         assertThat(DesktopLauncher.hasDisplay(OperatingSystem.MAC, Map.of())).isTrue();
         assertThat(DesktopLauncher.hasDisplay(OperatingSystem.LINUX, Map.of("DISPLAY", ":0")))
@@ -63,7 +63,7 @@ class DesktopLauncherTest {
     }
 
     @Test
-    void recognisesAPortTakenWhileStartingUp() {
+    void isPortInUse_portTakenWhileStarting_isTrue() {
         var wrapped =
                 new ApplicationContextException(
                         "Failed to start bean 'webServerStartStop'", new PortInUseException(17407));

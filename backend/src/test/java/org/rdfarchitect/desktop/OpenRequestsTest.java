@@ -35,7 +35,7 @@ class OpenRequestsTest {
     private final OpenRequests openRequests = new OpenRequests();
 
     @Test
-    void registersAWorkspaceFileUntilItIsOpen() throws Exception {
+    void add_workspaceFile_isRegisteredUntilRemoved() throws Exception {
         var file = Files.writeString(directory.resolve("Draft.RDFA"), "zip");
 
         var request = openRequests.add(file);
@@ -47,7 +47,7 @@ class OpenRequestsTest {
     }
 
     @Test
-    void takesWorkspaceFilesOnly() throws Exception {
+    void add_noReadableWorkspaceFile_isRefused() throws Exception {
         var text = Files.writeString(directory.resolve("notes.txt"), "text");
 
         assertThatThrownBy(() -> openRequests.add(text))
@@ -88,7 +88,7 @@ class OpenRequestsTest {
     }
 
     @Test
-    void knowsNoRequestWithoutAnId() {
+    void get_noOrUnknownId_isEmpty() {
         assertThat(openRequests.get(null)).isEmpty();
         assertThat(openRequests.remove("unknown")).isEmpty();
     }
