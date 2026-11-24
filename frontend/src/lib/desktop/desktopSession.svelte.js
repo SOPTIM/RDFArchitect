@@ -44,15 +44,27 @@ export const desktopSession = $state({
     unsavedWorkspaces: [],
     /** The workspaces whose file the backend writes on Save, as of the last heartbeat. */
     workspacesWithFile: [],
-    /** Whether the backend has stopped answering, which leaves this window without its data. */
+    /**
+     * The id of each workspace by its name, as of the last heartbeat. An id stays through renames
+     * and is never given to a workspace created anew under an old name.
+     *
+     * @type {Record<string, string>}
+     */
+    workspaceIds: {},
+    /**
+     * Whether the backend has stopped answering, or a backend started anew answers instead, which
+     * leaves this window without its data.
+     */
     stopped: false,
 });
 
 let windowId = null;
 let timer = null;
 let inFlight = null;
-let refreshQueued = false;
+let queued = null;
 let missedHeartbeats = 0;
+/** The run of the backend this window started with, see `DesktopStatusDTO.instanceId`. */
+let instanceId = null;
 let refreshTimer = null;
 let stopListeningToWrites = () => {};
 
@@ -70,10 +82,6 @@ export function registerUnappliedEdits(check) {
 
 function holdsUnappliedEdits() {
     return [...unappliedEditChecks].some(check => check());
-}
-
-export function isWorkspaceUnsaved(workspaceName) {
-    return desktopSession.unsavedWorkspaces.includes(workspaceName);
 }
 
 /**
@@ -100,6 +108,7 @@ export function startDesktopSession() {
     return stopDesktopSession;
 }
 
+/** Stops reporting this window to the desktop backend and says goodbye to it. */
 export function stopDesktopSession() {
     if (!desktopSession.active) {
         return;
@@ -116,13 +125,18 @@ export function stopDesktopSession() {
     desktopSession.active = false;
     desktopSession.unsavedWorkspaces = [];
     desktopSession.workspacesWithFile = [];
+    desktopSession.workspaceIds = {};
     desktopSession.stopped = false;
     missedHeartbeats = 0;
+    instanceId = null;
 }
 
 /**
  * Asks the backend again which workspaces are unsaved, after something may have changed one.
- * Calls arriving while a heartbeat is under way are folded into one more after it.
+ * Calls arriving while a heartbeat is under way are folded into one more after it, and resolve
+ * once that one has answered, so the answer covers what changed before the call.
+ *
+ * @returns {Promise<void>}
  */
 export function refreshDesktopStatus() {
     if (!desktopSession.active) {
@@ -140,37 +154,45 @@ function scheduleRefresh() {
 }
 
 function heartbeat() {
-    if (inFlight) {
-        refreshQueued = true;
+    if (!inFlight) {
+        inFlight = sendOneHeartbeat().finally(() => {
+            inFlight = null;
+        });
         return inFlight;
     }
-    inFlight = sendHeartbeat(windowId)
-        .then(status => {
-            missedHeartbeats = 0;
-            desktopSession.unsavedWorkspaces = status?.unsavedWorkspaces ?? [];
-            desktopSession.workspacesWithFile =
-                status?.workspacesWithFile ?? [];
-        })
-        .catch(error => {
-            // A network error means nobody listens any more; an error status is a backend
-            // that is still there.
-            if (error instanceof TypeError) {
-                missedHeartbeats += 1;
-                if (missedHeartbeats >= MISSED_HEARTBEATS_UNTIL_STOPPED) {
-                    desktopSession.stopped = true;
-                }
-            } else {
-                console.warn("[desktopSession] Heartbeat failed", error);
+    queued ??= inFlight.then(() => {
+        queued = null;
+        return desktopSession.active ? heartbeat() : undefined;
+    });
+    return queued;
+}
+
+async function sendOneHeartbeat() {
+    try {
+        const status = await sendHeartbeat(windowId);
+        missedHeartbeats = 0;
+        instanceId ??= status?.instanceId ?? null;
+        if (status?.instanceId && status.instanceId !== instanceId) {
+            // Started anew since: none of what this window shows exists there.
+            desktopSession.stopped = true;
+            return;
+        }
+        desktopSession.stopped = false;
+        desktopSession.unsavedWorkspaces = status?.unsavedWorkspaces ?? [];
+        desktopSession.workspacesWithFile = status?.workspacesWithFile ?? [];
+        desktopSession.workspaceIds = status?.workspaceIds ?? {};
+    } catch (error) {
+        // A network error means nobody listens any more; an error status is a backend that is
+        // still there.
+        if (error instanceof TypeError) {
+            missedHeartbeats += 1;
+            if (missedHeartbeats >= MISSED_HEARTBEATS_UNTIL_STOPPED) {
+                desktopSession.stopped = true;
             }
-        })
-        .finally(() => {
-            inFlight = null;
-            if (refreshQueued && desktopSession.active) {
-                refreshQueued = false;
-                void heartbeat();
-            }
-        });
-    return inFlight;
+        } else {
+            console.warn("[desktopSession] Heartbeat failed", error);
+        }
+    }
 }
 
 function heartbeatWhenShown() {

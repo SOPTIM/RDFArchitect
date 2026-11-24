@@ -20,7 +20,6 @@ import { onBackendWrite } from "$lib/api/backendConnectionMonitor.svelte.js";
 import { sendGoodbye, sendHeartbeat } from "$lib/desktop/desktopApi.js";
 import {
     desktopSession,
-    isWorkspaceUnsaved,
     refreshDesktopStatus,
     registerUnappliedEdits,
     startDesktopSession,
@@ -60,7 +59,7 @@ describe("desktopSession", () => {
         vi.useRealTimers();
     });
 
-    test("reports the window right away and then periodically", async () => {
+    test("startDesktopSession_running_reportsTheWindowAtOnceAndPeriodically", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         expect(sendHeartbeat).toHaveBeenCalledTimes(1);
@@ -73,20 +72,21 @@ describe("desktopSession", () => {
         expect(windowIds.size).toBe(1);
     });
 
-    test("learns which workspaces are unsaved", async () => {
+    test("heartbeat_answer_learnsUnsavedWorkspacesAndIds", async () => {
         vi.mocked(sendHeartbeat).mockResolvedValue({
+            instanceId: "run-1",
             unsavedWorkspaces: ["Draft"],
+            workspaceIds: { Draft: "id-1" },
         });
 
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
 
         expect(desktopSession.unsavedWorkspaces).toEqual(["Draft"]);
-        expect(isWorkspaceUnsaved("Draft")).toBe(true);
-        expect(isWorkspaceUnsaved("Other")).toBe(false);
+        expect(desktopSession.workspaceIds).toEqual({ Draft: "id-1" });
     });
 
-    test("asks before closing a window with unsaved work only", async () => {
+    test("warnBeforeUnload_unsavedWork_asksOnlyThen", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         expect(beforeUnload().defaultPrevented).toBe(false);
@@ -98,7 +98,7 @@ describe("desktopSession", () => {
         expect(beforeUnload().defaultPrevented).toBe(true);
     });
 
-    test("asks before closing a window with edits it has not sent yet", async () => {
+    test("warnBeforeUnload_unappliedEdits_asks", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         let edited = true;
@@ -112,7 +112,7 @@ describe("desktopSession", () => {
         expect(beforeUnload().defaultPrevented).toBe(false);
     });
 
-    test("says goodbye when the page goes away", async () => {
+    test("sayGoodbye_pageHidden_tellsTheBackend", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
 
@@ -123,7 +123,7 @@ describe("desktopSession", () => {
         );
     });
 
-    test("counts the backend as stopped once it no longer answers", async () => {
+    test("heartbeat_noAnswerTwice_countsTheBackendAsStopped", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         vi.mocked(sendHeartbeat).mockRejectedValue(
@@ -143,7 +143,48 @@ describe("desktopSession", () => {
         expect(beforeUnload().defaultPrevented).toBe(false);
     });
 
-    test("does not count an error answer as a stopped backend", async () => {
+    test("heartbeat_answerAfterAShortOutage_countsTheBackendAsRunningAgain", async () => {
+        vi.mocked(sendHeartbeat).mockResolvedValue({
+            instanceId: "run-1",
+            unsavedWorkspaces: ["Draft"],
+        });
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+        vi.mocked(sendHeartbeat).mockRejectedValue(
+            new TypeError("Failed to fetch"),
+        );
+        await vi.advanceTimersByTimeAsync(20_000);
+        expect(desktopSession.stopped).toBe(true);
+
+        vi.mocked(sendHeartbeat).mockResolvedValue({
+            instanceId: "run-1",
+            unsavedWorkspaces: ["Draft"],
+        });
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(desktopSession.stopped).toBe(false);
+        expect(beforeUnload().defaultPrevented).toBe(true);
+    });
+
+    test("heartbeat_backendStartedAnew_staysStopped", async () => {
+        vi.mocked(sendHeartbeat).mockResolvedValue({
+            instanceId: "run-1",
+            unsavedWorkspaces: ["Draft"],
+        });
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+
+        vi.mocked(sendHeartbeat).mockResolvedValue({
+            instanceId: "run-2",
+            unsavedWorkspaces: [],
+        });
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(desktopSession.stopped).toBe(true);
+        expect(desktopSession.unsavedWorkspaces).toEqual(["Draft"]);
+    });
+
+    test("heartbeat_errorAnswer_doesNotCountAsStopped", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         vi.mocked(sendHeartbeat).mockRejectedValue(new Error("500"));
@@ -154,7 +195,7 @@ describe("desktopSession", () => {
         expect(desktopSession.stopped).toBe(false);
     });
 
-    test("asks again shortly after a change elsewhere, but not after its own requests", async () => {
+    test("scheduleRefresh_writeElsewhere_asksAgainButNotForItsOwnRequests", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
         const listener = vi.mocked(onBackendWrite).mock.calls[0][0];
@@ -170,7 +211,7 @@ describe("desktopSession", () => {
         expect(sendHeartbeat).toHaveBeenCalledTimes(1);
     });
 
-    test("folds refreshes during a heartbeat into one more", async () => {
+    test("refreshDesktopStatus_duringAHeartbeat_foldsIntoOneMore", async () => {
         let answer;
         vi.mocked(sendHeartbeat).mockImplementation(
             () => new Promise(resolve => (answer = resolve)),
@@ -185,5 +226,23 @@ describe("desktopSession", () => {
         await vi.advanceTimersByTimeAsync(0);
 
         expect(sendHeartbeat).toHaveBeenCalledTimes(2);
+    });
+
+    test("refreshDesktopStatus_duringAHeartbeat_resolvesWithTheNextAnswer", async () => {
+        let answerFirst;
+        vi.mocked(sendHeartbeat).mockImplementationOnce(
+            () => new Promise(resolve => (answerFirst = resolve)),
+        );
+        startDesktopSession();
+        vi.mocked(sendHeartbeat).mockResolvedValue({
+            unsavedWorkspaces: [],
+            workspacesWithFile: ["Handed"],
+        });
+
+        const refreshed = refreshDesktopStatus();
+        answerFirst({ unsavedWorkspaces: [], workspacesWithFile: [] });
+        await refreshed;
+
+        expect(desktopSession.workspacesWithFile).toEqual(["Handed"]);
     });
 });
