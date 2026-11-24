@@ -84,12 +84,6 @@
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
-### spring-boot-starter-webflux
-- **Package:** org.springframework.boot
-- **Version:** 4.1.2
-- **License:** Apache License 2.0
-- **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
-
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
 - **Version:** 4.1.2
