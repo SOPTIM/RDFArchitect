@@ -23,7 +23,7 @@ Releases are tag-driven:
 1. Run the **`Update Changelog`** workflow (`.github/workflows/update-changelog.yml`) with the new version and merge the PR it opens. It generates the `## [X.Y.Z] - YYYY-MM-DD` section of `CHANGELOG.md` from the squash commit titles since the last tag.
 2. Push a tag of the form `vX.Y.Z` to `main`.
 3. CI builds and publishes Docker images tagged `X.Y.Z`, `X.Y`, and `X` (with `X` suppressed for `0.x.y`) plus `latest` on the default branch.
-4. **Desktop App** creates a draft release `X.Y.Z`, with the tag's changelog section as its notes, and attaches the portable archives of every platform and the macOS and Linux installers. A draft is only visible to people with write access to the repository.
+4. **Desktop App** creates a draft release `X.Y.Z`, with the tag's changelog section as its notes, and attaches the portable archives of every platform and the macOS and Linux installers. A draft is only visible to people with write access to the repository. When it runs again for the tag, it attaches only the downloads the draft does not hold yet, so signed downloads stay; to replace a download, delete it from the draft first. It fails when the release is published already.
 5. Sign the Windows downloads, as described below.
 6. Check the draft release (its notes and the eight downloads listed below) and publish it.
 

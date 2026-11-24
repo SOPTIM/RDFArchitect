@@ -169,7 +169,8 @@ jobs:
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             if [[ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != true ]]; then
-              echo "::warning::Release $TAG is published already, so its unsigned Windows downloads are public until they are signed."
+              echo "::error::Release $TAG is published already, so nothing is attached to it."
+              exit 1
             fi
             exit 0
           fi
@@ -186,4 +187,18 @@ jobs:
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
             --title "$version" --notes-file notes.md
       - name: Attach the apps
-        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+        # Only what the draft does not hold yet: a run again for the same tag must not replace the
+        # Windows downloads that were signed meanwhile.
+        run: |
+          attached="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          missing=()
+          for file in dist/*; do
+            if grep -qxF "${file##*/}" <<< "$attached"; then
+              echo "${file##*/} is attached already and left as it is."
+            else
+              missing+=("$file")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            gh release upload "$TAG" "${missing[@]}" --repo "$GITHUB_REPOSITORY"
+          fi
