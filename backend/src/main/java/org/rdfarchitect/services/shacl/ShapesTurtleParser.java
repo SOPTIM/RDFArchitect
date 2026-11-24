@@ -91,7 +91,9 @@ public final class ShapesTurtleParser {
 
     /**
      * Reports an IRI that cannot be saved as an error, where the parser's first warning about it
-     * stood, in place of those warnings: they say less, and only as a warning.
+     * stood, in place of those warnings: they say less, and only as a warning. Both of them go —
+     * the one naming the whole IRI and the tokenizer's naming the character — so the problem is one
+     * finding.
      */
     private static List<ShapesValidationFinding> withUnwritableIris(
             List<ShapesValidationFinding> findings, Graph graph) {
@@ -114,9 +116,7 @@ public final class ShapesTurtleParser {
         for (var finding : findings) {
             var named =
                     finding.getSeverity() == ShapesValidationFinding.Severity.WARNING
-                            ? unwritable.stream()
-                                    .filter(found -> finding.getMessage().contains(found.iri()))
-                                    .toList()
+                            ? unwritable.stream().filter(found -> names(finding, found)).toList()
                             : List.<UnwritableIris.Found>of();
             if (named.isEmpty()) {
                 result.add(finding);
@@ -129,6 +129,25 @@ public final class ShapesTurtleParser {
                 .filter(found -> reported.add(found.iri()))
                 .forEach(found -> result.add(unwritable(found)));
         return List.copyOf(result);
+    }
+
+    /**
+     * Whether a warning is about {@code found}: it names the whole IRI, or it is the tokenizer's,
+     * which shows the IRI up to a character it cannot hold, as in {@code <http://x/a[|]...>}.
+     */
+    private static boolean names(ShapesValidationFinding warning, UnwritableIris.Found found) {
+        var message = warning.getMessage();
+        if (message.contains(found.iri())) {
+            return true;
+        }
+        var iri = found.iri();
+        for (int at = 0; at < iri.length(); at = iri.offsetByCodePoints(at, 1)) {
+            if (UnwritableIris.notInAnIri(iri.codePointAt(at))
+                    && message.contains("<" + iri.substring(0, at) + "[")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static ShapesValidationFinding unwritable(UnwritableIris.Found found) {
