@@ -50,7 +50,7 @@
     let inputElement = $state(null);
     let toggleButton = $state(null);
     // Below the md breakpoint the field folds into a button and opens below the toolbar; on wider
-    // windows it is always shown and this has no effect.
+    // windows it is always shown and this stays false.
     let open = $state(false);
 
     onMount(() => {
@@ -196,8 +196,13 @@
         };
     }
 
+    /** Whether the window is narrower than the md breakpoint, where the field folds away. */
+    function isFolded() {
+        return !window.matchMedia?.("(min-width: 48rem)").matches;
+    }
+
     async function openSearch() {
-        open = true;
+        open = isFolded();
         await tick();
         inputElement?.focus();
         inputElement?.select();
@@ -236,7 +241,7 @@
             showScopeDropdown = false;
         } else if (searchResults.length > 0) {
             searchResults = [];
-        } else if (open) {
+        } else if (open && isFolded()) {
             closeSearch({ returnFocus: true });
         } else {
             return;

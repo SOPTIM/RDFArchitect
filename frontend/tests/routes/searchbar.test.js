@@ -179,6 +179,28 @@ describe("Searchbar field", () => {
         expect(pressEscape(input()).defaultPrevented).toBe(false);
     });
 
+    test("handleKeydown_escapeAfterCtrlFInAWideWindow_leavesEscToTheEditor", async () => {
+        vi.stubGlobal("matchMedia", () => ({ matches: true }));
+        try {
+            render();
+            shortcutStore.handleEvent(
+                new KeyboardEvent("keydown", {
+                    key: "f",
+                    code: "KeyF",
+                    ctrlKey: true,
+                    cancelable: true,
+                }),
+            );
+            await settle();
+            expect(document.activeElement).toBe(input());
+
+            expect(pressEscape(input()).defaultPrevented).toBe(false);
+            expect(toggle().getAttribute("aria-expanded")).toBe("false");
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
     test("names its scope briefly and searches within the one chosen", async () => {
         editorState.selectGraph("Draft", "Core");
         render();
