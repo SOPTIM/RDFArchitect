@@ -19,7 +19,7 @@ These files are generated and MUST NOT be edited by hand. Where a command is giv
 
 - `CHANGELOG.md`: generated from squash commit titles by the `Update Changelog` workflow at release time.
 - `frontend/openapi.json`: after changing REST routes or DTOs, run `mvn -B compile exec:java@export-openapi` in `backend/` and commit the result; CI checks it.
-- `frontend/src/lib/api/generated/`: after `frontend/openapi.json` changes, run `npm run api:generate` in `frontend/`.
+- `frontend/src/lib/api/generated/`: git-ignored. Run `npm run api:generate` in `frontend/` after a fresh checkout and after `frontend/openapi.json` changes. Frontend tests, lint and build fail without it.
 - `backend/LICENSES-THIRD-PARTY.md`: after changing dependencies in `backend/pom.xml`, run `mvn -B org.codehaus.mojo:license-maven-plugin:add-third-party` in `backend/`; CI checks it.
 - `frontend/LICENSES-THIRD-PARTY.md`: after changing dependencies in `frontend/package.json`, run `npm run licenses:generate` in `frontend/`; lint checks it.
 
@@ -66,6 +66,8 @@ These files are generated and MUST NOT be edited by hand. Where a command is giv
 
 - Backend tests, in `backend/`: `mvn -B test`, a single class with `mvn -B test -Dtest=<ClassName>`.
 - Frontend tests, in `frontend/`: `npm run test`, a single file with `npm run test -- <path>`.
+- Tests SHOULD be run once when the change is complete, not after every small edit.
+- Only the tests affected by the change SHOULD be run. The full suites and the integration tests run in CI.
 - Before committing, run in `backend/`: `mvn -B spotless:apply`, then `mvn -B -Plint -DskipTests verify`.
 - Before committing, run in `frontend/`: `npm run format`, then `npm run lint`.
 
@@ -73,6 +75,7 @@ These files are generated and MUST NOT be edited by hand. Where a command is giv
 
 Commits follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) and `.github/CONTRIBUTING.md`.
 
+- Commit messages, PR titles and PR descriptions MUST be in English.
 - Commit messages and PR titles MUST use `<type>[optional scope][!]: <description> (#<pr>, RDFA-<id>, GH-<issue>)`. Omit `#<pr>` while no PR exists. The PR title becomes the squash commit and the changelog entry.
 - The type MUST be one of `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `style`.
 - The description MUST start with a lowercase imperative verb, without a trailing period. It SHOULD be short and specific.
