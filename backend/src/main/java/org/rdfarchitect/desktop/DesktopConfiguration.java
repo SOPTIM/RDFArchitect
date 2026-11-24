@@ -123,8 +123,11 @@ public class DesktopConfiguration implements WebMvcConfigurer {
                 directory, databasePort, savedWorkspaces, exportWorkspaceUseCase);
     }
 
-    /** Shut down before the recovery writes its last copies, so the two never run together. */
-    @Bean(destroyMethod = "shutdownNow")
+    /**
+     * Shut down before the recovery writes its last copies. A write under way finishes rather than
+     * being interrupted, and the last one waits for it.
+     */
+    @Bean(destroyMethod = "shutdown")
     public ScheduledExecutorService workspaceRecoveryWriter(WorkspaceRecovery workspaceRecovery) {
         var executor =
                 Executors.newSingleThreadScheduledExecutor(daemonThreads("desktop-recovery"));

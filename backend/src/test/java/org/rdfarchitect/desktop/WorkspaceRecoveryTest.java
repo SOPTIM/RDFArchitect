@@ -33,11 +33,13 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.services.archive.exporting.ExportWorkspaceService;
+import org.rdfarchitect.services.archive.exporting.ExportWorkspaceUseCase;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -94,9 +96,13 @@ class WorkspaceRecoveryTest {
         thread.join();
     }
 
+    /** The copies the runs keep at the moment, not those set aside from earlier runs. */
     private List<Path> copies() throws IOException {
-        try (Stream<Path> files = Files.list(directory)) {
-            return files.filter(Files::isRegularFile).toList();
+        try (Stream<Path> files = Files.walk(directory, 2)) {
+            return files.filter(Files::isRegularFile)
+                    .filter(file -> !file.startsWith(directory.resolve("previous-run")))
+                    .filter(file -> file.getFileName().toString().endsWith(".rdfa"))
+                    .toList();
         }
     }
 
@@ -206,6 +212,84 @@ class WorkspaceRecoveryTest {
         assertThat(recovery.read("secret.txt")).isEmpty();
         assertThat(recovery.discard("../../secret.rdfa")).isFalse();
         assertThat(dataDirectory.resolve("secret.rdfa")).exists();
+    }
+
+    @Test
+    void constructor_anotherRunStillGoing_leavesItsCopiesAlone() throws Exception {
+        var running = recovery();
+        addSchema("Draft", "a");
+        writeFromAnotherThread(running);
+        var copy = copies().getFirst();
+
+        var second = recovery();
+
+        assertThat(second.previousRun()).isEmpty();
+        assertThat(copy).exists();
+        running.close();
+    }
+
+    @Test
+    void constructor_endedRunWithUnfinishedWrite_removesTheTemporaryFile() throws Exception {
+        var ended = directory.resolve("ended-run");
+        Files.createDirectories(ended);
+        Files.writeString(ended.resolve("Draft-1.rdfa"), "kept");
+        Files.writeString(ended.resolve("Draft-1.rdfa.0123.tmp"), "half");
+
+        var recovery = recovery();
+
+        assertThat(recovery.previousRun())
+                .singleElement()
+                .satisfies(workspace -> assertThat(workspace.id()).isEqualTo("Draft-1.rdfa"));
+        assertThat(ended).doesNotExist();
+    }
+
+    @Test
+    void close_nothingKept_removesTheDirectoryOfTheRun() throws Exception {
+        var recovery = recovery();
+
+        recovery.close();
+
+        try (Stream<Path> entries = Files.list(directory)) {
+            assertThat(entries).containsExactly(directory.resolve("previous-run"));
+        }
+    }
+
+    @Test
+    void writeUnsaved_namesOnlyTheirCaseTellsApart_keepsTwoFiles() throws Exception {
+        var recovery = recovery();
+        addSchema("Grid", "a");
+        addSchema("grid", "a");
+        addSchema("a:b", "a");
+        addSchema("a*b", "a");
+
+        writeFromAnotherThread(recovery);
+
+        assertThat(copies())
+                .hasSize(4)
+                .extracting(file -> file.getFileName().toString().toLowerCase(Locale.ROOT))
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void writeUnsaved_exportOfOneWorkspaceFails_keepsTheOthers() throws Exception {
+        ExportWorkspaceUseCase failingForBroken =
+                workspaceName -> {
+                    if (workspaceName.equals("Broken")) {
+                        throw new IllegalStateException("export failed");
+                    }
+                    return export.exportWorkspace(workspaceName);
+                };
+        var recovery =
+                new WorkspaceRecovery(directory, databasePort, savedWorkspaces, failingForBroken);
+        recovery.noteSession();
+        addSchema("Broken", "a");
+        addSchema("Draft", "a");
+
+        writeFromAnotherThread(recovery);
+
+        assertThat(copies())
+                .singleElement()
+                .satisfies(file -> assertThat(file.getFileName().toString()).startsWith("Draft-"));
     }
 
     @Test

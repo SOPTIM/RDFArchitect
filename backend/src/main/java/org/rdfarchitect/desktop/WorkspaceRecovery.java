@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.exporting.ExportWorkspaceUseCase;
 import org.slf4j.Logger;
@@ -29,17 +28,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -50,10 +52,12 @@ import java.util.zip.ZipInputStream;
  * without a save: a window closed despite the warning, a crashed browser, a computer shutting down.
  *
  * <p>While the app runs, {@link #writeUnsaved()} writes each workspace with changes no file has as
- * a workspace file into {@code recovery/} of the app's data directory, and removes the copy again
- * once the workspace is saved or deleted. It runs periodically and once more when the app stops. At
- * the next start the copies left behind are moved to {@code recovery/previous-run/}, where the user
- * interface offers them for restoring.
+ * a workspace file into a directory of this run under {@code recovery/} of the app's data
+ * directory, and removes the copy again once the workspace is saved or deleted. It runs
+ * periodically and once more when the app stops. The run holds a lock on its directory until then.
+ * At the next start the copies of every run whose directory is no longer locked are moved to {@code
+ * recovery/previous-run/}, where the user interface offers them for restoring. A second app running
+ * at the same time, such as another version, leaves the copies of the first one alone.
  *
  * <p>Workspaces live in sessions, and nothing here has a request to name one, so the sessions are
  * those that windows sent a heartbeat from ({@link #noteSession()}).
@@ -65,6 +69,7 @@ public class WorkspaceRecovery {
     private static final Logger logger = LoggerFactory.getLogger(WorkspaceRecovery.class);
 
     private static final String PREVIOUS_RUN = "previous-run";
+    private static final String LOCK_FILE = ".lock";
     private static final Pattern FILE_NAME = Pattern.compile("[^/\\\\:]+\\.rdfa");
 
     /**
@@ -80,14 +85,50 @@ public class WorkspaceRecovery {
 
     private record Copy(Path file, WorkspaceRevision revision) {}
 
+    /** The directory this run keeps its copies in, locked for as long as the run lasts. */
+    private record RunDirectory(Path path, FileChannel channel, FileLock lock) {
+
+        static RunDirectory claim(Path recoveryDirectory) {
+            var path = recoveryDirectory.resolve(UUID.randomUUID().toString());
+            try {
+                Files.createDirectories(path);
+                var channel =
+                        FileChannel.open(
+                                path.resolve(LOCK_FILE),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.WRITE);
+                var lock = tryLock(channel);
+                if (lock == null) {
+                    channel.close();
+                    throw new IOException("The directory is locked by another program.");
+                }
+                return new RunDirectory(path, channel, lock);
+            } catch (IOException e) {
+                logger.warn("Could not create {}; unsaved workspaces are not kept.", path, e);
+                return null;
+            }
+        }
+
+        void release() {
+            try {
+                lock.release();
+                channel.close();
+            } catch (IOException e) {
+                logger.warn("Could not unlock {}.", path, e);
+            }
+        }
+    }
+
     private final Path directory;
     private final Path previousRun;
+    private final RunDirectory run;
     private final DatabasePort databasePort;
     private final SavedWorkspaces savedWorkspaces;
     private final ExportWorkspaceUseCase exportWorkspaceUseCase;
 
     private final Set<String> sessions = ConcurrentHashMap.newKeySet();
     private final Map<Key, Copy> copies = new HashMap<>();
+    private boolean closed;
 
     /**
      * @param directory the {@code recovery} directory of the app's data directory, or {@code null}
@@ -103,14 +144,30 @@ public class WorkspaceRecovery {
         this.databasePort = databasePort;
         this.savedWorkspaces = savedWorkspaces;
         this.exportWorkspaceUseCase = exportWorkspaceUseCase;
-        if (directory != null) {
-            setAsidePreviousRun();
+        this.run = directory != null ? RunDirectory.claim(directory) : null;
+        if (run != null) {
+            setAsideEndedRuns();
         }
     }
 
-    /** Keeps what is unsaved one last time; called when the app stops. */
-    public void close() {
+    /**
+     * Keeps what is unsaved one last time and unlocks the directory of this run, so that the next
+     * start offers its copies; called when the app stops.
+     */
+    public synchronized void close() {
+        if (closed) {
+            return;
+        }
         writeUnsaved();
+        closed = true;
+        if (run == null) {
+            return;
+        }
+        run.release();
+        if (copies.isEmpty()) {
+            deleteQuietly(run.path().resolve(LOCK_FILE));
+            deleteQuietly(run.path());
+        }
     }
 
     /** Records that the current session has a window, so its workspaces are kept as well. */
@@ -123,7 +180,7 @@ public class WorkspaceRecovery {
      * of workspaces that are saved or gone.
      */
     public synchronized void writeUnsaved() {
-        if (directory == null) {
+        if (run == null || closed) {
             return;
         }
         for (var sessionId : List.copyOf(sessions)) {
@@ -150,10 +207,10 @@ public class WorkspaceRecovery {
             }
             try {
                 var file = copy != null ? copy.file() : fileFor(key);
-                writeAtomically(file, exportWorkspaceUseCase.exportWorkspace(workspaceName));
+                AtomicFiles.write(file, exportWorkspaceUseCase.exportWorkspace(workspaceName));
                 copies.put(key, new Copy(file, revision));
                 logger.info("Kept a copy of unsaved workspace \"{}\".", workspaceName);
-            } catch (IOException | ResourceNotFoundException e) {
+            } catch (IOException | RuntimeException e) {
                 logger.warn("Could not keep a copy of workspace \"{}\".", workspaceName, e);
             }
         }
@@ -259,52 +316,84 @@ public class WorkspaceRecovery {
         return id.substring(0, id.length() - WorkspaceArchiveFormat.FILE_EXTENSION.length());
     }
 
+    /**
+     * A file name of its own for every workspace: two names can be told apart by the app but not by
+     * the file system, such as {@code Grid} and {@code grid} on Windows, or {@code a:b} and {@code
+     * a*b}, which both become {@code a_b}.
+     */
     private Path fileFor(Key key) {
-        // A short digest of the session keeps two sessions' workspaces of one name apart.
-        var digest = HexFormat.of().toHexDigits(key.sessionId().hashCode());
         var name = WorkspaceArchiveFormat.fileNameFor(key.workspaceName());
-        return directory.resolve(
-                nameFromFile(name) + "-" + digest + WorkspaceArchiveFormat.FILE_EXTENSION);
+        var unique = UUID.randomUUID().toString().substring(0, 13).replace("-", "");
+        return run.path()
+                .resolve(nameFromFile(name) + "-" + unique + WorkspaceArchiveFormat.FILE_EXTENSION);
     }
 
-    private void setAsidePreviousRun() {
+    private void setAsideEndedRuns() {
         try {
             Files.createDirectories(previousRun);
-            var left = new ArrayList<Path>();
-            try (Stream<Path> files = Files.list(directory)) {
-                files.filter(Files::isRegularFile)
-                        .filter(file -> FILE_NAME.matcher(nameOf(file)).matches())
-                        .forEach(left::add);
+            List<Path> runs;
+            try (Stream<Path> entries = Files.list(directory)) {
+                runs =
+                        entries.filter(Files::isDirectory)
+                                .filter(entry -> !entry.equals(previousRun))
+                                .filter(entry -> !entry.equals(run.path()))
+                                .toList();
             }
-            for (var file : left) {
-                Files.move(
-                        file,
-                        previousRun.resolve(nameOf(file)),
-                        StandardCopyOption.REPLACE_EXISTING);
+            var kept = 0;
+            for (var ended : runs) {
+                kept += setAside(ended);
             }
-            if (!left.isEmpty()) {
-                logger.info("{} unsaved workspace(s) kept from the previous run.", left.size());
+            if (kept > 0) {
+                logger.info("{} unsaved workspace(s) kept from the previous run.", kept);
             }
         } catch (IOException e) {
             logger.warn("Could not set aside the workspaces kept from the previous run.", e);
         }
     }
 
-    private static void writeAtomically(Path file, byte[] content) throws IOException {
-        var parent = file.getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
+    /**
+     * Moves the copies of a run to {@code previous-run/} if the run has ended, and removes its
+     * directory with what else is left in it, such as a copy that was still being written.
+     *
+     * @return how many copies were moved; none while the run still holds its lock
+     */
+    private int setAside(Path runDirectory) throws IOException {
+        var moved = 0;
+        var lockFile = runDirectory.resolve(LOCK_FILE);
+        try (var channel =
+                        FileChannel.open(
+                                lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                var lock = tryLock(channel)) {
+            if (lock == null) {
+                return 0;
+            }
+            List<Path> files;
+            try (Stream<Path> entries = Files.list(runDirectory)) {
+                files = entries.filter(file -> !file.equals(lockFile)).toList();
+            }
+            for (var file : files) {
+                if (Files.isRegularFile(file) && FILE_NAME.matcher(nameOf(file)).matches()) {
+                    Files.move(
+                            file,
+                            previousRun.resolve(nameOf(file)),
+                            StandardCopyOption.REPLACE_EXISTING);
+                    moved++;
+                } else {
+                    deleteQuietly(file);
+                }
+            }
         }
-        var temporary = file.resolveSibling(nameOf(file) + ".tmp");
-        Files.write(temporary, content);
+        deleteQuietly(lockFile);
+        deleteQuietly(runDirectory);
+        return moved;
+    }
+
+    /** Locks the file, or returns {@code null} if a run, in this process or another, holds it. */
+    private static FileLock tryLock(FileChannel channel) throws IOException {
         try {
-            Files.move(
-                    temporary,
-                    file,
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException _) {
-            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            return channel.tryLock();
+        } catch (OverlappingFileLockException _) {
+            return null;
         }
     }
 
