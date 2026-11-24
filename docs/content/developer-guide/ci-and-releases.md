@@ -14,7 +14,7 @@ Two GitHub Actions workflows run on every push and PR:
 
 A third workflow, **`publish-test-images.yml`**, builds preview images for PRs from trusted contributors.
 
-**`.github/workflows/desktop.yml`** builds the [desktop app](/user-guide/desktop-app): the frontend once, then one job per platform (Windows x64, macOS arm64 and x64, Linux x64), since jpackage only builds for the system it runs on. It runs for release tags, and on pushes and pull requests that touch the desktop packaging.
+**`.github/workflows/desktop.yml`** builds the [desktop app](/user-guide/desktop-app): the frontend once, then one job per platform (Windows x64, macOS arm64 and x64, Linux x64), since jpackage only builds for the system it runs on. It runs for release tags, and on pushes and pull requests that touch the desktop packaging, `backend/pom.xml` or the desktop-only backend code.
 
 ## Releases
 

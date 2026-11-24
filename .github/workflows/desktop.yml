@@ -4,7 +4,7 @@ name: Desktop App
 # on, hence one job per platform. A release tag (vX.Y.Z) puts the builds into a draft release, where
 # the Windows ones are signed before the release is published, the .msi built in between by
 # desktop-windows-installer.yml (see "Releases" in the developer guide). Pushes and pull requests
-# build the app when they change the packaging.
+# build the app when they change the packaging, backend/pom.xml or the desktop-only backend code.
 on:
   workflow_dispatch:
   push:
@@ -16,14 +16,28 @@ on:
     paths:
       - "desktop/**"
       - ".github/workflows/desktop.yml"
+      - ".github/scripts/resolve_version.sh"
+      - "backend/pom.xml"
+      - "backend/src/desktop/**"
       - "backend/src/main/java/org/rdfarchitect/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/api/controller/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/api/dto/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/services/desktop/**"
       - "backend/src/main/resources/application-desktop.yml"
+      - "backend/src/main/resources/log4j2-desktop.yaml"
   pull_request:
     paths:
       - "desktop/**"
       - ".github/workflows/desktop.yml"
+      - ".github/scripts/resolve_version.sh"
+      - "backend/pom.xml"
+      - "backend/src/desktop/**"
       - "backend/src/main/java/org/rdfarchitect/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/api/controller/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/api/dto/desktop/**"
+      - "backend/src/main/java/org/rdfarchitect/services/desktop/**"
       - "backend/src/main/resources/application-desktop.yml"
+      - "backend/src/main/resources/log4j2-desktop.yaml"
 
 permissions:
   contents: read
