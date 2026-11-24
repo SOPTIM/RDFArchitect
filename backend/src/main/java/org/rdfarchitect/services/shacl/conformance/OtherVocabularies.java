@@ -27,8 +27,10 @@ import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Takes out of the documents' side what is written in a vocabulary the compared schema does not
@@ -75,18 +77,51 @@ final class OtherVocabularies {
     }
 
     /**
+     * What is kept for the comparison, and what was left out.
+     *
+     * @param leftOut per document name, the number of class and property constraints left out per
+     *     namespace of their class, so the report can say what it did not compare
+     */
+    record Kept(
+            EffectiveConstraints.Asserted asserted, Map<String, Map<String, Integer>> leftOut) {}
+
+    /**
      * @param vocabulary the namespaces the compared schema is written in; empty when it declares
      *     nothing, and there is no telling one vocabulary from another
      */
-    static EffectiveConstraints.Asserted leaveOut(
-            EffectiveConstraints.Asserted asserted, Set<String> vocabulary) {
+    static Kept leaveOut(EffectiveConstraints.Asserted asserted, Set<String> vocabulary) {
         if (vocabulary.isEmpty()) {
-            return asserted;
+            return new Kept(asserted, Map.of());
         }
-        return new EffectiveConstraints.Asserted(
-                inKnown(asserted.constraints(), vocabulary),
-                inKnown(asserted.advisory(), vocabulary),
-                asserted.statedIn());
+        var leftOut = new LinkedHashMap<String, Map<String, Integer>>();
+        var counted = new HashSet<EffectiveConstraints.Key>();
+        for (var constraints : List.of(asserted.constraints(), asserted.advisory())) {
+            constraints.keySet().stream()
+                    .filter(key -> !vocabulary.contains(namespaceOf(key.targetClass())))
+                    .filter(counted::add)
+                    .forEach(
+                            key ->
+                                    asserted.statedIn()
+                                            .getOrDefault(key, List.of())
+                                            .forEach(
+                                                    document ->
+                                                            leftOut.computeIfAbsent(
+                                                                            document,
+                                                                            ignored ->
+                                                                                    new TreeMap<>())
+                                                                    .merge(
+                                                                            namespaceOf(
+                                                                                    key
+                                                                                            .targetClass()),
+                                                                            1,
+                                                                            Integer::sum)));
+        }
+        return new Kept(
+                new EffectiveConstraints.Asserted(
+                        inKnown(asserted.constraints(), vocabulary),
+                        inKnown(asserted.advisory(), vocabulary),
+                        asserted.statedIn()),
+                leftOut);
     }
 
     private static Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> inKnown(

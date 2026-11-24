@@ -176,10 +176,11 @@ public class ConformanceService implements ConformanceUseCase {
         }
 
         var implies = impliedFor(schema, targetedClasses(documentShapes.values()));
-        var asserted =
+        var kept =
                 OtherVocabularies.leaveOut(
                         EffectiveConstraints.of(documentShapes, implies.hierarchy()),
                         implies.vocabulary());
+        var asserted = kept.asserted();
         var stated = new HashSet<>(asserted.constraints().keySet());
         stated.addAll(asserted.advisory().keySet());
 
@@ -221,6 +222,12 @@ public class ConformanceService implements ConformanceUseCase {
                         count(findings, ConformanceFinding.Kind.MISSING_IN_DOCUMENT))
                 .notInSchemaCount(notInSchema)
                 .findings(findings)
+                .notCompared(
+                        NotCompared.of(
+                                documentShapes.keySet(),
+                                kept.leftOut(),
+                                EffectiveConstraints.unread(documentShapes),
+                                prefixes))
                 .build();
     }
 

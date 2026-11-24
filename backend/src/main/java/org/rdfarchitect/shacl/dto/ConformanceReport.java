@@ -76,4 +76,10 @@ public class ConformanceReport {
     private int notInSchemaCount;
 
     private List<ConformanceFinding> findings;
+
+    /**
+     * What the comparison did not read, per document, so that a constraint reading as not covered
+     * can be traced to a rule written in a way it cannot compare.
+     */
+    private List<ConformanceNotCompared> notCompared;
 }

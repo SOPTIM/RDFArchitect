@@ -688,6 +688,35 @@
         },
         "type" : "object"
       },
+      "ConformanceNotCompared" : {
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "document" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "enum" : [
+              "OTHER_VOCABULARY",
+              "OTHER_TARGET",
+              "COMBINATION"
+            ],
+            "type" : "string"
+          },
+          "terms" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ConformanceReport" : {
         "properties" : {
           "agreeing" : {
@@ -728,6 +757,12 @@
           "missingInDocumentCount" : {
             "format" : "int32",
             "type" : "integer"
+          },
+          "notCompared" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceNotCompared"
+            },
+            "type" : "array"
           },
           "notInSchemaCount" : {
             "format" : "int32",

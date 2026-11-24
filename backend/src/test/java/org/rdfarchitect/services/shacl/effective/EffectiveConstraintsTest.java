@@ -177,6 +177,37 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void whatTheReaderCannotFollowIsCountedPerDocument() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "targets.ttl",
+                shapes(
+                        """
+                        ex:A sh:targetSubjectsOf ex:value ; sh:property ex:Rule .
+                        ex:B sh:targetNode ex:x .
+                        ex:C sh:targetNode ex:y ; sh:deactivated true .
+                        ex:Rule sh:path ex:value ; sh:or ( [ sh:minCount 1 ] [ sh:maxCount 0 ] ) .
+                        """));
+        documents.put(
+                "classes.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule ;
+                            sh:not [ sh:path ex:value ; sh:minCount 2 ] .
+                        """));
+        documents.put("plain.ttl", shapes("ex:Other sh:targetClass ex:Thing ."));
+
+        var unread = EffectiveConstraints.unread(documents);
+
+        assertThat(unread)
+                .containsOnlyKeys("targets.ttl", "classes.ttl")
+                .containsEntry(
+                        "targets.ttl",
+                        Map.of(SH + "targetSubjectsOf", 1, SH + "targetNode", 1, SH + "or", 1))
+                .containsEntry("classes.ttl", Map.of(SH + "not", 1));
+    }
+
+    @Test
     void aDocumentsOwnDefinitionOfARuleIsTheOneItMeans() {
         var referring =
                 shapes(

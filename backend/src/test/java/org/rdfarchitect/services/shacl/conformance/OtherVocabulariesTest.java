@@ -47,7 +47,10 @@ class OtherVocabulariesTest {
         var asserted =
                 new EffectiveConstraints.Asserted(
                         Map.of(key, constraint), Map.of(), Map.of(key, List.of("doc.ttl")));
-        return OtherVocabularies.leaveOut(asserted, Set.of(CIM18)).constraints().get(key);
+        return OtherVocabularies.leaveOut(asserted, Set.of(CIM18))
+                .asserted()
+                .constraints()
+                .get(key);
     }
 
     @Test
@@ -72,6 +75,22 @@ class OtherVocabulariesTest {
         var key = new Key(CIM100 + "TopologyAction", CIM18 + "TopologyAction.Switch");
 
         assertThat(kept(key, types(Set.of(CIM18 + "Switch")))).isNull();
+    }
+
+    @Test
+    void whatIsLeftOutIsCountedPerDocumentAndNamespace() {
+        var other = new Key(CIM100 + "TopologyAction", CIM100 + "TopologyAction.Switch");
+        var asserted =
+                new EffectiveConstraints.Asserted(
+                        Map.of(SWITCH, types(Set.of()), other, types(Set.of())),
+                        Map.of(),
+                        Map.of(SWITCH, List.of("a.ttl"), other, List.of("a.ttl", "b.ttl")));
+
+        var kept = OtherVocabularies.leaveOut(asserted, Set.of(CIM18));
+
+        assertThat(kept.asserted().constraints()).containsOnlyKeys(SWITCH);
+        assertThat(kept.leftOut())
+                .isEqualTo(Map.of("a.ttl", Map.of(CIM100, 1), "b.ttl", Map.of(CIM100, 1)));
     }
 
     @Test

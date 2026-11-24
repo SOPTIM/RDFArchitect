@@ -363,6 +363,79 @@ public final class EffectiveConstraints {
                 .orElse(namedIn);
     }
 
+    /** Targets other than a class, which say nothing about the class of what they select. */
+    private static final List<Node> OTHER_TARGETS =
+            List.of(SHACL.targetSubjectsOf, SHACL.targetObjectsOf, SHACL.targetNode);
+
+    /** Combinations of shapes no reading per class and property can follow. */
+    private static final List<Node> COMBINATIONS = List.of(SHACL.or, SHACL.xone, SHACL.not);
+
+    /**
+     * What {@link #of(Map)} leaves unread in each document, by the SHACL term that makes it: how
+     * many shapes target nodes other than by class ({@code sh:targetSubjectsOf}, {@code
+     * sh:targetObjectsOf}, {@code sh:targetNode}), and how many of the shapes it does read combine
+     * rules with {@code sh:or}, {@code sh:xone} or {@code sh:not}.
+     *
+     * <p>Path expressions are not counted: what a profile states about inverse and nested paths has
+     * nothing to line up with on a schema's side.
+     *
+     * @return per document name, in the order given, the number of shapes per term's IRI; a
+     *     document leaving nothing unread is not listed
+     */
+    public static Map<String, Map<String, Integer>> unread(Map<String, Graph> documents) {
+        var reached = new HashSet<Node>();
+        for (var document : documents.values()) {
+            for (var target : targets(document)) {
+                reached.add(target.shape());
+                var visited = new HashSet<Node>();
+                if (definedIn(target.shape(), document, documents.values())
+                        .contains(target.shape(), SHACL.path, Node.ANY)) {
+                    continue;
+                }
+                var rules = new ArrayList<NamedRule>();
+                nodeShapeRules(target.shape(), documents.values(), null, visited, rules);
+                reached.addAll(visited);
+                rules.forEach(rule -> reached.add(rule.node()));
+            }
+        }
+        var unread = new LinkedHashMap<String, Map<String, Integer>>();
+        documents.forEach(
+                (name, document) -> {
+                    var counts = new LinkedHashMap<String, Integer>();
+                    for (var term : OTHER_TARGETS) {
+                        count(
+                                counts,
+                                term,
+                                document.stream(Node.ANY, term, Node.ANY)
+                                        .map(triple -> triple.getSubject())
+                                        .filter(shape -> !isDeactivated(document, shape))
+                                        .distinct()
+                                        .count());
+                    }
+                    for (var term : COMBINATIONS) {
+                        count(
+                                counts,
+                                term,
+                                document.stream(Node.ANY, term, Node.ANY)
+                                        .map(triple -> triple.getSubject())
+                                        .filter(reached::contains)
+                                        .filter(shape -> !isDeactivated(document, shape))
+                                        .distinct()
+                                        .count());
+                    }
+                    if (!counts.isEmpty()) {
+                        unread.put(name, counts);
+                    }
+                });
+        return unread;
+    }
+
+    private static void count(Map<String, Integer> counts, Node term, long shapes) {
+        if (shapes > 0) {
+            counts.put(term.getURI(), (int) shapes);
+        }
+    }
+
     /**
      * Whether a shape is switched off by {@code sh:deactivated true}. Shared with the conflict
      * analysis, so that a shape nobody validates with is ignored the same way everywhere.

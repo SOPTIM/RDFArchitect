@@ -33,6 +33,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
+import org.rdfarchitect.shacl.dto.ConformanceNotCompared;
 import org.rdfarchitect.shacl.dto.ConformanceReport;
 
 import java.io.IOException;
@@ -91,6 +92,31 @@ class ConformanceAcrossProfilesTest {
                                 assertThat(finding.getTargetClass())
                                         .startsWith("http://iec.ch/TC57/CIM100#"))
                 .noneSatisfy(finding -> assertThat(finding.getTargetClass()).contains("cim16"));
+    }
+
+    @Test
+    void theRulesForOtherCimVersionsAreReportedAsNotCompared() {
+        var report = compareOfficial("SteadyStateInstruction");
+
+        assertThat(report.getNotCompared())
+                .filteredOn(
+                        entry ->
+                                entry.getReason() == ConformanceNotCompared.Reason.OTHER_VOCABULARY)
+                .singleElement()
+                .satisfies(
+                        entry ->
+                                assertThat(entry.getTerms())
+                                        .contains(
+                                                "http://iec.ch/TC57/CIM100#",
+                                                "http://iec.ch/TC57/2013/CIM-schema-cim16#"));
+        assertThat(report.getNotCompared())
+                .anySatisfy(
+                        entry -> {
+                            assertThat(entry.getReason())
+                                    .isEqualTo(ConformanceNotCompared.Reason.OTHER_TARGET);
+                            assertThat(entry.getTerms())
+                                    .contains("http://www.w3.org/ns/shacl#targetSubjectsOf");
+                        });
     }
 
     @Test
