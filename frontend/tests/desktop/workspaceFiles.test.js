@@ -19,25 +19,19 @@ import { describe, expect, test } from "vitest";
 import { workspaceFiles } from "$lib/desktop/workspaceFiles.js";
 
 describe("workspaceFiles", () => {
-    test("remembers, renames and forgets the file of a workspace", () => {
+    test("get_rememberedId_returnsTheFile", () => {
         const handle = { name: "Draft.rdfa" };
 
-        workspaceFiles.remember("Draft", handle);
-        expect(workspaceFiles.fileName("Draft")).toBe("Draft.rdfa");
+        workspaceFiles.remember("id-1", handle);
 
-        workspaceFiles.rename("Draft", "Final");
-        expect(workspaceFiles.get("Draft")).toBeUndefined();
-        expect(workspaceFiles.get("Final")).toBe(handle);
-
-        workspaceFiles.forget("Final");
-        expect(workspaceFiles.fileName("Final")).toBeNull();
+        expect(workspaceFiles.get("id-1")).toBe(handle);
+        expect(workspaceFiles.get("id-2")).toBeUndefined();
     });
 
-    test("does not hand a renamed workspace the file of one that had its new name", () => {
-        workspaceFiles.remember("Target", { name: "Old.rdfa" });
+    test("get_unknownWorkspace_returnsNothing", () => {
+        workspaceFiles.remember(null, { name: "Draft.rdfa" });
 
-        workspaceFiles.rename("Source", "Target");
-
-        expect(workspaceFiles.get("Target")).toBeUndefined();
+        expect(workspaceFiles.get(null)).toBeUndefined();
+        expect(workspaceFiles.get(undefined)).toBeUndefined();
     });
 });

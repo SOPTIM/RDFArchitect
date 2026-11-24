@@ -65,7 +65,7 @@ vi.mock("$lib/desktop/desktopApi.js", () => ({
     saveWorkspaceToItsFile: vi.fn(),
 }));
 vi.mock("$lib/desktop/desktopSession.svelte.js", () => ({
-    desktopSession: { workspacesWithFile: [] },
+    desktopSession: { workspacesWithFile: [], workspaceIds: {} },
     refreshDesktopStatus: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -77,15 +77,26 @@ vi.mock("$lib/utils/fileUtils", async importOriginal => ({
 }));
 
 describe("saveWorkspace", () => {
-    beforeEach(() => {
-        vi.mocked(fetchWorkspaceFile).mockResolvedValue({
-            blob: new Blob(["workspace v1"]),
-            version: "v1",
+    /** The id of "Draft", new in every test, so no test inherits another one's file. */
+    let draftId;
+
+    function fileOf(text, version, workspaceId = draftId) {
+        return {
+            blob: new Blob([text]),
+            version,
+            workspaceId,
             fileName: "Draft.rdfa",
-        });
+        };
+    }
+
+    beforeEach(() => {
+        draftId = crypto.randomUUID();
+        vi.mocked(fetchWorkspaceFile).mockResolvedValue(
+            fileOf("workspace v1", "v1"),
+        );
         vi.mocked(markWorkspaceSaved).mockResolvedValue(undefined);
-        workspaceFiles.forget("Draft");
         desktopSession.workspacesWithFile = [];
+        desktopSession.workspaceIds = { Draft: draftId };
     });
 
     afterEach(() => {
@@ -103,7 +114,7 @@ describe("saveWorkspace", () => {
             window.showOpenFilePicker = vi.fn(async () => [chosen]);
         });
 
-        test("asks where to save the first time and records the version written", async () => {
+        test("saveWorkspace_firstTime_asksWhereAndRecordsTheVersionWritten", async () => {
             const result = await saveWorkspace("Draft");
 
             expect(result).toBe("saved");
@@ -116,13 +127,11 @@ describe("saveWorkspace", () => {
             expect(saveFile).not.toHaveBeenCalled();
         });
 
-        test("writes to the same file again without asking", async () => {
+        test("saveWorkspace_again_writesToTheSameFileWithoutAsking", async () => {
             await saveWorkspace("Draft");
-            vi.mocked(fetchWorkspaceFile).mockResolvedValue({
-                blob: new Blob(["workspace v2"]),
-                version: "v2",
-                fileName: "Draft.rdfa",
-            });
+            vi.mocked(fetchWorkspaceFile).mockResolvedValue(
+                fileOf("workspace v2", "v2"),
+            );
 
             await saveWorkspace("Draft");
 
@@ -131,7 +140,7 @@ describe("saveWorkspace", () => {
             expect(markWorkspaceSaved).toHaveBeenLastCalledWith("Draft", "v2");
         });
 
-        test("asks again for Save As", async () => {
+        test("saveWorkspace_saveAs_asksAgain", async () => {
             await saveWorkspace("Draft");
             const other = fakeHandle("Copy.rdfa");
             window.showSaveFilePicker = vi.fn(async () => other);
@@ -139,10 +148,10 @@ describe("saveWorkspace", () => {
             await saveWorkspace("Draft", { saveAs: true });
 
             expect(other.written).toEqual(["workspace v1"]);
-            expect(workspaceFiles.get("Draft")).toBe(other);
+            expect(workspaceFiles.get(draftId)).toBe(other);
         });
 
-        test("does nothing when the user cancels the picker", async () => {
+        test("saveWorkspace_pickerCancelled_doesNothing", async () => {
             window.showSaveFilePicker = vi.fn(async () => {
                 throw abort();
             });
@@ -155,7 +164,7 @@ describe("saveWorkspace", () => {
             expect(toastStore.error).not.toHaveBeenCalled();
         });
 
-        test("leaves the workspace unsaved when writing is not allowed", async () => {
+        test("saveWorkspace_writingNotAllowed_leavesTheWorkspaceUnsaved", async () => {
             vi.spyOn(console, "error").mockImplementation(() => {});
             chosen = fakeHandle("Draft.rdfa", "denied");
 
@@ -166,20 +175,76 @@ describe("saveWorkspace", () => {
             expect(toastStore.error).toHaveBeenCalled();
         });
 
-        test("keeps hold of the file a workspace was opened from", async () => {
+        test("workspaceOpenedFromFile_handle_savesToItLater", async () => {
             const opened = await chooseWorkspaceFile();
             await workspaceOpenedFromFile("Draft", opened.handle);
 
             expect(await opened.file.text()).toBe("zip");
             expect(markWorkspaceSaved).toHaveBeenCalledWith("Draft");
-            expect(workspaceFiles.fileName("Draft")).toBe("Draft.rdfa");
+            expect(workspaceFiles.get(draftId)).toBe(opened.handle);
 
             await saveWorkspace("Draft");
             expect(window.showSaveFilePicker).not.toHaveBeenCalled();
             expect(chosen.written).toEqual(["workspace v1"]);
         });
 
-        test("returns nothing when no file was chosen to open", async () => {
+        test("saveWorkspace_renamed_writesToTheSameFile", async () => {
+            await saveWorkspace("Draft");
+            desktopSession.workspaceIds = { Renamed: draftId };
+
+            await saveWorkspace("Renamed");
+
+            expect(window.showSaveFilePicker).toHaveBeenCalledTimes(1);
+            expect(chosen.written).toEqual(["workspace v1", "workspace v1"]);
+        });
+
+        test("saveWorkspace_createdAnewUnderTheName_asksForAFile", async () => {
+            await saveWorkspace("Draft");
+            const newId = crypto.randomUUID();
+            desktopSession.workspaceIds = { Draft: newId };
+            vi.mocked(fetchWorkspaceFile).mockResolvedValue(
+                fileOf("new workspace", "n1", newId),
+            );
+            const other = fakeHandle("New.rdfa");
+            window.showSaveFilePicker = vi.fn(async () => other);
+
+            await saveWorkspace("Draft");
+
+            expect(window.showSaveFilePicker).toHaveBeenCalledTimes(1);
+            expect(chosen.written).toEqual(["workspace v1"]);
+            expect(other.written).toEqual(["new workspace"]);
+        });
+
+        test("saveWorkspace_replacedSinceTheLastHeartbeat_writesNothing", async () => {
+            vi.spyOn(console, "error").mockImplementation(() => {});
+            await saveWorkspace("Draft");
+            vi.mocked(fetchWorkspaceFile).mockResolvedValue(
+                fileOf("new workspace", "n1", crypto.randomUUID()),
+            );
+
+            expect(await saveWorkspace("Draft")).toBe("failed");
+
+            expect(chosen.written).toEqual(["workspace v1"]);
+            expect(markWorkspaceSaved).toHaveBeenCalledTimes(1);
+        });
+
+        test("saveWorkspace_whileASaveRuns_startsNoOther", async () => {
+            let pick;
+            window.showSaveFilePicker = vi.fn(
+                () => new Promise(resolve => (pick = resolve)),
+            );
+
+            const first = saveWorkspace("Draft");
+            expect(await saveWorkspace("Draft")).toBe("busy");
+            expect(await saveWorkspace("Draft", { saveAs: true })).toBe("busy");
+            pick(chosen);
+
+            expect(await first).toBe("saved");
+            expect(window.showSaveFilePicker).toHaveBeenCalledTimes(1);
+            expect(chosen.written).toEqual(["workspace v1"]);
+        });
+
+        test("chooseWorkspaceFile_noFileChosen_returnsNull", async () => {
             window.showOpenFilePicker = vi.fn(async () => {
                 throw abort();
             });
@@ -193,7 +258,7 @@ describe("saveWorkspace", () => {
             desktopSession.workspacesWithFile = ["Draft"];
         });
 
-        test("lets the backend write it", async () => {
+        test("saveWorkspace_handedOverFile_letsTheBackendWriteIt", async () => {
             vi.mocked(saveWorkspaceToItsFile).mockResolvedValue(true);
             window.showSaveFilePicker = vi.fn();
 
@@ -205,7 +270,7 @@ describe("saveWorkspace", () => {
             expect(refreshDesktopStatus).toHaveBeenCalled();
         });
 
-        test("asks where to when the backend has no file for it after all", async () => {
+        test("saveWorkspace_backendHasNoFileAfterAll_savesElsewhere", async () => {
             vi.mocked(saveWorkspaceToItsFile).mockResolvedValue(false);
 
             expect(await saveWorkspace("Draft")).toBe("saved");
@@ -214,24 +279,22 @@ describe("saveWorkspace", () => {
             expect(markWorkspaceSaved).toHaveBeenCalledWith("Draft", "v1");
         });
 
-        test("asks where to for Save As", async () => {
+        test("saveWorkspace_handedOverFileSaveAs_savesElsewhere", async () => {
             await saveWorkspace("Draft", { saveAs: true });
 
             expect(saveWorkspaceToItsFile).not.toHaveBeenCalled();
             expect(saveFile).toHaveBeenCalled();
         });
 
-        test("records the request a workspace was opened from", async () => {
-            workspaceFiles.remember("Draft", { name: "Old.rdfa" });
-
+        test("workspaceOpenedFromRequest_request_recordsIt", async () => {
             await workspaceOpenedFromRequest("Draft", "request-1");
 
             expect(markOpenedFrom).toHaveBeenCalledWith("Draft", "request-1");
-            expect(workspaceFiles.get("Draft")).toBeUndefined();
+            expect(refreshDesktopStatus).toHaveBeenCalled();
         });
     });
 
-    test("downloads the file where the browser cannot write files", async () => {
+    test("saveWorkspace_noFileAccess_downloadsTheFile", async () => {
         const result = await saveWorkspace("Draft");
 
         expect(result).toBe("saved");
@@ -243,7 +306,7 @@ describe("saveWorkspace", () => {
         expect(markWorkspaceSaved).toHaveBeenCalledWith("Draft", "v1");
     });
 
-    test("reports a backend that could not write the file", async () => {
+    test("saveWorkspace_backendFails_reportsIt", async () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.mocked(fetchWorkspaceFile).mockRejectedValue(new Error("500"));
 
@@ -260,7 +323,7 @@ describe("suggestedFileName", () => {
         ['a:b*c?"d<e>f|g\\h', "a_b_c__d_e_f_g_h.rdfa"],
         ["tab\there", "tab_here.rdfa"],
         ["  ", "workspace.rdfa"],
-    ])("names %s", (name, expected) => {
+    ])("suggestedFileName_%s_isSafe", (name, expected) => {
         expect(suggestedFileName(name)).toBe(expected);
     });
 });

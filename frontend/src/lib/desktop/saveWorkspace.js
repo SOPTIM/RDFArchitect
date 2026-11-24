@@ -44,9 +44,14 @@ const PICKER_OPTIONS = {
 
 const UNSAFE_FILE_NAME_CHARACTERS = '\\/:*?"<>|';
 
+/** The save under way, so that a second one, such as a held Ctrl+S, does not start alongside. */
+let saving = null;
+
 /**
  * Whether the browser lets the page choose a file and write to it again later (the File System
  * Access API, Chromium only). Elsewhere a save is a download.
+ *
+ * @returns {boolean}
  */
 export function canChooseFiles() {
     return (
@@ -56,7 +61,12 @@ export function canChooseFiles() {
     );
 }
 
-/** The file name the backend suggests for a workspace, see `WorkspaceArchiveFormat.fileNameFor`. */
+/**
+ * The file name the backend suggests for a workspace, see `WorkspaceArchiveFormat.fileNameFor`.
+ *
+ * @param {string} workspaceName
+ * @returns {string}
+ */
 export function suggestedFileName(workspaceName) {
     const safe = Array.from(workspaceName ?? "", character =>
         UNSAFE_FILE_NAME_CHARACTERS.includes(character) ||
@@ -79,18 +89,31 @@ export function suggestedFileName(workspaceName) {
  * The picker has to open first, while the click or key press that asked for it still counts as
  * the user's: browsers refuse it otherwise.
  *
+ * One save runs at a time; asking for another while one is under way does nothing.
+ *
  * @param {string} workspaceName
  * @param {{saveAs?: boolean}} [options]
- * @returns {Promise<"saved" | "cancelled" | "failed">}
+ * @returns {Promise<"saved" | "cancelled" | "failed" | "busy">}
  */
 export async function saveWorkspace(workspaceName, { saveAs = false } = {}) {
     if (!workspaceName) {
         return "failed";
     }
+    if (saving) {
+        return "busy";
+    }
+    saving = save(workspaceName, saveAs);
     try {
-        let handle = saveAs
-            ? null
-            : (workspaceFiles.get(workspaceName) ?? null);
+        return await saving;
+    } finally {
+        saving = null;
+    }
+}
+
+async function save(workspaceName, saveAs) {
+    try {
+        const workspaceId = desktopSession.workspaceIds[workspaceName] ?? null;
+        let handle = saveAs ? null : (workspaceFiles.get(workspaceId) ?? null);
         if (
             !saveAs &&
             !handle &&
@@ -113,9 +136,15 @@ export async function saveWorkspace(workspaceName, { saveAs = false } = {}) {
             }
         }
         const file = await fetchWorkspaceFile(workspaceName);
+        if (handle && !saveAs && file.workspaceId !== workspaceId) {
+            // Deleted and created anew under its name since the last heartbeat.
+            throw new Error(
+                "The workspace was replaced by another of the same name. Save it again.",
+            );
+        }
         if (handle) {
             await writeTo(handle, file.blob);
-            workspaceFiles.remember(workspaceName, handle);
+            workspaceFiles.remember(file.workspaceId, handle);
         } else {
             saveFile(file.blob, file.fileName, workspaceArchiveMediaType);
         }
@@ -170,10 +199,9 @@ export async function chooseWorkspaceFile() {
  *
  * @param {string} workspaceName
  * @param {FileSystemFileHandle | null} handle
+ * @returns {Promise<void>}
  */
 export async function workspaceOpenedFromFile(workspaceName, handle) {
-    workspaceFiles.forget(workspaceName);
-    workspaceFiles.remember(workspaceName, handle);
     try {
         await markWorkspaceSaved(workspaceName);
     } catch (error) {
@@ -183,14 +211,18 @@ export async function workspaceOpenedFromFile(workspaceName, handle) {
         );
     }
     await refreshDesktopStatus();
+    workspaceFiles.remember(desktopSession.workspaceIds[workspaceName], handle);
 }
 
 /**
  * Records that a workspace was just opened from a file the operating system handed over: it holds
  * nothing the file does not, and Save writes back to that file.
+ *
+ * @param {string} workspaceName
+ * @param {string} requestId the open request the file came with
+ * @returns {Promise<void>}
  */
 export async function workspaceOpenedFromRequest(workspaceName, requestId) {
-    workspaceFiles.forget(workspaceName);
     try {
         await markOpenedFrom(workspaceName, requestId);
     } catch (error) {

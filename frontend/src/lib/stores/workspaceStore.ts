@@ -27,7 +27,6 @@ import {
     createDataset,
     renameDataset,
 } from "../api/generated";
-import { workspaceFiles } from "../desktop/workspaceFiles.js";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./storeLogging";
@@ -131,9 +130,6 @@ function createWorkspaceStore() {
             `"${workspaceName}" was created.`,
         );
 
-        // A new workspace has no file yet, whatever one of the same name had.
-        workspaceFiles.forget(workspaceName);
-
         return { error: null };
     }
 
@@ -177,8 +173,6 @@ function createWorkspaceStore() {
             `"${workspaceName}" is now "${newWorkspaceName}".`,
         );
 
-        workspaceFiles.rename(workspaceName, newWorkspaceName);
-
         return { error: null };
     }
 
@@ -212,8 +206,6 @@ function createWorkspaceStore() {
             "Workspace deleted",
             `"${workspaceName}" was deleted.`,
         );
-
-        workspaceFiles.forget(workspaceName);
 
         return { error: null };
     }

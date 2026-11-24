@@ -19,38 +19,32 @@
  * Save can write to it again without asking. Only where the browser has that API (Chromium); kept
  * in memory, so a reload asks once more.
  *
- * Keyed by workspace name. A workspace that is deleted or created anew under a name must not
- * inherit the file of the one before, so the workspace store forgets the name on both.
+ * Kept by the workspace's id from the backend (`desktopSession.workspaceIds`), not its name: the
+ * id stays through renames, and a workspace deleted and created anew under the same name, in this
+ * window or another, gets a new one and so never inherits the file of the one before.
  */
 const handles = new Map();
 
 export const workspaceFiles = {
-    /** @returns {FileSystemFileHandle | undefined} */
-    get(workspaceName) {
-        return handles.get(workspaceName);
+    /**
+     * Returns the file of the workspace.
+     *
+     * @param {string | null | undefined} workspaceId
+     * @returns {FileSystemFileHandle | undefined}
+     */
+    get(workspaceId) {
+        return workspaceId ? handles.get(workspaceId) : undefined;
     },
 
-    remember(workspaceName, handle) {
-        if (handle) {
-            handles.set(workspaceName, handle);
+    /**
+     * Records the file the workspace was opened from or saved to.
+     *
+     * @param {string | null | undefined} workspaceId
+     * @param {FileSystemFileHandle | null} handle
+     */
+    remember(workspaceId, handle) {
+        if (workspaceId && handle) {
+            handles.set(workspaceId, handle);
         }
-    },
-
-    forget(workspaceName) {
-        handles.delete(workspaceName);
-    },
-
-    rename(workspaceName, newName) {
-        const handle = handles.get(workspaceName);
-        handles.delete(workspaceName);
-        handles.delete(newName);
-        if (handle) {
-            handles.set(newName, handle);
-        }
-    },
-
-    /** The name of the file the workspace is saved in, if it has one. */
-    fileName(workspaceName) {
-        return handles.get(workspaceName)?.name ?? null;
     },
 };
