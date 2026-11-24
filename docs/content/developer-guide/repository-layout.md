@@ -35,7 +35,8 @@ sidebar_position: 2
 │           ├── models/       # DTO types and reactive wrappers ($state-backed)
 │           ├── rendering/    # SvelteFlow + Mermaid diagram renderers
 │           ├── dialog/       # Generic dialog scaffolding
-│           ├── ttl/          # CodeMirror-based TTL editor with validation
+│           ├── monaco/       # Monaco Turtle editor: grammars, theme, markers, completion and hover
+│           ├── shacl/        # Constraints workbench state and helpers
 │           ├── rdf-syntax-grammar/  # IRI/prefix/NCName validation rules
 │           └── sharedState.svelte.js # Cross-component reactive state
 │

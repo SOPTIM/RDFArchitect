@@ -22,15 +22,19 @@ SHACL shapes are generated procedurally from CIM model objects. The entry point 
 
 When fixing a SHACL bug, the most useful starting point is `SHACLFromCIMGeneratorTest`. It loads a known-good CIM graph and asserts the shape of the generated SHACL — adding a failing case there is the quickest way to reproduce.
 
-`XSDDatatypeMapper` maps a CIM primitive to an XSD datatype by composing `xsd:<primitive label>`, and falls back to a `BaseDatatype` with that URI when Jena does not recognise the result. It therefore invents datatypes for primitives whose CIM name differs from the XSD one — `MonthDay` becomes the non-existent `xsd:MonthDay` where ENTSO-E uses `xsd:gMonthDay`. The conformance check (below) surfaces this, and `ConformanceAgainstEntsoeProfilesTest` pins the current behaviour.
+`XSDDatatypeMapper` maps a CIM primitive to an XSD datatype. Most primitives are named after their datatype, so it composes `xsd:<primitive label>`; those that are not, such as `MonthDay` (`xsd:gMonthDay`) or `URI` (`xsd:anyURI`), are listed in `CIM_PRIMITIVE_ALIASES`. A label that matches neither falls back to a `BaseDatatype` with the composed URI. `XSDDatatypeMapperAgainstEntsoeProfilesTest` checks that every primitive an official schema declares maps to a datatype that exists.
 
-## Custom SHACL: many documents per graph
+## Custom SHACL: constraints documents
 
-A graph holds a **list** of `ShapesDocument`s, not one shapes graph. Each carries its display name, its origin (imported or authored), its position, whether it is enabled, and — importantly — the **verbatim text** it was written from alongside the parsed graph.
+A workspace holds any number of `ShapesDocument`s. Each carries its name, its origin (imported or authored), the file it was imported from, its position, whether it is enabled, the names of the schemas it applies to, and — importantly — the **verbatim text** it was written from, next to the graph parsed from it.
 
-The text is the source of truth. Official ENTSO-E files carry comments and a deliberate ordering that users expect back byte for byte, and line/column diagnostics need the original characters; round-tripping through Jena destroys both. Anything that edits a document therefore edits *text*, and the parsed graph is derived from it.
+The text is the source of truth. Official ENTSO-E files carry comments and a deliberate ordering that users expect back byte for byte, and line/column diagnostics need the original characters; round-tripping through Jena destroys both. Anything that edits a document therefore edits *text*, and the parsed graph is derived from it. `ShapesDocumentReader` is the one strict parse every write goes through, against `ShapesDocument.BASE_IRI`, so a relative IRI means the same thing wherever the text is read.
 
-Storage lives in `database/` (`GraphContext.getShapesDocuments()`), and `services/shacl/SHACLStoringService` is the use-case layer. Reads that need "the constraints of this graph" merge every **enabled** document in order; the first document to bind a prefix keeps it, so a later document rebinding it cannot change what earlier shapes mean.
+The documents are read through `WorkspaceTransaction.shapesDocuments()`, held by `ShapesDocumentCollection` in the in-memory database, and `services/shacl/SHACLStoringService` is the use-case layer behind `/api/workspaces/{workspaceName}/shacl/documents`. Every read that needs the constraints of a class or a schema goes through `ShapesUnion`, which adds the enabled documents to one model in order:
+
+- The first document to bind a prefix keeps it, so a later document rebinding it cannot change what earlier shapes mean.
+- A blank node gets a label scoped by its document (`ShapesUnion.scoped`). A label identifies a blank node only within the document it was normalised in, and merging on it would fold together two lists of different documents that merely look alike.
+- The union is a copy, so writing to it changes no document.
 
 Which documents *exist* is versioned like their content. `ShapesDocumentCollection` is a transaction participant, and the changelog's retained versions keep a deleted document reachable, so undoing a delete brings it back with its shapes, text and metadata. Deleting also clears the document's graph in the same commit, which is what lets the changelog entry say what went.
 
@@ -39,54 +43,65 @@ Two invariants worth not breaking:
 - **Conjunction, not precedence.** Every enabled document applies. Contradictions between documents are reported as findings (`ShapesConflictAnalyzer`), never resolved by preferring one document.
 - **A commit only versions what it changed.** Saving a shapes document leaves `GraphContext.getRdfGraphVersion()` alone, so work derived from the schema stays valid across a shapes save. `WorkspaceTransaction.shapesDocumentsVersion()` is the id to key on for work derived from the documents; it is derived from their content, so an undo returns the id the content had before.
 
+### Where documents live
+
+A document belongs to the workspace and names the schemas it applies to by schema name: official files are often about more than one profile, or about none of their own. Nothing writes to a document when a schema goes away: a name with no schema behind it shows as *Not assigned*, and a schema of that name imported again takes the document back, so replacing a schema needs no special case. Renaming a schema rewrites the name in every document. The changelog files a document's changes under its schemas, as a workspace-scoped participant, which is also why a restore held to one schema leaves documents alone.
+
+A persisted workspace and a share snapshot store each document as its own named graph (`urn:rdfa:shacl:<id>`), plus one **metadata** graph (`urn:rdfa:shacl-meta`) holding every document's name, position, schemas and text. A document holding no triples has no graph of its own, because the store keeps no empty graph, so documents are recovered from the metadata graph as well as from the shapes graphs. The load path turns every named graph it finds into a schema (`SchemaIri.toName`), so it leaves out the graphs `ShapesGraphNaming.isReserved` names first; a new kind of stored graph has to be added there.
+
+The `.rdfa` workspace file holds the documents in `shacl/`, and each schema's `shacl.ttl` for readers of format 1.0; see [The workspace file](./backend-architecture#the-workspace-file).
+
 ## Validating and understanding shapes: CIMVocabCheck
 
-Everything that reasons *about* shapes rather than generating them is built on `de.soptim.opencgmes:cimvocabcheck-core`, and all of it hangs off one object: an `RdfsSchemaIndex` built from the workspace's graphs by `services/shacl/validation/SchemaIndexCache`.
+Everything that reasons *about* shapes rather than generating them is built on `de.soptim.opencgmes:cimvocabcheck-core`, and all of it hangs off one object: an `RdfsSchemaIndex` built from the workspace's schemas by `services/shacl/validation/SchemaIndexCache`.
 
 | package | question it answers |
 |---|---|
 | `services/shacl/validation/` | Are these shapes valid against the schema? Shape structure and embedded SPARQL, with source positions. |
-| `services/shacl/terms/` | What terms exist, and what does this one mean? Backs editor completion and hover. |
+| `services/shacl/terms/` | What terms exist, and what does this one mean? Backs editor completion, hover and go-to-definition. |
 | `services/shacl/conformance/` | Do a schema and the documents applying to it still agree? |
 
-It is bounded by *size* rather than by entry count — the triples its indexes were built from, which is the thing an index is proportional to and is free to count. Counting entries said nothing about memory: eight indexes is a few megabytes of one-profile workspaces and something else entirely of eight full CGMES releases. An index nothing has asked for in half an hour is dropped as well, because sessions end without telling anyone and nothing else would ever release one. The most recently used entry is never dropped for size, so a workspace larger than the whole budget is still cached rather than rebuilt on every call.
+The cache is bounded by *size* rather than by entry count — the triples its indexes were built from, which is the thing an index is proportional to and is free to count. An entry count says nothing about memory: eight indexes is a few megabytes of one-profile workspaces and something else entirely of eight full CGMES releases. An index nothing has asked for in half an hour is dropped as well, because sessions end without telling anyone and nothing else would ever release one. The most recently used entry is never dropped for size, so a workspace larger than the whole budget is still cached rather than rebuilt on every call.
 
-Three things about that cache are load-bearing:
+Four things about validation are load-bearing:
 
-- It is keyed on `{graphUri → committed version id}` **and the session id**, because the in-memory database is per HTTP session. A commit, an undo or a redo invalidates it without the commit path knowing the cache exists.
-- Validation is scoped to **every profile in the workspace**, not to the graph a document belongs to. Official cross-profile constraints files reference neighbouring profiles on purpose; scoping to one profile reported 25 spurious unknown-class errors on a single official file where whole-workspace scoping reported none.
-- Every graph contributes exactly one profile. Graphs the CIM loader does not recognise are indexed generically under their declared `owl:versionIRI`, or a synthetic one — otherwise a profile still being authored would have its own classes reported as unknown.
+- The cache is keyed on `{schema name → committed version id}` **and the session id**, because the in-memory database is per HTTP session. A commit, an undo or a redo invalidates it without the commit path knowing the cache exists.
+- Validation is scoped to **every schema in the workspace**, not to the schemas a document applies to. Official cross-profile constraints files reference neighbouring profiles on purpose, and scoping to one profile would report each of those references as an unknown class.
+- Every schema contributes exactly one profile. Schemas the CIM loader does not recognise are indexed generically under their declared `owl:versionIRI`, or a synthetic one — otherwise a profile still being authored would have its own classes reported as unknown.
+- A term in a namespace no schema of the workspace uses is information, not an error, because official NC files name each type under every CIM version's namespace. `KnownNamespaces` keeps the error where the namespace is a misspelling: within two edits of a schema's namespace, a schema's namespace missing its closing `#` or `/`, or the namespace most of the document's `sh:path` properties are written in.
 
 Note that positions come back **1-based** for shape findings and **0-based** for findings inside embedded SPARQL; `SourcePositions` normalises them.
 
 ### There is no language server
 
-Editor completion, hover and go-to-definition are plain REST endpoints plus Monaco providers, not LSP. The reason is that the language intelligence is not in OpenCGMES's LSP module — it is in `cimvocabcheck-core`'s `SchemaIndex`, which this process already holds. An LSP would have added a WebSocket, a protocol and a schema-injection SPI to reach an index one method call away, and its go-to-definition jumps into RDFS *source files*, which is the wrong destination for an editor whose classes live in a database. `esm/external/monaco-lsp-client` inside monaco-editor is a good reference for the LSP↔Monaco conversions if that ever changes.
+Editor completion, hover and go-to-definition are plain REST endpoints (`/api/workspaces/{workspaceName}/shacl/terms` and `…/terms/detail`) plus Monaco providers, not LSP. The reason is that the language intelligence is not in OpenCGMES's LSP module — it is in `cimvocabcheck-core`'s `SchemaIndex`, which this process already holds. An LSP would have added a WebSocket, a protocol and a schema-injection SPI to reach an index one method call away, and its go-to-definition jumps into RDFS *source files*, which is the wrong destination for an editor whose classes live in a database. `esm/external/monaco-lsp-client` inside monaco-editor is a good reference for the LSP↔Monaco conversions if that ever changes.
 
-### Where documents live
-
-A `ShapesDocument` belongs to the workspace and carries a set of schema URIs, versioned and undone with the rest of it. 21 of the 104 current official SHACL files do not fit one schema: 12 target classes outside their own and 9 have no schema of their own. Nothing writes to a document when a schema goes away: a URI with no schema behind it shows as *Not assigned*, and importing that URI again reattaches it, so replacing a schema needs no special case. Renaming a schema rewrites the URI. The changelog files a document's changes under its schemas, as a workspace-scoped participant, which is also why a restore held to one schema leaves documents alone.
-
-A snapshot stores each document as its own named graph (`urn:rdfa:shacl:<id>`), and a document holding no triples has none, because an empty graph is not something the store will take. Documents are therefore recovered from the one **metadata** graph (`urn:rdfa:shacl-meta`) as well as from the shapes graphs, or an empty-but-named one would be lost with its name, position and text.
+A class several schemas declare opens in the first of the schemas the request names (`?schema=`, the open document's schemas), or in the first by name when it names none. The SHACL, RDF, RDFS, OWL and XSD vocabularies are in no CGMES profile, so they come from a static table in the frontend (`src/lib/shacl/standardVocabulary.js`), not from the index.
 
 ### Comparing schema with document
 
-`services/shacl/effective/EffectiveConstraints` collapses a shapes graph into one statement per `(sh:targetClass, sh:path)` before anything is compared, because generated and official shapes share no naming convention and both spread a single property's rules over separate cardinality, datatype and value-type shapes. Collapsing is conjunction — the effective lower bound is the largest `sh:minCount` anyone asks for. Datatypes are *collected* rather than merged: two different ones is not a stricter rule but a contradiction, and the comparison has to see it as one.
+`services/shacl/effective/EffectiveConstraints` collapses shapes into one statement per `(class, sh:path)` before anything is compared, because generated and official shapes share no naming convention and both spread a single property's rules over separate cardinality, datatype and value-type shapes. Collapsing is conjunction — the effective lower bound is the largest `sh:minCount` anyone asks for. Datatypes are *collected* rather than merged: two different ones is not a stricter rule but a contradiction, and the comparison has to see it as one. The reader follows a targeted node shape into the shapes it names with `sh:node` and into every member of its `sh:and`, takes a shape that is also an `rdfs:Class` as targeting itself, and, given the schema's `ClassHierarchy`, files a rule under every class deriving from its target, as SHACL applies it.
 
-Two things about the comparison are load-bearing, and both were got wrong first:
+What `services/shacl/conformance/ConformanceService` compares:
 
-- **The right-hand side is every enabled document applying to the schema, not one of them.** A schema's constraints are their conjunction, and official releases split their rules across files: the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the shared IdentifiedObject file. Reading one document alone reported its neighbours' coverage as missing. The open document joins in even when it is disabled, because it is the one the question is about, and `ConformanceFinding.statedIn` names the documents behind each finding so a merged answer still points at a file.
-- **Coverage is counted apart from agreement.** `compared` is the *overlap* — the keys both sides state — and `agreeing` is that minus the contradictions and differences. Counting the schema's whole surface instead scored silence as disagreement, so a 55-line cross-profile constraints file with one rule in it announced "0 of 49 property constraints agree" about a profile it had no quarrel with. `ConformanceAcrossDocumentsTest` pins both, against the real DiagramLayout files.
+- **The documents' side is every enabled document applying to the schema, read together.** A schema's constraints are their conjunction, and official releases split their rules across files, so one file read alone would report its neighbours' rules as missing. `ConformanceFinding.statedIn` names the documents behind each finding, so a merged answer still points at a file.
+- **The schema's side is the workspace's schemas, scoped to this schema.** An NC profile adds properties to classes the Equipment profile declares, so the documents are compared with everything the workspace says about the classes they target, while the schema is only asked to cover what it declares itself. Shapes are generated only for classes in the schema's own vocabulary.
+- **Rules in another vocabulary are left out, and so is what the reader cannot follow.** Official NC files state every rule under each CIM version's namespace, and a schema is written in one of them. `OtherVocabularies` takes the others out, and `NotCompared` lists them in the report's `notCompared`, together with shapes chosen by something other than a class (`sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`) and rules combined with `sh:or`, `sh:xone` or `sh:not`.
+- **Coverage is counted apart from agreement.** `compared` is the *overlap* — the keys both sides state — and `agreeing` is that minus the contradictions and differences. Counting the schema's whole surface would score a file's silence about a property as disagreement.
+- **Value types are compared by the classes they admit.** Every `sh:class` stated applies, so the admitted classes are their intersection, and a type list (`sh:path (p rdf:type) ; sh:in (…)`) admits its members. Two value types sharing no class contradict each other only when the workspace declares every class they name; otherwise the finding is a difference saying they cannot be checked. A compound attribute reads as a blank node of its class (`CompoundAttributes`).
+
+`ConformanceAcrossDocumentsTest`, `ConformanceInheritanceTest`, `ConformanceAcrossProfilesTest` and `ConformanceAgainstOfficialFilesTest` pin these against the official files.
 
 ### What one class is constrained by
 
-`GET /classes/{classUUID}/shacl` answers in two halves — the shapes the schema generates and the shapes the documents state — and the class dialog folds them into one row per property. Two things make that possible and both live in `SHACLStoringService`:
+`GET /api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/shacl` answers in two halves — the shapes the schema generates and the shapes the documents state — and the class dialog folds them into one row per property. The property dialog's endpoints answer the same way for one attribute or association. What makes that possible lives in `SHACLStoringService`:
 
-- **Provenance.** Shapes are read from the union of the enabled documents, and merging is what throws away the file a reader needs in order to change a rule. `ShapeOrigin` puts it back: the document, and the line the shape starts on in that document's own text (via `ShapeBlockLocator`). Shapes are matched to documents by the id the fetchers already produce — `RDFNode.toString()` — which is the IRI for a named shape and the label for a blank node. Blank node identity survives the merge because adding a model copies triples rather than rewriting them, so an inlined property shape is attributed as reliably as a named one.
-- **A summary in words.** `PropertyShapesWrapper.summary` is the conjunction of the wrapper's shapes, rendered by `services/shacl/effective/EffectiveConstraints`. That class is shared with the conformance check on purpose, so `0..1, xsd:float` means the same thing in both places.
+- **Provenance.** Shapes are read from the union of the enabled documents, and merging is what throws away the file a reader needs in order to change a rule. `ShapeOrigin` puts it back: the document, and the line the shape starts on in that document's own text. `TurtleSubjectLines` finds the lines in one pass over the text with the tokenizer Jena's Turtle parser is built on, against the base the text was parsed with. Shapes are matched to documents by the id the fetchers produce — `RDFNode.toString()` — which is the IRI for a named shape and the scoped label for a blank node. The index uses the same scoped labels as the union, so an inlined property shape is attributed as reliably as a named one.
+- **A summary in words.** `PropertyShapesWrapper.summary` is the conjunction of the wrapper's shapes, read by `EffectiveConstraints` and written by `ConstraintFormatter`. Both are shared with the conformance check on purpose, so `0..1, xsd:float` means the same thing in both places.
 - **Inline rules.** The lookups that sort shapes onto a class's properties match on `a sh:PropertyShape`, which `sh:property [ … ]` rules usually leave off. The class-shapes method therefore reads the shapes with that type implied for every value of `sh:property` — which SHACL says it is anyway — so an inline rule lands on its property's row instead of only inside its node shape.
+- **Prefixes.** The prefixes returned with the rules (`…/shacl/custom/namespaces` for the property dialog) are the union's, so a rule from a document applying to another schema, or to none, reads with the prefixes it was written with.
 
-Neither dialog writes. See the deprecation note on `updateClassSHACL` for why.
+Neither dialog writes. A rule shown there may be merged from several documents, so it has no one place to be written back to; the dialogs link to the document and line instead, and the workbench edits the text.
 
 ## Diagram layout
 

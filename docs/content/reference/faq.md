@@ -55,7 +55,7 @@ The default upload limit is 50 MB. For larger files, an administrator can raise 
 
 ### I made a mistake — how do I undo it?
 
-**Ctrl+Z** or **Edit → Undo**. The history belongs to the whole workspace: undo walks back through every tracked change in it, be it a class, attribute, association, package, ontology metadata, namespace, custom SHACL shape, diagram, or the import, deletion or renaming of a schema. Up to 256 steps per workspace. A step that would make a schema or diagram disappear is confirmed first.
+**Ctrl+Z** or **Edit → Undo**. The history belongs to the whole workspace: undo walks back through every tracked change in it, be it a class, attribute, association, package, ontology metadata, namespace, constraints document, diagram, or the import, deletion or renaming of a schema. Up to 256 steps per workspace. A step that would make a schema or diagram disappear is confirmed first.
 
 ### Why can't I edit this class / package?
 
@@ -82,7 +82,7 @@ Keeping them separate means you can see where a given constraint came from, and 
 
 ### Can I edit custom SHACL in RDFArchitect?
 
-Yes. Open **View → Constraints (SHACL)** and edit any of the graph's constraints documents in the workbench. Generated SHACL is read-only because it is derived from the current graph.
+Yes. Open **View → Constraints (SHACL)** and edit any of the workspace's constraints documents in the workbench. Generated SHACL is read-only because it is derived from the current schema.
 
 ### How do I validate instance data against the SHACL RDFArchitect produces?
 

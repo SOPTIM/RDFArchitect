@@ -40,6 +40,8 @@ Unsaved changes are not thrown away quietly. Opening another document, following
 
 A save is also refused rather than allowed to overwrite a change it has not seen. If the document was changed since you opened it — saved from another tab, or rewound by an undo while you had edits — the workbench says so and lets you choose: **Overwrite** it with your version, or **Load the stored version** and drop your edits. Closing the dialog keeps your edits in the editor, unsaved.
 
+If the open document disappears while you have unsaved edits — deleted in another tab, or undone away — the edits stay in the editor and a notice says the document is no longer in the workspace. **Save as a new document** stores them under the same name (or a numbered one, if that is taken) and the schemas that still exist; **Discard** drops them.
+
 ### The editor
 
 The document as text, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks from one problem to the next; hovering a marker shows the message.
@@ -51,22 +53,24 @@ Typing gets you more than highlighting:
 - **Completion** on `:` offers the classes, properties and enumeration members that the workspace's schema actually declares, written the way the open document writes them. You never have to type an IRI.
 - **Hover** over a term shows its label, its `rdfs:comment`, and for a property its domain, range and multiplicity, together with the profiles that declare it.
 - **Completion** also covers the vocabularies a constraints file is *written in* — `sh:`, `rdf:`, `rdfs:`, `owl:` and the XSD datatypes — with a one-line explanation of each on hover. These are in no CGMES profile, so the schema knows nothing about them.
-- **Ctrl+click** a class or property and you land on it in the class editor, with the class highlighted on its package diagram. For a property that means the class it belongs to, since a property is edited as a row of its class. `F12` and the context menu do the same thing.
+- **Ctrl+click** a class or property and you land on it in the class editor, with the class highlighted on its package diagram. For a property that means the class it belongs to, since a property is edited as a row of its class. A class that several schemas declare opens in a schema the document applies to. `F12` and the context menu do the same thing.
 
 ### Comparing a schema with its documents
 
 Opening a schema in the tree and pressing **Compare** answers the question only RDFArchitect can answer: **do this schema and the constraints documents applying to it still agree?** It says nothing about instance data, and it is a different check from **Problems**, which looks at each document on its own: whether it parses, and whether the terms it uses exist.
 
-It generates the shapes the schema implies and compares them, property by property, with what the **enabled documents applying to that schema** state, read together. An official release splits its rules across several files, and the CGMES 3.0 DiagramLayout constraints are a good example: one file defers most of its property shapes to the shared IdentifiedObject file, and two more carry a single cross-profile rule each. So tick the schema under *Applies to* on every document that belongs in the comparison.
+It generates the shapes the schema implies and compares them, property by property, with what the **enabled documents applying to that schema** state, read together. An official release splits its rules across several files — the CGMES DiagramLayout constraints, for example, leave most of their property shapes to the shared IdentifiedObject file — so tick the schema under *Applies to* on every document that belongs in the comparison.
 
-The schema side is the **whole workspace**, scoped to the schema: profiles build on each other — an NC profile adds properties to classes the Equipment profile declares — so the documents are compared with everything the workspace says about the classes they target, while the schema is only asked to cover the classes and properties it declares itself.
+The schema side is the **whole workspace**, scoped to the schema: profiles build on each other — an NC profile adds properties to classes the Equipment profile declares — so the documents are compared with everything the workspace says about the classes they target, while the schema is only asked to cover the classes and properties it declares itself. A rule on a class applies to every class deriving from it, as it does in SHACL, so a rule the documents state on an abstract class is compared on its subclasses.
+
+Only what is written in the schema's own vocabulary is compared. Official NC files state each rule for every CIM version's namespace, so that one file checks data of any of them; the rules for the other versions are about other data, and the report lists them as not compared instead of calling them missing from the schema.
 
 What it finds is grouped, and hovering a group's heading shows an example:
 
 | | |
 |---|---|
 | **Contradiction** | The two cannot both be satisfied — different datatypes, unrelated value classes, or the schema requires more values than the documents allow. A document that permits an enumeration value (`sh:in`) the schema does not list is reported here too, because that is how an extended enumeration drifts from its schema. Someone has to decide which is right. |
-| **Difference** | Both can be satisfied, but they do not say the same thing. Usually the profile deliberately narrowing what the schema allows. |
+| **Difference** | Both can be satisfied, but they do not say the same thing — usually the profile deliberately narrowing what the schema allows. Also used when the value classes cannot be checked, because the workspace does not declare a class they name. |
 | **Not covered** | The schema implies a constraint no document states. |
 | **Not in the schema** | A document constrains a property the schema does not have on that class — or a class or property no schema in the workspace declares, and the finding says which. |
 
@@ -74,9 +78,9 @@ Coverage and agreement are counted separately, and the headline only turns red f
 
 Shapes are matched by class and property, never by name, because generated and official shapes share no naming convention and both spread one property's rules over several shapes.
 
-What is compared, per property: `sh:minCount`, `sh:maxCount`, `sh:datatype`, `sh:nodeKind`, the value class, and the permitted values of `sh:in`. A value class is compared by the instances it admits: RDFArchitect and the CGMES files state it as the list of types a value may have (`sh:path (p rdf:type) ; sh:in (…)`), NC files as `sh:class`, and the two agree when they admit the same concrete classes. A shape switched off with `sh:deactivated true` states nothing, and a constraint stated only at `sh:Warning` or `sh:Info` is at most a difference, never a contradiction — data breaking it still conforms.
+What is compared, per property: `sh:minCount`, `sh:maxCount`, `sh:datatype`, `sh:nodeKind`, the value class, and the permitted values of `sh:in`. A value class is compared by the instances it admits: RDFArchitect and the CGMES files state it as the list of types a value may have (`sh:path (p rdf:type) ; sh:in (…)`), NC files as `sh:class`, and the two agree when they admit the same concrete classes. Every `sh:class` stated applies, so two of them admit only what both admit. A compound attribute is read as a blank node of its compound class, as the official files state it. Rules a shape takes in through `sh:node` or `sh:and` count as the shape's own. A shape switched off with `sh:deactivated true` states nothing, and a constraint stated only at `sh:Warning` or `sh:Info` is at most a difference, never a contradiction — data breaking it still conforms.
 
-Not compared: value ranges (`sh:minInclusive` and friends), patterns, `sh:hasValue`, embedded SPARQL, logical combinations (`sh:or`, `sh:not`, …), and any path expression other than the value-type list above, such as the inverse cardinality RDFArchitect generates.
+Not compared: value ranges (`sh:minInclusive` and friends), patterns, `sh:hasValue`, embedded SPARQL, rules combined with `sh:or`, `sh:xone` or `sh:not`, shapes that choose their data by something other than a class (`sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`), and any path expression other than the value-type list above, such as the inverse cardinality RDFArchitect generates. The report lists, per document, what it left out and why.
 
 ### What validation checks
 
@@ -86,7 +90,7 @@ The check for terms spans *every* schema in the workspace, not only the ones a d
 
 Contradictions are looked for only between documents applying to a **common schema**, because documents about different schemas constrain different data. A document applying to no schema is only compared with itself.
 
-A term in a namespace that *no* profile in the workspace uses cannot be checked at all, so it is reported as information rather than as an error. Official NC files rely on this: they name each class under every CIM namespace in use (`cim16`, `CIM100` and the current one) so that one file validates data of any of those versions. A misspelt term is still an error, because a misspelling stays in a namespace the workspace knows.
+A term in a namespace that *no* profile in the workspace uses cannot be checked at all, so it is reported as information rather than as an error. Official NC files rely on this: they name each class under every CIM namespace in use (`cim16`, `CIM100` and the current one) so that one file validates data of any of those versions. A misspelt term is still an error, and so is a term in a misspelt namespace: one that differs from a schema's namespace by a character or two, one missing the schema namespace's closing `#` or `/`, or the namespace most of the document's constrained properties are written in.
 
 A document with problems still saves. Validation is a report, not a gate — you could not otherwise use the editor to finish a half-written file. Turtle that does not *parse* is the exception: there is nothing to store, and the message tells you the line and column where the parser stopped.
 
@@ -100,7 +104,7 @@ A similar dialog at class level answers the same question for a whole class, and
 - **Generated and custom rules are merged**, because "what is enforced on this property?" is the question, and which half a rule came from is an answer to a different one. The **Generated / Custom** buttons narrow it when you do want one half. Where the two disagree, both readings are shown side by side.
 - **Every row names its sources** — `generated`, or the constraints document. Clicking a document opens it in the workbench with the cursor on the rule.
 - **A filter** matches property names and rules alike, so `xsd:float` finds every float-valued property.
-- **Referenced by** lists the classes that point at this one, in the class's own schema. Relations that reference nothing are left out.
+- **Referenced by** lists the classes of the class's own schema that point at this one through an attribute or an association, and **Inherits from** the classes it derives from. Clicking one opens it in its package diagram. Relations that name no class are left out.
 
 **Both dialogs read; the workbench writes.** They show constraints merged from every enabled document, and a merged shape cannot be written back as it is shown. The way to change a rule is the document name next to it, which opens the workbench on that document at that rule. **Edit in workbench** in the dialog's header opens the first document the class's (or property's) custom rules name, or the workbench on its own when every rule is generated. Either way the workbench opens on the class's workspace, even when another one is selected in the navigation.
 
@@ -117,3 +121,5 @@ A **read-only** workspace cannot take an import: the menu entry and its shortcut
 What is ticked to begin with is what applies to the schema: its documents that are switched on. A document that is switched off is labelled so and can still be ticked — off means "takes no part in validation", not "cannot be exported". The generated shapes are only ticked when the schema has no constraints documents of its own; next to an official constraints file they restate most of it in other words, so ticking both repeats most rules in the file.
 
 Exporting **one document on its own, as TTL** — ticking empty documents beside it does not count — gives back its text exactly as it is stored — comments and ordering included — the same file the workbench's **download** saves. Any other combination is merged and written out afresh, which keeps what the shapes say but not how the files spelled it.
+
+One document exported on its own is saved under its own name, with the extension of the format chosen, so importing it again gives it back its name. A merge is named after the workspace.
