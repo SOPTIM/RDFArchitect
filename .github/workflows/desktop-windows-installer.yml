@@ -29,7 +29,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ inputs.tag }}
       ALLOW_UNSIGNED: ${{ inputs.allow-unsigned }}
-      # Optional repository variable, e.g. "O=SOPTIM AG": the signer the exe has to be signed by.
+      # Optional repository variable, e.g. "SOPTIM AG": the organization (O=) that signs the exe.
       EXPECTED_SIGNER: ${{ vars.WINDOWS_SIGNER }}
     steps:
       - name: Checkout

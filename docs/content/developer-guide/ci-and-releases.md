@@ -51,7 +51,7 @@ The two Windows downloads have to be signed before the release is published. The
    gh workflow run desktop-windows-installer.yml --repo SOPTIM/RDFArchitect -f tag=vX.Y.Z
    ```
 
-   It refuses an archive whose `RDFArchitect.exe` is not validly signed, builds the `.msi`, checks the program inside it again, and attaches `RDFArchitect-X.Y.Z-windows-x64.msi` to the draft. With the repository variable `WINDOWS_SIGNER` set (e.g. `O=SOPTIM AG`), it also checks who signed it. Its `allow-unsigned` input is only for trying the workflow.
+   It refuses an archive whose `RDFArchitect.exe` is not validly signed, builds the `.msi`, checks the program inside it again, and attaches `RDFArchitect-X.Y.Z-windows-x64.msi` to the draft. With the repository variable `WINDOWS_SIGNER` set (e.g. `SOPTIM AG`), it also checks that the organization (`O=`) of the signing certificate is exactly that value. Its `allow-unsigned` input is only for trying the workflow.
 
 5. Download the `.msi`, sign it, and replace it in the draft the same way:
 

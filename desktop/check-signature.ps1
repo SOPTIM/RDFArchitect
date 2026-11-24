@@ -26,8 +26,9 @@ timestamp passes with a warning: it stops being valid when the certificate expir
 The file to check.
 
 .PARAMETER ExpectedSigner
-Text the signer's certificate subject has to contain, e.g. "O=SOPTIM AG". Any valid signer passes
-when it is empty.
+The organization (O=) the subject of the signer's certificate has to name, exactly and as its only
+organization, e.g. "SOPTIM AG". Any valid signer passes when it is empty. Checking it needs
+PowerShell 7.3 or newer.
 
 .PARAMETER AllowUnsigned
 Report a missing or invalid signature as a warning only.
@@ -52,9 +53,17 @@ if ($signature.Status -ne "Valid") {
     Write-Host "::error::$($Path) is not validly signed: $($signature.Status). $($signature.StatusMessage)"
     exit 1
 }
-if ($ExpectedSigner -and -not $signer.Contains($ExpectedSigner)) {
-    Write-Host "::error::$($Path) is signed by $signer, not by $ExpectedSigner."
-    exit 1
+if ($ExpectedSigner) {
+    # 2.5.4.10 is the object identifier of the organization (O=).
+    $organizations = @(
+        $signature.SignerCertificate.SubjectName.EnumerateRelativeDistinguishedNames($true) |
+            Where-Object { -not $_.HasMultipleElements -and $_.GetSingleElementType().Value -eq "2.5.4.10" } |
+            ForEach-Object { $_.GetSingleElementValue() }
+    )
+    if ($organizations.Count -ne 1 -or $organizations[0] -cne $ExpectedSigner) {
+        Write-Host "::error::$($Path) is signed by $signer, not by the organization $ExpectedSigner."
+        exit 1
+    }
 }
 if (-not $signature.TimeStamperCertificate) {
     Write-Host "::warning::$($Path) carries no timestamp, so its signature ends with the certificate."
