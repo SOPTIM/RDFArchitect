@@ -137,6 +137,19 @@ class ConformanceAgainstOfficialFilesTest {
                                 assertThat(finding.getDocumentSays()).contains("of class nothing"));
     }
 
+    @Test
+    void aCompoundAttributeIsABlankNodeOfItsClassAsTheOfficialFilesSay() {
+        var report = service.compare(profile("GeographicalLocation"));
+
+        assertThat(report.getContradictedCount()).isZero();
+        assertThat(report.getFindings())
+                .filteredOn(finding -> finding.getPath().equals(CIM + "Location.mainAddress"))
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getSchemaSays())
+                                        .contains("of class cim:StreetAddress", "sh:BlankNode"));
+    }
+
     /** Imports a profile's vocabulary as a schema, with every official file named after it. */
     private GraphIdentifier profile(String name) {
         var schema = new GraphIdentifier(WORKSPACE, name);

@@ -306,7 +306,7 @@ public class ConformanceService implements ConformanceUseCase {
                         .getGraph();
         var vocabulary = OtherVocabularies.of(own);
         return new Implied(
-                EffectiveConstraints.of(shapes),
+                CompoundAttributes.asBlankNodes(EffectiveConstraints.of(shapes), union),
                 hierarchy,
                 ownClassUris,
                 ownProperties,
