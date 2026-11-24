@@ -26,9 +26,9 @@
 #   --installer-from <dir>  Windows only: build just the .msi, from the app in <dir>, an unpacked
 #                           portable archive whose RDFArchitect.exe was signed meanwhile
 #
-# Needs a JDK 25 or newer (JAVA_HOME, with jlink and jpackage), Maven, and Node.js 24 with npm.
-# The .msi needs the WiX Toolset; the .deb needs dpkg-deb and fakeroot.
-# Results go to desktop/dist/.
+# Needs a JDK 25 or newer (JAVA_HOME, with jlink and jpackage), Maven, and Node.js 24 or newer
+# with npm. The .msi needs the WiX Toolset; the .deb needs dpkg-deb and fakeroot. On Windows it
+# runs in Git Bash. Results go to desktop/dist/.
 
 set -euo pipefail
 
@@ -50,6 +50,17 @@ WINDOWS_UPGRADE_UUID="5d8f5b4e-0d0c-4d3a-9a57-3f1f2a6c8b21"
 JAVA_MODULES="${DESKTOP_JAVA_MODULES:-java.se,jdk.unsupported,jdk.unsupported.desktop,jdk.jfr,jdk.crypto.ec,jdk.zipfs,jdk.charsets,jdk.localedata,jdk.management,jdk.net,jdk.naming.dns}"
 JAVA_OPTIONS=('-XX:MaxRAMPercentage=50' '-splash:$APPDIR/splash.png')
 
+usage() { sed -n '17,31p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# Stops with the usage when the option in $1 comes without a value.
+require_value() {
+  if [[ $# -lt 2 || "$2" == --* ]]; then
+    echo "$1 needs a value." >&2
+    usage >&2
+    exit 2
+  fi
+}
+
 version=""
 installer=false
 installer_from=""
@@ -57,13 +68,13 @@ build_frontend=true
 build_backend=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version) version="$2"; shift 2 ;;
+    --version) require_value "$@"; version="$2"; shift 2 ;;
     --installer) installer=true; shift ;;
-    --installer-from) installer_from="$2"; installer=true; shift 2 ;;
+    --installer-from) require_value "$@"; installer_from="$2"; installer=true; shift 2 ;;
     --skip-frontend) build_frontend=false; shift ;;
     --skip-backend) build_backend=false; shift ;;
-    -h|--help) sed -n '17,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "Unknown option: $1" >&2; exit 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
 
@@ -72,7 +83,8 @@ log() { printf '\n==> %s\n' "$*"; }
 case "$(uname -s)" in
   Linux*) os=linux ;;
   Darwin*) os=mac ;;
-  MINGW*|MSYS*|CYGWIN*) os=windows ;;
+  MINGW*|MSYS*) os=windows ;;
+  CYGWIN*) echo "Cygwin is not supported; on Windows, run this in Git Bash." >&2; exit 1 ;;
   *) echo "Unsupported operating system: $(uname -s)" >&2; exit 1 ;;
 esac
 case "$(uname -m)" in
