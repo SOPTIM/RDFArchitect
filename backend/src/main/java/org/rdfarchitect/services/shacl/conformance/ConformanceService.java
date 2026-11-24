@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.services.shacl.conformance;
 
-import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphUtil;
 import org.apache.jena.graph.Node;
@@ -325,12 +323,7 @@ public class ConformanceService implements ConformanceUseCase {
     /** The classes the documents target, which the comparison has to have the schema's word on. */
     private static Set<String> targetedClasses(Iterable<Graph> documents) {
         var targets = new TreeSet<String>();
-        documents.forEach(
-                document ->
-                        document.stream(Node.ANY, Shacl.TARGET_CLASS, Node.ANY)
-                                .map(triple -> triple.getObject())
-                                .filter(Node::isURI)
-                                .forEach(target -> targets.add(target.getURI())));
+        documents.forEach(document -> targets.addAll(EffectiveConstraints.targetClasses(document)));
         return Set.copyOf(targets);
     }
 

@@ -150,6 +150,24 @@ class ConformanceAgainstOfficialFilesTest {
                                         .contains("of class cim:StreetAddress", "sh:BlankNode"));
     }
 
+    @Test
+    void aRuleTheComplexFileStatesInsideShAndIsRead() {
+        // CGMES requires position points instead of a main address, which the Complex file says
+        // with sh:and ( [ sh:path cim:Location.mainAddress ; sh:maxCount 0 ] … ).
+        var report = service.compare(profile("GeographicalLocation"));
+
+        assertThat(report.getFindings())
+                .filteredOn(finding -> finding.getPath().equals(CIM + "Location.mainAddress"))
+                .filteredOn(finding -> finding.getTargetClass().equals(CIM + "Location"))
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.DIFFERENT);
+                            assertThat(finding.getDocumentSays()).startsWith("0..0");
+                        });
+    }
+
     /** Imports a profile's vocabulary as a schema, with every official file named after it. */
     private GraphIdentifier profile(String name) {
         var schema = new GraphIdentifier(WORKSPACE, name);
