@@ -42,7 +42,8 @@ sidebar_position: 2
 ├── docker/                   # Compose-based local stack (gateway + frontend + backend)
 ├── docs/                     # User-facing documentation (this site)
 ├── .github/                  # CI workflows, issue/PR templates, governance
-└── CHANGELOG.md              # Manually maintained, Keep-a-Changelog style
+├── AGENTS.md                 # Rules for coding agents (.claude/CLAUDE.md imports it)
+└── CHANGELOG.md              # Generated at release, Keep-a-Changelog style
 ```
 
 The split between backend and frontend is **strict**: nothing under `backend/` imports from `frontend/`, and vice versa. The contract between them is the REST API, documented in Swagger UI at runtime.

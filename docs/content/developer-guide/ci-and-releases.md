@@ -18,7 +18,7 @@ A third workflow, **`publish-test-images.yml`**, builds preview images for PRs f
 
 Releases are tag-driven:
 
-1. Update `CHANGELOG.md`: move items from `## [Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD` section.
+1. Run the **`Update Changelog`** workflow (`.github/workflows/update-changelog.yml`) with the new version and merge the PR it opens. It generates the `## [X.Y.Z] - YYYY-MM-DD` section of `CHANGELOG.md` from the squash commit titles since the last tag.
 2. Push a tag of the form `vX.Y.Z` to `main`.
 3. CI builds and publishes Docker images tagged `X.Y.Z`, `X.Y`, and `X` (with `X` suppressed for `0.x.y`) plus `latest` on the default branch.
 4. A GitHub Release is created automatically.

@@ -30,7 +30,10 @@ Both `npm run lint` and `npm run format` run all three together.
 
 ## License header
 
-Every source file (Java, JavaScript, TypeScript, Svelte) must carry the Apache 2.0 header. The auto-fixers add it for you. CI fails if it is missing.
+Every source file (Java, JavaScript, TypeScript, Svelte) must carry the Apache 2.0 header. CI fails if it is missing.
+
+- Java: `mvn -B com.mycila:license-maven-plugin:format` in `backend/` adds missing headers from `backend/src/license/header.txt`. `spotless:apply` does not.
+- JavaScript, TypeScript, Svelte: `npm run format` in `frontend/` adds them.
 
 ## Renovate
 

@@ -140,16 +140,13 @@ Notes:
 
 ## Breaking Changes
 
-Breaking changes are detected when either of these is present:
-
-- `!` in the commit header (`feat!:` or `feat(scope)!:`)
-- `BREAKING CHANGE:` in the commit body
-
-Use one of these markers whenever the change is not backward compatible.
+- Mark every change that is not backward compatible with `!` in the commit header (`feat!:` or `feat(scope)!:`).
+- Only commits with `!` in the header are listed under Breaking Changes in the changelog.
+- A `BREAKING CHANGE:` footer may add details.
 
 ## Changelog
 
-- Keep `CHANGELOG.md` up to date manually for notable user-facing changes.
+- `CHANGELOG.md` is generated from the squash commit titles by the `Update Changelog` workflow when a release is prepared. Do not edit it by hand.
 - Release versions are derived from git tags (`vX.Y.Z`).
 
 ## Contributor Checklist
