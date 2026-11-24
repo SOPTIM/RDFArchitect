@@ -292,10 +292,19 @@ public class ConformanceService implements ConformanceUseCase {
         }
 
         // A rule on a class applies to the classes deriving from it, so the schema has to speak for
-        // those as well.
+        // those as well; but only in its own vocabulary. The documents' rules on other versions'
+        // classes are left out, and generating them as well would let the generator, which names
+        // property shapes by local name, give a CIM 18 property the multiplicity of its CIM100
+        // namesake.
         var hierarchy = ClassHierarchy.of(union);
+        var ownVocabulary = OtherVocabularies.of(own);
+        var vocabulary = ownVocabulary.isEmpty() ? OtherVocabularies.of(union) : ownVocabulary;
         var reached = new HashSet<String>();
-        targetedClasses.forEach(target -> reached.addAll(hierarchy.withSubClasses(target)));
+        targetedClasses.forEach(
+                target ->
+                        hierarchy.withSubClasses(target).stream()
+                                .filter(OtherVocabularies.within(vocabulary))
+                                .forEach(reached::add));
 
         var ontology = ModelFactory.createModelForGraph(union);
         ontology.setNsPrefixes(databasePort.getPrefixMapping(schema.workspaceName()));
@@ -309,14 +318,13 @@ public class ConformanceService implements ConformanceUseCase {
                                         reached.contains(instantiableClass.getURI())
                                                 || ownClasses.declares(instantiableClass.getURI()))
                         .getGraph();
-        var vocabulary = OtherVocabularies.of(own);
         return new Implied(
                 CompoundAttributes.asBlankNodes(EffectiveConstraints.of(shapes), union),
                 hierarchy,
                 ownClassUris,
                 ownProperties,
                 subjectsOf(union, RDFS.domain.asNode()),
-                vocabulary.isEmpty() ? OtherVocabularies.of(union) : vocabulary);
+                vocabulary);
     }
 
     private static Set<String> ownClassesOf(Graph own) {

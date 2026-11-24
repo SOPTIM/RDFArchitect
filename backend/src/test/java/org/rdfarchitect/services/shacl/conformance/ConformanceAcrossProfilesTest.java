@@ -120,6 +120,17 @@ class ConformanceAcrossProfilesTest {
     }
 
     @Test
+    void aCgmesSchemaOfAnotherCimVersionChangesNothingAboutAnNcComparison() {
+        var withCgmes = compareOfficial("EquipmentReliability");
+
+        database.listDatasets().forEach(database::deleteDataset);
+        databasePort.createDataset(WORKSPACE);
+        var alone = compareOfficial("EquipmentReliability");
+
+        assertThat(withCgmes.getFindings()).isEqualTo(alone.getFindings());
+    }
+
+    @Test
     void aTypeListForAnotherCimVersionIsNotAContradiction() {
         // TopologyAction.Switch has a CIM 18 range, and the official file lists the switch types
         // only in CIM100 and cim16. With CGMES in the workspace, CIM100 is a known vocabulary.

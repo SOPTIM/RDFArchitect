@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 /**
  * Takes out of the documents' side what is written in a vocabulary the compared schema does not
@@ -68,6 +69,11 @@ final class OtherVocabularies {
                             });
         }
         return namespaces;
+    }
+
+    /** Whether a term is in one of the namespaces of {@code vocabulary}. */
+    static Predicate<String> within(Set<String> vocabulary) {
+        return iri -> vocabulary.contains(namespaceOf(iri));
     }
 
     private static void addNamespace(Set<String> namespaces, Node node) {
