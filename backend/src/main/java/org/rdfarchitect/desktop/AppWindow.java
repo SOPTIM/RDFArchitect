@@ -32,7 +32,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 /**
  * Shows the user interface of the desktop app.
@@ -50,6 +52,10 @@ final class AppWindow {
     private static final Logger logger = LoggerFactory.getLogger(AppWindow.class);
 
     private static final String INITIAL_WINDOW_SIZE = "--window-size=1440,900";
+
+    private static final Pattern SNAP_NAME = Pattern.compile("[a-z0-9][a-z0-9-]*");
+    private static final Pattern SNAP_COMMAND = Pattern.compile("/snap/bin/([a-z0-9][a-z0-9-]*)");
+    private static final int MAX_LINKS = 10;
 
     private AppWindow() {}
 
@@ -72,12 +78,16 @@ final class AppWindow {
             System.out.println("RDFArchitect is running at " + pages.sessionUrl(next));
             return false;
         }
+        var os = OperatingSystem.current();
+        var home = Path.of(System.getProperty("user.home"));
         if (mode == DesktopOptions.BrowserMode.APP) {
-            var os = OperatingSystem.current();
-            var browser =
-                    findAppBrowser(os, System.getenv(), Path.of(System.getProperty("user.home")));
+            var browser = findAppBrowser(os, System.getenv(), home);
             if (browser.isPresent()) {
-                var page = pages.appWindowPage(next).toASCIIString();
+                var snap =
+                        os == OperatingSystem.LINUX
+                                ? snapName(browser.get())
+                                : Optional.<String>empty();
+                var page = readableBy(snap, pages, home).appWindowPage(next).toASCIIString();
                 var command = appWindowCommand(os, browser.get(), page, browserProfile);
                 try {
                     start(command);
@@ -90,7 +100,26 @@ final class AppWindow {
                 logger.info("No Chromium-based browser found, using the default browser.");
             }
         }
-        return openInDefaultBrowser(pages.windowPage(next).toASCIIString());
+        var snap =
+                os == OperatingSystem.LINUX ? defaultBrowserSnap(home) : Optional.<String>empty();
+        return openInDefaultBrowser(readableBy(snap, pages, home).windowPage(next).toASCIIString());
+    }
+
+    /**
+     * Returns launch pages the browser can read. A browser installed as a snap cannot read hidden
+     * directories in the home directory, where the data directory is, but it can read its own
+     * directory in {@code ~/snap}.
+     */
+    private static LaunchPages readableBy(Optional<String> snap, LaunchPages pages, Path home)
+            throws IOException {
+        if (snap.isEmpty()) {
+            return pages;
+        }
+        return pages.in(PrivateFiles.createDirectory(snapLaunchDirectory(home, snap.get())));
+    }
+
+    static Path snapLaunchDirectory(Path home, String snap) {
+        return home.resolve("snap").resolve(snap).resolve("common").resolve("rdfarchitect");
     }
 
     /** Returns the first Chromium-based browser installed, in order of preference. */
@@ -179,7 +208,7 @@ final class AppWindow {
         command.add("--app=" + url);
         // A browser installed as a snap may not write to hidden directories in the home directory,
         // where the profile lives; it opens the window in its own profile instead.
-        if (!(os == OperatingSystem.LINUX && isSnap(browser))) {
+        if (!(os == OperatingSystem.LINUX && snapName(browser).isPresent())) {
             if (!Files.isDirectory(browserProfile)) {
                 // Only the first time: from then on the browser remembers where the user put it.
                 command.add(INITIAL_WINDOW_SIZE);
@@ -232,22 +261,99 @@ final class AppWindow {
     }
 
     /**
-     * Whether the browser runs confined as a snap: a link into {@code /snap}, or one of the scripts
-     * Ubuntu puts in {@code /usr/bin} to hand over to the snap.
+     * Returns the name of the snap the browser runs confined in, if it does: a link to {@code
+     * /snap/bin/<name>}, a file in {@code /snap/<name>/}, or one of the scripts Ubuntu puts in
+     * {@code /usr/bin} to hand over to a snap.
      */
-    static boolean isSnap(Path browser) {
+    static Optional<String> snapName(Path browser) {
+        try {
+            var path = browser.toAbsolutePath();
+            for (var links = 0; links < MAX_LINKS; links++) {
+                var name = snapNameOf(path);
+                if (name.isPresent() || !Files.isSymbolicLink(path)) {
+                    return name.or(() -> snapNameInScript(browser));
+                }
+                var target = path.resolveSibling(Files.readSymbolicLink(path)).normalize();
+                // The snap command runs the app named like the link it is started through.
+                if (target.endsWith("snap")) {
+                    return snapOfApp(String.valueOf(path.getFileName()));
+                }
+                path = target;
+            }
+            return Optional.empty();
+        } catch (IOException | RuntimeException _) {
+            return snapNameOf(browser);
+        }
+    }
+
+    /**
+     * Returns the snap named by a path in {@code /snap/bin/<name>[.<app>]} or {@code
+     * /snap/<name>/}.
+     */
+    static Optional<String> snapNameOf(Path path) {
+        if (!path.startsWith("/snap") || path.getNameCount() < 3) {
+            return Optional.empty();
+        }
+        var second = path.getName(1).toString();
+        return snapOfApp(second.equals("bin") ? path.getName(2).toString() : second);
+    }
+
+    /** Returns the snap of an app named {@code <snap>} or {@code <snap>.<app>}. */
+    private static Optional<String> snapOfApp(String app) {
+        var dot = app.indexOf('.');
+        return validSnapName(dot < 0 ? app : app.substring(0, dot));
+    }
+
+    private static Optional<String> snapNameInScript(Path browser) {
         try {
             var real = browser.toRealPath();
-            if (real.startsWith("/snap/") || real.endsWith("snap")) {
-                return true;
-            }
             if (Files.size(real) > 64 * 1024) {
-                return false;
+                return Optional.empty();
             }
-            return Files.readString(real, StandardCharsets.ISO_8859_1).contains("/snap/");
+            var matcher = SNAP_COMMAND.matcher(Files.readString(real, StandardCharsets.ISO_8859_1));
+            return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
         } catch (IOException | RuntimeException _) {
-            return browser.startsWith("/snap/");
+            return Optional.empty();
         }
+    }
+
+    /** Returns the snap of the default browser, if it is one. Linux only. */
+    private static Optional<String> defaultBrowserSnap(Path home) {
+        try {
+            var process =
+                    new ProcessBuilder("xdg-settings", "get", "default-web-browser")
+                            .redirectError(ProcessBuilder.Redirect.DISCARD)
+                            .start();
+            if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                process.destroy();
+                return Optional.empty();
+            }
+            var desktopFile =
+                    new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return snapOfDesktopFile(desktopFile.strip(), home);
+        } catch (IOException | RuntimeException _) {
+            return Optional.empty();
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns the snap a desktop file belongs to: snapd names them {@code <snap>_<app>.desktop},
+     * and a snap the user has run has a directory in {@code ~/snap}.
+     */
+    static Optional<String> snapOfDesktopFile(String desktopFile, Path home) {
+        var separator = desktopFile.indexOf('_');
+        if (separator <= 0 || !desktopFile.endsWith(".desktop")) {
+            return Optional.empty();
+        }
+        return validSnapName(desktopFile.substring(0, separator))
+                .filter(snap -> Files.isDirectory(home.resolve("snap").resolve(snap)));
+    }
+
+    private static Optional<String> validSnapName(String name) {
+        return SNAP_NAME.matcher(name).matches() ? Optional.of(name) : Optional.empty();
     }
 
     private static void addIfPresent(List<Path> candidates, String base, String... more) {

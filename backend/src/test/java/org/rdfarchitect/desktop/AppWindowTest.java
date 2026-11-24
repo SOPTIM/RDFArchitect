@@ -19,6 +19,7 @@ package org.rdfarchitect.desktop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -129,9 +130,80 @@ class AppWindowTest {
                 AppWindow.appWindowCommand(
                         OperatingSystem.LINUX, wrapper, "http://x", dir.resolve("browser"));
 
-        assertThat(AppWindow.isSnap(wrapper)).isTrue();
+        assertThat(AppWindow.snapName(wrapper)).contains("chromium");
         assertThat(command).noneMatch(argument -> argument.startsWith("--user-data-dir"));
         assertThat(command).contains("--class=RDFArchitect");
+    }
+
+    @Test
+    void snapNameOf_pathsOfSnaps_namesTheSnap() {
+        assertThat(AppWindow.snapNameOf(Path.of("/snap/bin/chromium"))).contains("chromium");
+        assertThat(AppWindow.snapNameOf(Path.of("/snap/bin/chromium.chromedriver")))
+                .contains("chromium");
+        assertThat(
+                        AppWindow.snapNameOf(
+                                Path.of("/snap/chromium/3000/usr/lib/chromium-browser/chrome")))
+                .contains("chromium");
+        assertThat(AppWindow.snapNameOf(Path.of("/usr/bin/chromium"))).isEmpty();
+        assertThat(AppWindow.snapNameOf(Path.of("/snap/bin"))).isEmpty();
+    }
+
+    @Test
+    void snapName_linkToASnap_namesTheSnap(@TempDir Path dir) throws IOException {
+        Path link;
+        try {
+            link =
+                    Files.createSymbolicLink(
+                            dir.resolve("chromium-browser"), Path.of("/snap/bin/chromium"));
+        } catch (IOException | UnsupportedOperationException e) {
+            Assumptions.abort("No symbolic links here: " + e);
+            return;
+        }
+
+        assertThat(AppWindow.snapName(link)).contains("chromium");
+    }
+
+    @Test
+    void snapName_linkToTheSnapCommand_namesTheSnapAfterTheLink(@TempDir Path dir)
+            throws IOException {
+        Path link;
+        try {
+            link = Files.createSymbolicLink(dir.resolve("chromium"), Path.of("/usr/bin/snap"));
+        } catch (IOException | UnsupportedOperationException e) {
+            Assumptions.abort("No symbolic links here: " + e);
+            return;
+        }
+
+        assertThat(AppWindow.snapName(link)).contains("chromium");
+    }
+
+    @Test
+    void snapName_browserOutsideSnaps_isEmpty(@TempDir Path dir) throws IOException {
+        var chrome =
+                Files.writeString(
+                        dir.resolve("google-chrome"),
+                        "#!/bin/sh\nexec /opt/google/chrome/chrome \"$@\"\n");
+
+        assertThat(AppWindow.snapName(chrome)).isEmpty();
+    }
+
+    @Test
+    void snapOfDesktopFile_desktopFileOfASnapTheUserHasRun_namesTheSnap(@TempDir Path home)
+            throws IOException {
+        Files.createDirectories(home.resolve("snap/firefox"));
+
+        assertThat(AppWindow.snapOfDesktopFile("firefox_firefox.desktop", home))
+                .contains("firefox");
+        assertThat(AppWindow.snapOfDesktopFile("chromium_chromium.desktop", home)).isEmpty();
+        assertThat(AppWindow.snapOfDesktopFile("firefox.desktop", home)).isEmpty();
+        assertThat(AppWindow.snapOfDesktopFile("../firefox_firefox.desktop", home)).isEmpty();
+        assertThat(AppWindow.snapOfDesktopFile("", home)).isEmpty();
+    }
+
+    @Test
+    void snapLaunchDirectory_anySnap_isInTheSnapsOwnDirectory() {
+        assertThat(AppWindow.snapLaunchDirectory(HOME, "firefox"))
+                .isEqualTo(HOME.resolve("snap/firefox/common/rdfarchitect"));
     }
 
     @Test

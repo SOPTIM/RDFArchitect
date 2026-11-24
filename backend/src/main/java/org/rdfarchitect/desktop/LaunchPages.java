@@ -94,6 +94,11 @@ final class LaunchPages {
         this.token = token;
     }
 
+    /** Returns the same pages, written to another directory. */
+    LaunchPages in(Path otherDirectory) {
+        return new LaunchPages(otherDirectory, port, token);
+    }
+
     /**
      * Returns the address that lets a browser in and shows a page of the app.
      *

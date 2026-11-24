@@ -86,6 +86,14 @@ class LaunchPagesTest {
     }
 
     @Test
+    void in_otherDirectory_writesThePagesThere(@TempDir Path other) throws Exception {
+        var page = pages().in(other).appWindowPage("/mainpage");
+
+        assertThat(Path.of(page.getPath())).isEqualTo(other.resolve("launch.html"));
+        assertThat(directory.resolve("launch.html")).doesNotExist();
+    }
+
+    @Test
     void windowPage_eachWindow_writesAPageOfItsOwnWithThePageInside() throws Exception {
         var first = pages().windowPage("/mainpage?open=a");
         var second = pages().windowPage("/mainpage?open=b");

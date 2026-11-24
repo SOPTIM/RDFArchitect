@@ -97,6 +97,7 @@ Only the user who started the app can use its API:
 - `run/instance.json` in the data directory holds `port`, `token` and `version` of the running app. Only the user can read it.
 - A request with the header `X-RDFA-Desktop-Challenge: <nonce>` gets `X-RDFA-Desktop-Proof: <base64url(HMAC-SHA256(token, nonce))>` in its answer, also with `401`. A second start checks it before it sends the token to the port named in `instance.json`.
 - The launcher opens a window with `run/launch.html` (the default browser with `run/open-<id>.html`), which forwards to the session address. So the token is not on the browser's command line.
+- A browser installed as a snap cannot read hidden directories in the home directory. For it, the launcher writes these pages to `~/snap/<snap>/common/rdfarchitect/`.
 
 To call the API by hand, for example on Linux with the default data directory:
 
