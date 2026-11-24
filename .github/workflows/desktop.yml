@@ -120,14 +120,12 @@ jobs:
         shell: pwsh
         run: if ($env:WIX) { Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:WIX "bin") }
       - name: Build portable app
+        id: portable
         run: desktop/build.sh --skip-frontend --version "$APP_VERSION"
       - name: Build installer
         # A release builds its .msi only once RDFArchitect.exe is signed
         # (desktop-windows-installer.yml), so that the program it installs is signed as well.
         if: runner.os != 'Windows' || github.ref_type != 'tag'
-        # The portable archive is the main download; a runner without the installer tooling
-        # (the WiX Toolset on Windows) should not hold it back.
-        continue-on-error: true
         run: desktop/build.sh --skip-frontend --skip-backend --installer --version "$APP_VERSION"
       - name: Check the signature check
         # desktop-windows-installer.yml relies on it and runs for releases only, so it is tried
@@ -141,6 +139,8 @@ jobs:
           $null = & desktop/check-signature.ps1 -Path $exe -AllowUnsigned *>&1
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::check-signature.ps1 -AllowUnsigned refused an unsigned program."; exit 1 }
       - name: Upload app
+        # Also after a failed installer, so that the portable archive is there while the job fails.
+        if: ${{ !cancelled() && steps.portable.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-${{ matrix.platform }}
