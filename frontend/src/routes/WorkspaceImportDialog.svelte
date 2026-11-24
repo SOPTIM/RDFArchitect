@@ -21,6 +21,13 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
+    import { PUBLIC_DESKTOP } from "$lib/config/runtime";
+    import {
+        canChooseFiles,
+        chooseWorkspaceFile,
+        workspaceOpenedFromFile,
+        workspaceOpenedFromRequest,
+    } from "$lib/desktop/saveWorkspace.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -36,14 +43,28 @@
     } from "$lib/utils/importJob.svelte.js";
     import { JobState } from "$lib/utils/importProgress.svelte.js";
 
-    let { showDialog = $bindable() } = $props();
+    /**
+     * `initialArchive` preselects a file, and `openRequestId` names the open request it came from
+     * when the operating system handed it over (desktop app).
+     */
+    let {
+        showDialog = $bindable(),
+        initialArchive = null,
+        openRequestId = null,
+    } = $props();
 
     const uniqueId = uuidv4();
     const nameInputId = `workspaceArchiveName-${uniqueId}`;
     const fileInputId = `workspaceArchiveFile-${uniqueId}`;
     const job = new ImportJobRunner();
 
+    // In the desktop app a workspace file is opened, and saved back to later; elsewhere a
+    // workspace is imported into the session.
+    const verb = PUBLIC_DESKTOP ? "Open" : "Import";
+
     let archive = $state(null);
+    /** The file the archive was read from, when the browser lets Save write to it again. */
+    let archiveHandle = null;
     let rejectedFileName = $state(null);
     let workspaceName = $state("");
     let existingWorkspaces = $state([]);
@@ -58,6 +79,9 @@
         clearInputs();
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         existingWorkspaces = workspaces.map(workspace => workspace.label);
+        if (initialArchive) {
+            await selectArchive([initialArchive]);
+        }
     }
 
     function onClose() {
@@ -67,11 +91,12 @@
 
     function clearInputs() {
         archive = null;
+        archiveHandle = null;
         rejectedFileName = null;
         workspaceName = "";
     }
 
-    async function selectArchive(files) {
+    async function selectArchive(files, handle = null) {
         const file = Array.from(files ?? [])[0];
         if (!file) {
             return;
@@ -80,6 +105,7 @@
             rejectedFileName = file.name;
             return;
         }
+        archiveHandle = handle;
         rejectedFileName = null;
         archive = file;
         workspaceName = "";
@@ -116,6 +142,8 @@
     }
 
     async function dismissImport() {
+        const handle = archiveHandle;
+        const requestId = archive === initialArchive ? openRequestId : null;
         const result = await job.dismiss();
         // The workspace is imported as a whole or not at all.
         if (result?.state === JobState.COMPLETED) {
@@ -123,6 +151,25 @@
                 result.workspaceName,
                 result.importedSchemaNames,
             );
+            if (PUBLIC_DESKTOP && requestId) {
+                await workspaceOpenedFromRequest(
+                    result.workspaceName,
+                    requestId,
+                );
+            } else if (PUBLIC_DESKTOP) {
+                await workspaceOpenedFromFile(result.workspaceName, handle);
+            }
+        }
+    }
+
+    async function selectFile() {
+        if (!PUBLIC_DESKTOP || !canChooseFiles()) {
+            document.getElementById(fileInputId).click();
+            return;
+        }
+        const chosen = await chooseWorkspaceFile();
+        if (chosen) {
+            await selectArchive([chosen.file], chosen.handle);
         }
     }
 
@@ -137,7 +184,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel={progress?.finished ? "Close" : "Import"}
+    primaryLabel={progress?.finished ? "Close" : verb}
     onPrimary={progress?.finished ? closeAfterImport : startImport}
     disablePrimary={!progress?.finished &&
         (progress !== null || !archive || !!nameError)}
@@ -145,7 +192,7 @@
     onSecondary={() => job.cancel()}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
-    title={`Import Workspace (${workspaceArchiveMediaType.fileExtension})`}
+    title={`${verb} Workspace (${workspaceArchiveMediaType.fileExtension})`}
     size="w-1/3"
 >
     {#if progress}
@@ -170,11 +217,7 @@
                     class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
                 >
                     <div class="h-9 w-24">
-                        <ButtonControl
-                            height={9}
-                            callOnClick={() =>
-                                document.getElementById(fileInputId).click()}
-                        >
+                        <ButtonControl height={9} callOnClick={selectFile}>
                             Select File
                         </ButtonControl>
                     </div>
@@ -184,9 +227,15 @@
                 </div>
                 <p class="text-font-secondary mt-2 text-xs">
                     A <b>{workspaceArchiveMediaType.fileExtension}</b>
-                    file written by File → Export → Workspace ({workspaceArchiveMediaType.fileExtension}).
-                    It is imported as a new workspace, with all of its schemas,
-                    constraints, diagrams and layouts.
+                    {#if PUBLIC_DESKTOP}
+                        file written by File → Save Workspace. It is opened as a
+                        new workspace, with all of its schemas, constraints,
+                        diagrams and layouts.
+                    {:else}
+                        file written by File → Export → Workspace ({workspaceArchiveMediaType.fileExtension}).
+                        It is imported as a new workspace, with all of its
+                        schemas, constraints, diagrams and layouts.
+                    {/if}
                 </p>
                 {#if rejectedFileName}
                     <div

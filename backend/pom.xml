@@ -70,7 +70,55 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>org.rdfarchitect.Launcher</mainClass>
+                    <!-- Repackaging takes provided dependencies along; Lombok is compile time only. -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                        </exclude>
+                    </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>ban-test-libraries</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <!-- Every scope but test, the provided one included, reaches the application jar. -->
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>org.springframework.boot:spring-boot-starter-test</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-test*</exclude>
+                                        <exclude>org.springframework:spring-test</exclude>
+                                        <exclude>org.junit*</exclude>
+                                        <exclude>org.mockito*</exclude>
+                                        <exclude>org.assertj*</exclude>
+                                        <exclude>org.hamcrest*</exclude>
+                                        <exclude>org.awaitility*</exclude>
+                                        <exclude>org.xmlunit*</exclude>
+                                        <exclude>org.skyscreamer:jsonassert</exclude>
+                                        <exclude>com.vaadin.external.google:android-json</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>*:*:*:*:test</include>
+                                    </includes>
+                                    <message>Test libraries must only be in the test scope; otherwise they are packaged into the application jar.</message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
@@ -331,6 +379,96 @@
                 </plugins>
             </build>
         </profile>
+        <!--
+          The desktop app: one jar holding the backend and the built user interface, started by
+          DesktopLauncher. Build the frontend first (npm run build in ../frontend), then
+          `mvn -Pdesktop clean package`; desktop/build.sh does both and packages the result.
+        -->
+        <profile>
+            <id>desktop</id>
+            <properties>
+                <desktop.user-interface>${project.basedir}/../frontend/build</desktop.user-interface>
+                <!-- Release tags are lightweight, which git.properties does not resolve. -->
+                <desktop.version>${project.version}</desktop.version>
+            </properties>
+            <build>
+                <finalName>rdfarchitect-desktop</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>desktop-requires-user-interface</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <fail message="The desktop build needs the built user interface at ${desktop.user-interface}: run `npm run build` in frontend/, or point -Ddesktop.user-interface at a build.">
+                                            <condition>
+                                                <not>
+                                                    <available file="${desktop.user-interface}/index.html"/>
+                                                </not>
+                                            </condition>
+                                        </fail>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>desktop-user-interface</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.outputDirectory}/rdfarchitect-web</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${desktop.user-interface}</directory>
+                                            <excludes>
+                                                <!-- Written by RuntimeConfigController instead. -->
+                                                <exclude>env.js</exclude>
+                                            </excludes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>desktop-version</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.basedir}/src/desktop/resources</directory>
+                                            <filtering>true</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>org.rdfarchitect.desktop.DesktopLauncher</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -368,11 +506,6 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.1.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
         <dependency>
@@ -389,6 +522,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <version>4.1.2</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

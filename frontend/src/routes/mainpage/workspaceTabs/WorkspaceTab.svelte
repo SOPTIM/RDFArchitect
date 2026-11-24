@@ -17,6 +17,7 @@
 
 <script>
     import {
+        faCircle,
         faDatabase,
         faLock,
         faTrash,
@@ -25,6 +26,7 @@
 
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { desktopSession } from "$lib/desktop/desktopSession.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { dragHasFiles, fileDragState } from "$lib/fileDragState.svelte.js";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -60,6 +62,8 @@
 
     let switchTimeout = null;
     const readonly = $derived(readonlyValue.current ?? false);
+    const unsaved = $derived(desktopSession.unsavedWorkspaces.includes(name));
+    const tabLabel = $derived(unsaved ? `${name} (unsaved changes)` : name);
     const stateClasses = $derived(
         active
             ? activeTabClasses
@@ -133,9 +137,9 @@
                 type="button"
                 role="tab"
                 aria-selected={active}
-                aria-label={name}
+                aria-label={tabLabel}
                 class="focus-visible:outline-button-default-background absolute inset-0 cursor-pointer rounded-t-lg focus-visible:outline-2 focus-visible:-outline-offset-2"
-                title={name}
+                title={tabLabel}
                 onclick={() => onActivate?.()}
             ></button>
             <span
@@ -151,6 +155,11 @@
                         title="Read-only"
                     >
                         <Fa icon={faLock} />
+                    </span>
+                {/if}
+                {#if unsaved}
+                    <span class="text-orange inline-flex text-[0.5rem]">
+                        <Fa icon={faCircle} />
                     </span>
                 {/if}
             </span>

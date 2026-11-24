@@ -9,7 +9,9 @@ This page gets you from a fresh checkout to the first useful actions in RDFArchi
 
 ## Start the application
 
-The shortest path for evaluation is Docker Compose.
+The shortest path is the desktop app: download it for Windows, macOS or Linux from the [latest release](https://github.com/SOPTIM/RDFArchitect/releases/latest) and start it. It needs no server and no Java installation. See [The desktop app](/user-guide/desktop-app).
+
+To run RDFArchitect as a server, for a team or for evaluation, use Docker Compose.
 
 1. Check out the repository:
 

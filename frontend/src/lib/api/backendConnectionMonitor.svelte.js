@@ -31,11 +31,48 @@
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
+const writeListeners = new Set();
+const READING_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 /** Reactive connection state — components can read `.isOffline` if needed. */
 export const backendConnection = $state({ isOffline: false });
 
 let offlineToastId = null;
 let installed = false;
+
+/**
+ * Calls `listener` with the URL of every request that may have changed something on the backend,
+ * once it has been answered, successfully or not.
+ *
+ * @param {(url: string) => void} listener
+ * @returns {() => void} removes the listener again
+ */
+export function onBackendWrite(listener) {
+    writeListeners.add(listener);
+    return () => writeListeners.delete(listener);
+}
+
+function requestMethod(input, init) {
+    const method =
+        init?.method ??
+        (typeof Request !== "undefined" && input instanceof Request
+            ? input.method
+            : "GET");
+    return method.toUpperCase();
+}
+
+function notifyWrite(url) {
+    for (const listener of writeListeners) {
+        try {
+            listener(url);
+        } catch (error) {
+            console.error(
+                "[backendConnectionMonitor] Write listener failed",
+                error,
+            );
+        }
+    }
+}
 
 /**
  * Resolve the URL of a `fetch()` first argument to a string we can pattern-match.
@@ -51,8 +88,15 @@ function resolveUrl(input) {
 }
 
 function isBackendUrl(url) {
-    if (!PUBLIC_BACKEND_URL) return false;
-    return url.startsWith(PUBLIC_BACKEND_URL);
+    if (PUBLIC_BACKEND_URL) {
+        return url.startsWith(PUBLIC_BACKEND_URL);
+    }
+    // Served from the backend's own origin, as in the desktop app or behind the gateway.
+    return (
+        url.startsWith("/api/") ||
+        (typeof window !== "undefined" &&
+            url.startsWith(`${window.location.origin}/api/`))
+    );
 }
 
 function isNetworkError(error) {
@@ -98,11 +142,16 @@ export function installBackendFetchInterceptor() {
     window.fetch = async function interceptedFetch(input, init) {
         const url = resolveUrl(input);
         const watched = isBackendUrl(url);
+        const writes =
+            watched && !READING_METHODS.has(requestMethod(input, init));
 
         try {
             const response = await originalFetch(input, init);
             if (watched) {
                 markOnline();
+            }
+            if (writes) {
+                notifyWrite(url);
             }
             return response;
         } catch (error) {

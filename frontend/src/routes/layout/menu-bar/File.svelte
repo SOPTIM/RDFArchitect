@@ -21,6 +21,8 @@
         faDownload,
         faFileExport,
         faFileImport,
+        faFloppyDisk,
+        faFolderOpen,
         faGear,
         faShare,
         faTrash,
@@ -30,6 +32,11 @@
 
     import { exportWorkspace } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import {
+        PUBLIC_DESKTOP,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
+    } from "$lib/config/runtime";
+    import { saveWorkspace } from "$lib/desktop/saveWorkspace.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -103,12 +110,6 @@
                 true,
             ),
             shortcutStore.register(
-                "snapshot",
-                ["ctrl", "shift", "s"],
-                () => (showSnapshotDialog = true),
-                true,
-            ),
-            shortcutStore.register(
                 "settings",
                 ["ctrl", "alt", "s"],
                 () => (showUserSettingDialog = true),
@@ -121,11 +122,60 @@
                 true,
             ),
         );
+        // The desktop app has no snapshots, and gives their keys to Save As.
+        if (PUBLIC_SHARE_SNAPSHOT_ENABLED && !PUBLIC_DESKTOP) {
+            shortcutsUnregister.push(
+                shortcutStore.register(
+                    "snapshot",
+                    ["ctrl", "shift", "s"],
+                    () => (showSnapshotDialog = true),
+                    true,
+                ),
+            );
+        }
+        if (PUBLIC_DESKTOP) {
+            shortcutsUnregister.push(
+                shortcutStore.register(
+                    "openWorkspace",
+                    ["ctrl", "o"],
+                    () => (showWorkspaceImportDialog = true),
+                    true,
+                    { whileTyping: true },
+                ),
+                shortcutStore.register(
+                    "saveWorkspace",
+                    ["ctrl", "s"],
+                    event => saveFromShortcut(event, false),
+                    false,
+                    { whileTyping: true, keepsEdits: true },
+                ),
+                shortcutStore.register(
+                    "saveWorkspaceAs",
+                    ["ctrl", "shift", "s"],
+                    event => saveFromShortcut(event, true),
+                    false,
+                    { whileTyping: true, keepsEdits: true },
+                ),
+            );
+        }
     });
 
     onDestroy(() => {
         shortcutsUnregister.forEach(unregister => unregister());
     });
+
+    function saveFromShortcut(event, saveAs) {
+        // A held key repeats; one press saves once.
+        if (!event.repeat) {
+            saveSelectedWorkspace(saveAs);
+        }
+    }
+
+    function saveSelectedWorkspace(saveAs) {
+        if (hasWorkspaceSelected) {
+            void saveWorkspace(selectedWorkspace, { saveAs });
+        }
+    }
 
     async function downloadWorkspaceArchive() {
         const workspaceName = selectedWorkspace;
@@ -162,6 +212,32 @@
 <Menubar.Menu value="file">
     <Menubar.Trigger>File</Menubar.Trigger>
     <Menubar.Content side="bottom" sideOffset={8}>
+        {#if PUBLIC_DESKTOP}
+            <Menubar.Item.Button
+                onSelect={() => (showWorkspaceImportDialog = true)}
+                faIcon={faFolderOpen}
+                altText="Ctrl+O"
+            >
+                Open Workspace…
+            </Menubar.Item.Button>
+            <Menubar.Item.Button
+                onSelect={() => saveSelectedWorkspace(false)}
+                disabled={!hasWorkspaceSelected}
+                faIcon={faFloppyDisk}
+                altText="Ctrl+S"
+            >
+                Save Workspace
+            </Menubar.Item.Button>
+            <Menubar.Item.Button
+                onSelect={() => saveSelectedWorkspace(true)}
+                disabled={!hasWorkspaceSelected}
+                faIcon={faFloppyDisk}
+                altText="Ctrl+Shift+S"
+            >
+                Save Workspace As…
+            </Menubar.Item.Button>
+            <Menubar.Separator />
+        {/if}
         <Menubar.SubMenu.Root>
             <Menubar.SubMenu.Trigger faIcon={faFileImport}>
                 Import
@@ -187,12 +263,14 @@
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
-                <Menubar.Item.Button
-                    onSelect={() => (showWorkspaceImportDialog = true)}
-                    faIcon={faBoxArchive}
-                >
-                    Workspace ({workspaceArchiveMediaType.fileExtension})
-                </Menubar.Item.Button>
+                {#if !PUBLIC_DESKTOP}
+                    <Menubar.Item.Button
+                        onSelect={() => (showWorkspaceImportDialog = true)}
+                        faIcon={faBoxArchive}
+                    >
+                        Workspace ({workspaceArchiveMediaType.fileExtension})
+                    </Menubar.Item.Button>
+                {/if}
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
         <Menubar.SubMenu.Root>
@@ -221,13 +299,15 @@
                 >
                     Documentation (HTML, AsciiDoc)
                 </Menubar.Item.Button>
-                <Menubar.Item.Button
-                    onSelect={downloadWorkspaceArchive}
-                    disabled={!hasWorkspaceSelected}
-                    faIcon={faBoxArchive}
-                >
-                    Workspace ({workspaceArchiveMediaType.fileExtension})
-                </Menubar.Item.Button>
+                {#if !PUBLIC_DESKTOP}
+                    <Menubar.Item.Button
+                        onSelect={downloadWorkspaceArchive}
+                        disabled={!hasWorkspaceSelected}
+                        faIcon={faBoxArchive}
+                    >
+                        Workspace ({workspaceArchiveMediaType.fileExtension})
+                    </Menubar.Item.Button>
+                {/if}
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
         <Menubar.Separator />
@@ -239,14 +319,16 @@
             Settings
         </Menubar.Item.Button>
         <Menubar.Separator />
-        <Menubar.Item.Button
-            onSelect={() => (showSnapshotDialog = true)}
-            faIcon={faShare}
-            altText="Ctrl+Shift+S"
-        >
-            Share Snapshot
-        </Menubar.Item.Button>
-        <Menubar.Separator />
+        {#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+            <Menubar.Item.Button
+                onSelect={() => (showSnapshotDialog = true)}
+                faIcon={faShare}
+                altText={PUBLIC_DESKTOP ? undefined : "Ctrl+Shift+S"}
+            >
+                Share Snapshot
+            </Menubar.Item.Button>
+            <Menubar.Separator />
+        {/if}
         <Menubar.SubMenu.Root>
             <Menubar.SubMenu.Trigger faIcon={faTrash} variant="danger">
                 Delete
@@ -277,7 +359,9 @@
 <WorkspaceImportDialog bind:showDialog={showWorkspaceImportDialog} />
 <XmiImportDialog bind:showDialog={showXmiImportDialog} />
 <ExportDialog bind:showDialog={showExportDialog} />
-<SnapshotDialog bind:showDialog={showSnapshotDialog} />
+{#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+    <SnapshotDialog bind:showDialog={showSnapshotDialog} />
+{/if}
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />
 <SHACLExportDialog bind:showDialog={showSHACLExportDialog} />
 <DocumentationExportDialog bind:showDialog={showDocumentationExportDialog} />

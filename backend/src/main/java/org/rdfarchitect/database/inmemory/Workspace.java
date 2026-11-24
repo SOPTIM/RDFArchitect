@@ -88,6 +88,9 @@ public class Workspace {
 
     @Setter @Getter private volatile boolean isReadOnly = true;
 
+    /** Stays the same through every change and rename; a workspace created anew gets another. */
+    @Getter private final UUID id = UUID.randomUUID();
+
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final WorkspaceChangeLog changeLog;
@@ -735,6 +738,24 @@ public class Workspace {
                     ("Cannot restore: the oldest change being taken back names version %s, "
                                     + "but %d versions back the participant holds %s.")
                             .formatted(oldestTakenBack, versionsGained - 1, standingThere));
+        }
+    }
+
+    /**
+     * Returns the change the workspace stands on, see {@link HistoryPosition#currentChangeId()}, or
+     * {@code null} while another thread is writing to it. Does not wait for that write: an import
+     * holds the workspace for as long as it runs, and the answer would be out of date the moment
+     * the write commits anyway.
+     */
+    public UUID currentChangeId() {
+        var lock = rwLock.readLock();
+        if (!lock.tryLock()) {
+            return null;
+        }
+        try {
+            return historyPosition().currentChangeId();
+        } finally {
+            lock.unlock();
         }
     }
 

@@ -17,8 +17,10 @@
 
 <script>
     import "../app.css";
+    import { faLock } from "@fortawesome/free-solid-svg-icons";
     import { Tooltip } from "bits-ui";
     import { onMount } from "svelte";
+    import { Fa } from "svelte-fa";
 
     import {
         installBackendFetchInterceptor,
@@ -32,7 +34,18 @@
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
+    import {
+        PUBLIC_DESKTOP,
+        PUBLIC_EMBED_SESSION_HANDSHAKE,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
+    } from "$lib/config/runtime";
+    import {
+        refreshDesktopStatus,
+        startDesktopSession,
+    } from "$lib/desktop/desktopSession.svelte.js";
+    import DesktopStoppedOverlay from "$lib/desktop/DesktopStoppedOverlay.svelte";
+    import RecoveryDialog from "$lib/desktop/RecoveryDialog.svelte";
+    import UnsavedIndicator from "$lib/desktop/UnsavedIndicator.svelte";
     import { isDialogOpen } from "$lib/dialog/openDialogs.js";
     import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
@@ -53,6 +66,7 @@
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
+    import DesktopOpenRequests from "./DesktopOpenRequests.svelte";
     import Edit from "./layout/menu-bar/Edit.svelte";
     import File from "./layout/menu-bar/File.svelte";
     import Help from "./layout/menu-bar/Help.svelte";
@@ -100,15 +114,29 @@
         await fetchUndoRedo();
     });
 
+    // Imports upload with XMLHttpRequest, which the fetch interceptor does not see; they all end
+    // in a reload of the editor, after which the desktop app asks again what is unsaved.
+    $effect(() => {
+        forceReloadTrigger.subscribe();
+        void refreshDesktopStatus();
+    });
+
     onMount(() => {
         installBackendFetchInterceptor();
         probeBackendConnection();
-        loadSnapshot();
+        if (PUBLIC_SHARE_SNAPSHOT_ENABLED) {
+            loadSnapshot();
+        }
+        const stopDesktopSession = startDesktopSession();
         // Lets an embedding IDE read the workspaces of this very session; opt-in per deployment.
-        return installSessionHandshake({
+        const removeHandshake = installSessionHandshake({
             enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
             fetchSessionId: sessionId,
         });
+        return () => {
+            removeHandshake?.();
+            stopDesktopSession();
+        };
     });
 
     /** The backend session this browser is using, or null when it cannot be read. */
@@ -243,8 +271,7 @@
             }
         }
 
-        if (inputFocused) return;
-        shortcutStore.handleEvent(event);
+        shortcutStore.handleEvent(event, { typing: inputFocused });
     }
 
     /**
@@ -315,64 +342,62 @@
     >
         {#if page.url.pathname !== "/"}
             <nav
-                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center {pageTitle
+                class="toolbar-surface toolbar-layout text-default-text relative h-12 min-h-12 w-full {pageTitle
                     ? 'toolbar-surface--named'
                     : ''}"
             >
-                <!-- Left -->
-                <div class="w-1/3">
-                    <div class="flex min-w-0 flex-1 items-center">
-                        <BrandLogo
-                            class="toolbar-brand"
-                            onclick={navigateHome}
-                        />
+                <div class="flex items-center">
+                    <BrandLogo class="toolbar-brand" onclick={navigateHome} />
 
-                        {#if page.url.pathname !== "/"}
-                            <Menubar.Root
-                                bind:value={menubarValue}
-                                class="toolbar-menubar"
-                            >
-                                <File {isWorkspaceReadOnly} />
-                                <Edit
-                                    {canRedo}
-                                    {canUndo}
-                                    {isWorkspaceReadOnly}
-                                    {reload}
-                                />
-                                <View />
-                                <Help />
-                            </Menubar.Root>
-                        {/if}
-                    </div>
+                    {#if page.url.pathname !== "/"}
+                        <Menubar.Root
+                            bind:value={menubarValue}
+                            class="toolbar-menubar"
+                        >
+                            <File {isWorkspaceReadOnly} />
+                            <Edit
+                                {canRedo}
+                                {canUndo}
+                                {isWorkspaceReadOnly}
+                                {reload}
+                            />
+                            <View />
+                            <Help />
+                        </Menubar.Root>
+                    {/if}
                 </div>
 
-                <!-- Center -->
-                <div class="w-1/3">
+                <div class="min-w-0">
                     {#if page.url.pathname === "/mainpage"}
-                        <div class="w-full">
-                            <Searchbar />
-                        </div>
+                        <Searchbar />
                     {:else if pageTitle}
-                        <div class="w-full text-center text-sm font-semibold">
+                        <div class="truncate text-center text-sm font-semibold">
                             {pageTitle}
                         </div>
                     {/if}
                 </div>
 
-                <!-- Right -->
-                <div class="w-1/3">
-                    <div
-                        class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
-                    >
-                        {#if isWorkspaceReadOnly}
+                <div class="flex items-center justify-end gap-2 pr-2">
+                    {#if PUBLIC_DESKTOP}
+                        <UnsavedIndicator workspaceName={selectedWorkspace} />
+                    {/if}
+                    {#if isWorkspaceReadOnly}
+                        <!-- ButtonControl fills its parent; this one is as wide as the button. -->
+                        <div class="shrink-0">
                             <ButtonControl
                                 callOnClick={requestEnableEditing}
                                 height={9}
+                                title="The workspace is read-only. Enable editing"
                             >
-                                Enable Editing
+                                <span class="flex items-center gap-2">
+                                    <Fa icon={faLock} />
+                                    <span class="max-lg:sr-only">
+                                        Enable Editing
+                                    </span>
+                                </span>
                             </ButtonControl>
-                        {/if}
-                    </div>
+                        </div>
+                    {/if}
                 </div>
             </nav>
         {/if}
@@ -382,6 +407,11 @@
         </div>
     </div>
     <ToastContainer />
+    <DesktopStoppedOverlay />
+    {#if PUBLIC_DESKTOP}
+        <RecoveryDialog />
+        <DesktopOpenRequests />
+    {/if}
     <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

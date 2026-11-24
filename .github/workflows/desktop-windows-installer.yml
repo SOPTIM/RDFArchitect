@@ -1,0 +1,84 @@
+name: Desktop Windows Installer
+run-name: Windows installer for ${{ inputs.tag }}
+
+# Builds the .msi of a release from its portable archive once RDFArchitect.exe in it is signed and
+# the archive uploaded to the draft release again, so that the program the installer puts on a
+# computer is signed too. The .msi is signed after it; see "Releases" in the developer guide.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v1.9.0; its draft release has to hold the signed windows-x64.zip"
+        required: true
+        type: string
+      allow-unsigned:
+        description: "Build from an unsigned RDFArchitect.exe, only to try the workflow"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  msi:
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      ALLOW_UNSIGNED: ${{ inputs.allow-unsigned }}
+      # Optional repository variable, e.g. "SOPTIM AG": the organization (O=) that signs the exe.
+      EXPECTED_SIGNER: ${{ vars.WINDOWS_SIGNER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: "temurin"
+          java-version: "25"
+      - name: Put the WiX Toolset on the path
+        # Installed on the windows-2022 image, but not on the path, where jpackage looks for it.
+        shell: pwsh
+        run: if ($env:WIX) { Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:WIX "bin") }
+      - name: Download the portable archive
+        shell: pwsh
+        run: |
+          $download = Join-Path $env:RUNNER_TEMP "download"
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern "*-windows-x64.zip" --dir $download
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $archives = @(Get-ChildItem $download -Filter "*-windows-x64.zip")
+          if ($archives.Count -ne 1) {
+            Write-Host "::error::Expected one *-windows-x64.zip in release $env:TAG, found $($archives.Count)."
+            exit 1
+          }
+          Expand-Archive $archives[0].FullName -DestinationPath (Join-Path $env:RUNNER_TEMP "portable")
+      - name: Check the signature of RDFArchitect.exe
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "portable\RDFArchitect\RDFArchitect.exe"
+          & desktop/check-signature.ps1 -Path $exe -ExpectedSigner $env:EXPECTED_SIGNER -AllowUnsigned:($env:ALLOW_UNSIGNED -eq 'true')
+      - name: Build the installer
+        shell: bash
+        run: desktop/build.sh --installer-from "$RUNNER_TEMP/portable" --version "${TAG#v}"
+      - name: Check the signature of the RDFArchitect.exe it installs
+        shell: pwsh
+        run: |
+          $msi = @(Get-ChildItem desktop/dist -Filter "*.msi")
+          if ($msi.Count -ne 1) { Write-Host "::error::Expected one .msi, found $($msi.Count)."; exit 1 }
+          # An administrative installation only unpacks the files, without installing anything.
+          $content = Join-Path $env:RUNNER_TEMP "msi-content"
+          $process = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @(
+            "/a", "`"$($msi[0].FullName)`"", "/qn", "TARGETDIR=`"$content`"")
+          if ($process.ExitCode -ne 0) { Write-Host "::error::msiexec /a failed ($($process.ExitCode))."; exit 1 }
+          $exe = Get-ChildItem $content -Recurse -Filter "RDFArchitect.exe" | Select-Object -First 1
+          if (-not $exe) { Write-Host "::error::The .msi holds no RDFArchitect.exe."; exit 1 }
+          & desktop/check-signature.ps1 -Path $exe.FullName -ExpectedSigner $env:EXPECTED_SIGNER -AllowUnsigned:($env:ALLOW_UNSIGNED -eq 'true')
+      - name: Attach the installer to the release
+        shell: bash
+        run: gh release upload "$TAG" desktop/dist/*.msi --clobber --repo "$GITHUB_REPOSITORY"

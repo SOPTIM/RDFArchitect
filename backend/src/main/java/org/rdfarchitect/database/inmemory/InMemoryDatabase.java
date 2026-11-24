@@ -161,6 +161,25 @@ public interface InMemoryDatabase {
     List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
+     * Returns an id the workspace keeps for as long as it exists: through every change, undo and
+     * rename. A workspace deleted and created anew under the same name gets another one.
+     *
+     * @param workspaceName literal workspace name
+     * @return the id of the workspace
+     */
+    UUID workspaceId(String workspaceName);
+
+    /**
+     * Returns the change the workspace currently stands on. An undo moves it back to the change
+     * before, so a workspace stepped back to where it stood earlier reports the same id again.
+     *
+     * @param workspaceName literal workspace name
+     * @return the id of the current change, or {@code null} while another thread is writing to the
+     *     workspace
+     */
+    UUID currentChangeId(String workspaceName);
+
+    /**
      * Checks whether a Graph exists in a specified dataset.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the

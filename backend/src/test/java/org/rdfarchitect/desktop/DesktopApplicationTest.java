@@ -1,0 +1,320 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.desktop;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.rdfarchitect.api.controller.desktop.DesktopRESTController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.CookieManager;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.ZipInputStream;
+
+/** The desktop profile as the browser window sees it, over HTTP. */
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+            "desktop.exit-when-closed=false",
+            "desktop.user-interface=classpath:/desktop-ui/",
+            "desktop.data-directory=${java.io.tmpdir}/rdfarchitect-desktop-test-${random.uuid}"
+        })
+@ActiveProfiles("desktop")
+class DesktopApplicationTest {
+
+    @LocalServerPort private int port;
+
+    @Autowired private DesktopAccessToken token;
+
+    private HttpClient client;
+
+    @BeforeEach
+    void setUp() {
+        client = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
+    }
+
+    private String url(String path) {
+        return "http://127.0.0.1:" + port + path;
+    }
+
+    /** A request as the launcher sends it, with the token in its header. */
+    private HttpRequest.Builder request(String path) {
+        return HttpRequest.newBuilder(URI.create(url(path)))
+                .header(DesktopAccessFilter.TOKEN_HEADER, token.value());
+    }
+
+    private HttpResponse<String> get(String path) throws IOException, InterruptedException {
+        return client.send(request(path).GET().build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> getWithoutToken(String path)
+            throws IOException, InterruptedException {
+        return client.send(
+                HttpRequest.newBuilder(URI.create(url(path))).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> send(String method, String path, String origin)
+            throws IOException, InterruptedException {
+        var request = request(path).method(method, HttpRequest.BodyPublishers.noBody());
+        if (origin != null) {
+            request.header("Origin", origin);
+        }
+        return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void userInterface_anyRoute_servesIndex() throws Exception {
+        for (var route : new String[] {"/", "/mainpage", "/shacl/workbench"}) {
+            var response = getWithoutToken(route);
+
+            assertThat(response.statusCode()).as(route).isEqualTo(200);
+            assertThat(response.body()).as(route).contains("fixture");
+            assertThat(response.headers().firstValue("Cache-Control"))
+                    .as(route)
+                    .hasValue("no-cache");
+        }
+    }
+
+    @Test
+    void userInterface_missingFileOrUnknownApiPath_answersNotFound() throws Exception {
+        assertThat(get("/_app/immutable/missing.js").statusCode()).isEqualTo(404);
+        assertThat(get("/missing.png").statusCode()).isEqualTo(404);
+        assertThat(get("/api/missing").statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void userInterface_versionedFile_isCachedForGood() throws Exception {
+        var response = get("/_app/immutable/start.js");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.headers().firstValue("Cache-Control").orElseThrow())
+                .contains("immutable");
+    }
+
+    @Test
+    void runtimeConfig_desktop_configuresTheUserInterfaceForThisBackend() throws Exception {
+        var response = getWithoutToken("/env.js");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.headers().firstValue("Content-Type").orElseThrow())
+                .startsWith("text/javascript");
+        assertThat(response.body())
+                .contains("PUBLIC_BACKEND_URL: \"\"")
+                .contains("PUBLIC_DESKTOP: \"true\"")
+                .contains("PUBLIC_SHARE_SNAPSHOT_ENABLED: \"false\"")
+                .contains("PUBLIC_DESKTOP_HEARTBEAT_SECONDS: \"10\"");
+    }
+
+    @Test
+    void snapshots_desktop_areNotOffered() throws Exception {
+        assertThat(send("POST", "/api/snapshots", null).statusCode()).isEqualTo(404);
+        assertThat(get("/api/snapshots/token").statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void reportWindowOpen_otherOrigin_isRefused() throws Exception {
+        var foreign = send("POST", "/api/desktop/windows/w/heartbeat", "http://evil.example");
+        var own = send("POST", "/api/desktop/windows/w/heartbeat", url(""));
+
+        assertThat(foreign.statusCode()).isEqualTo(403);
+        assertThat(own.statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void getDesktopInfo_running_identifiesTheApp() throws Exception {
+        var response = get("/api/desktop");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("\"application\":\"RDFArchitect\"");
+    }
+
+    @Test
+    void getWorkspaceFile_workspace_namesItsVersion() throws Exception {
+        assertThat(send("PUT", "/api/workspaces/Draft%20One", null).statusCode()).isEqualTo(200);
+        assertThat(send("POST", "/api/desktop/windows/w/heartbeat", null).body())
+                .contains("\"unsavedWorkspaces\":[]");
+
+        var file =
+                client.send(
+                        request("/api/desktop/workspaces/Draft%20One/file").build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+
+        assertThat(file.statusCode()).isEqualTo(200);
+        assertThat(file.headers().firstValue(DesktopRESTController.WORKSPACE_VERSION_HEADER))
+                .isPresent();
+        assertThat(file.headers().firstValue("Content-Disposition").orElseThrow())
+                .contains("Draft One.rdfa");
+        try (var zip = new ZipInputStream(new ByteArrayInputStream(file.body()))) {
+            assertThat(zip.getNextEntry()).isNotNull();
+        }
+    }
+
+    private HttpResponse<String> postJson(String path, String json)
+            throws IOException, InterruptedException {
+        return client.send(
+                request(path)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void requestOpenFile_handedOverFile_opensAndSavesBackToIt(@TempDir Path directory)
+            throws Exception {
+        assertThat(send("PUT", "/api/workspaces/Handed", null).statusCode()).isEqualTo(200);
+        var file =
+                client.send(
+                        request("/api/desktop/workspaces/Handed/file").build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+        var onDisk = Files.write(directory.resolve("Handed.rdfa"), file.body());
+
+        var registered =
+                postJson(
+                        "/api/desktop/open-requests",
+                        "{\"path\":"
+                                + new ObjectMapper().writeValueAsString(onDisk.toString())
+                                + "}");
+        assertThat(registered.statusCode()).isEqualTo(201);
+        var id = new ObjectMapper().readTree(registered.body()).get("id").asText();
+        assertThat(get("/api/desktop/open-requests/" + id).statusCode()).isEqualTo(200);
+
+        assertThat(
+                        send("PUT", "/api/desktop/workspaces/Handed/opened-from/" + id, null)
+                                .statusCode())
+                .isEqualTo(204);
+        assertThat(get("/api/desktop/open-requests/" + id).statusCode()).isEqualTo(404);
+        assertThat(send("POST", "/api/desktop/windows/w/heartbeat", null).body())
+                .contains("\"workspacesWithFile\":[\"Handed\"]");
+
+        Files.writeString(onDisk, "overwritten");
+        assertThat(send("POST", "/api/desktop/workspaces/Handed/file", null).statusCode())
+                .isEqualTo(204);
+        assertThat(Files.size(onDisk)).isGreaterThan(100);
+
+        // Saved elsewhere by the browser: that file is the workspace's file from now on.
+        assertThat(send("PUT", "/api/desktop/workspaces/Handed/saved", null).statusCode())
+                .isEqualTo(204);
+        assertThat(send("POST", "/api/desktop/workspaces/Handed/file", null).statusCode())
+                .isEqualTo(409);
+    }
+
+    @Test
+    void requestOpenFile_noWorkspaceFile_isRefused(@TempDir Path directory) throws Exception {
+        var text = Files.writeString(directory.resolve("notes.txt"), "text");
+
+        assertThat(
+                        postJson(
+                                        "/api/desktop/open-requests",
+                                        "{\"path\":\"" + text.getFileName() + "\"}")
+                                .statusCode())
+                .isEqualTo(400);
+        assertThat(postJson("/api/desktop/open-requests", "{}").statusCode()).isEqualTo(400);
+        assertThat(send("POST", "/api/desktop/workspaces/missing/file", null).statusCode())
+                .isEqualTo(409);
+    }
+
+    @Test
+    void listRecoveredWorkspaces_nothingKept_isEmpty() throws Exception {
+        var listed = get("/api/desktop/recovery");
+
+        assertThat(listed.statusCode()).isEqualTo(200);
+        assertThat(listed.body()).isEqualTo("[]");
+        assertThat(get("/api/desktop/recovery/missing.rdfa").statusCode()).isEqualTo(404);
+        assertThat(send("DELETE", "/api/desktop/recovery/missing.rdfa", null).statusCode())
+                .isEqualTo(404);
+    }
+
+    @Test
+    void api_withoutToken_answersUnauthorized() throws Exception {
+        for (var path : new String[] {"/api/desktop", "/api/desktop/recovery", "/api/session"}) {
+            assertThat(getWithoutToken(path).statusCode()).as(path).isEqualTo(401);
+        }
+        var postWithoutToken =
+                client.send(
+                        HttpRequest.newBuilder(URI.create(url("/api/desktop/open-requests")))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString("{\"path\":\"/x.rdfa\"}"))
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(postWithoutToken.statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void session_rightToken_letsTheBrowserInByCookie() throws Exception {
+        var session =
+                getWithoutToken("/desktop/session?token=" + token.value() + "&next=%2Fmainpage");
+
+        assertThat(session.statusCode()).isEqualTo(303);
+        assertThat(session.headers().firstValue("Location")).hasValue("/mainpage");
+        assertThat(session.headers().firstValue("Set-Cookie").orElseThrow())
+                .startsWith("RDFA_DESKTOP_ACCESS_" + port + "=")
+                .contains("HttpOnly", "SameSite=Strict");
+        assertThat(getWithoutToken("/api/desktop").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void session_wrongToken_answersUnauthorized() throws Exception {
+        var session = getWithoutToken("/desktop/session?token=wrong&next=%2Fmainpage");
+
+        assertThat(session.statusCode()).isEqualTo(401);
+        assertThat(session.headers().firstValue("Set-Cookie")).isEmpty();
+        assertThat(getWithoutToken("/api/desktop").statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void api_challengeWithoutToken_provesToHoldTheToken() throws Exception {
+        var challenge = DesktopAccessToken.challenge();
+
+        var response =
+                client.send(
+                        HttpRequest.newBuilder(URI.create(url("/api/desktop")))
+                                .header(DesktopAccessFilter.CHALLENGE_HEADER, challenge)
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.headers().firstValue(DesktopAccessFilter.PROOF_HEADER))
+                .hasValue(token.proof(challenge));
+        assertThat(LocalPorts.provenVersion(port, token)).isPresent();
+        assertThat(LocalPorts.provenVersion(port, DesktopAccessToken.generate())).isEmpty();
+    }
+
+    @Test
+    void getWorkspaceFile_unknownWorkspace_answersNotFound() throws Exception {
+        assertThat(get("/api/desktop/workspaces/missing/file").statusCode()).isEqualTo(404);
+        assertThat(send("PUT", "/api/desktop/workspaces/missing/saved", null).statusCode())
+                .isEqualTo(404);
+    }
+}

@@ -37,6 +37,32 @@ export const PUBLIC_DEPLOYMENT_ENVIRONMENT = readPublicValue(
 export const PUBLIC_EMBED_SESSION_HANDSHAKE =
     readPublicValue("PUBLIC_EMBED_SESSION_HANDSHAKE").toLowerCase() === "true";
 
+/**
+ * Whether this is the desktop app: the backend runs on the user's own machine, serves this page
+ * and stops when its last window closes, so unsaved work is lost on closing. Set by the backend's
+ * own `/env.js` (see `RuntimeConfigController`).
+ */
+export const PUBLIC_DESKTOP =
+    readPublicValue("PUBLIC_DESKTOP").toLowerCase() === "true";
+
+/** How often a desktop window tells the backend it is still open, in seconds. */
+export const PUBLIC_DESKTOP_HEARTBEAT_SECONDS = readPositiveNumber(
+    "PUBLIC_DESKTOP_HEARTBEAT_SECONDS",
+    10,
+);
+
+/**
+ * Whether Share Snapshot is offered. On unless the deployment switches it off, which it does
+ * together with the backend's `snapshots.enabled`.
+ */
+export const PUBLIC_SHARE_SNAPSHOT_ENABLED =
+    readPublicValue("PUBLIC_SHARE_SNAPSHOT_ENABLED").toLowerCase() !== "false";
+
+function readPositiveNumber(key, fallback) {
+    const value = Number(readPublicValue(key));
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 function readPublicValue(key) {
     const runtimeValue = runtimeConfig?.[key];
     if (typeof runtimeValue === "string" && runtimeValue.trim()) {

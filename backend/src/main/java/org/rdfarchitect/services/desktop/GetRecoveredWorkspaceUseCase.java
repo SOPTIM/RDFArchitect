@@ -15,17 +15,18 @@
  *
  */
 
-package org.rdfarchitect.database.config;
+package org.rdfarchitect.services.desktop;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.web.reactive.config.WebFluxConfigurer;
+import java.util.Optional;
 
-@Configuration
-public class WebFluxConfiguration implements WebFluxConfigurer {
+/** Reads a workspace the desktop app kept from its previous run. */
+public interface GetRecoveredWorkspaceUseCase {
 
-    @Override
-    public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
-        configurer.defaultCodecs().maxInMemorySize(-1);
-    }
+    /**
+     * Reads the workspace file of a kept workspace.
+     *
+     * @param id the id {@link ListRecoveredWorkspacesUseCase} names it by
+     * @return the workspace file, empty if there is no such copy
+     */
+    Optional<byte[]> getRecoveredWorkspace(String id);
 }
