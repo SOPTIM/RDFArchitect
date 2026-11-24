@@ -1,6 +1,6 @@
 ---
 title: CI, Releases, and Docker Images
-sidebar_position: 10
+sidebar_position: 12
 ---
 
 # CI, Releases, and Docker Images

@@ -34,8 +34,10 @@ export function plural(word) {
  *
  * @param {number} count how many there are
  * @param {string} noun what they are, in the singular
+ * @param {string} [many] what they are, in the plural, for a noun whose plural
+ *     is irregular
  * @returns {string} e.g. {@code "1 change"} or {@code "3 changes"}
  */
-export function counted(count, noun) {
-    return `${count} ${count === 1 ? noun : plural(noun)}`;
+export function counted(count, noun, many = plural(noun)) {
+    return `${count} ${count === 1 ? noun : many}`;
 }

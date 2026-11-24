@@ -50,6 +50,34 @@ The dialog stays open while the import runs and shows a progress bar together wi
 
 ![Import schema dialog](/img/screenshots/import-schema.png)
 
+### Import a model (File → Import → Model (Enterprise Architect XMI)) {#xmi-import}
+
+The other entry point for CGMES: the Enterprise Architect export the profiles are maintained in,
+rather than the RDFS released from it. One export becomes **one workspace of its own**, so a name a
+workspace already has is refused. Upload the entire model including any possible metadata to
+prevent missing references; which packages are actually imported is chosen afterwards.
+Supported are Enterprise Architect **XMI 2.5.1** exports (Publish → Publish As… → XMI 2.5.1) and
+**XMI 2.1** exports; a 2.1 export carries no diagrams.
+Multiple inheritance is not fully supported: a class with several superclasses may lose all but one
+of them.
+
+Every package can become a schema, and a schema is the package you pick plus everything its classes
+need, which is what the two numbers per row mean: `26 classes + 7 dependencies`. A package marked
+`profile` declares a namespace of its own and is taken whole, the way a release ships it. The
+export's class diagrams sit in the tree under their package; one drawing a class you did not pick
+is greyed out. Each schema is named after its package, following the same rules as a schema
+imported from a file.
+
+Two namespaces decide what the resources are called, **Model** and **Extension**, and both can be
+changed in the last step: an export carries the namespaces of the generation it was made in, which
+are not always the ones a schema is to be written in. The rest of the prefix table comes along
+unchanged.
+
+Where something could not be carried over as the export states it, the import reports it as
+`n warnings`: attributes typed with something the export does not declare, classes declared more
+than once, and header fields no ontology field matches. Such an attribute keeps its type as a
+dangling reference, so importing the package that declares the type completes it.
+
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).

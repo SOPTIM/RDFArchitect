@@ -32,7 +32,7 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
@@ -179,7 +179,7 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
      *     diagram nor a package of the graph
      */
     private static Optional<Set<UUID>> shownClassesOfGraphDiagram(
-            ICIMModelFacade cimModel,
+            ICIMModelReader cimModel,
             UUID diagramUUID,
             UUID defaultPackageUUID,
             Map<UUID, CustomDiagram> customDiagrams) {

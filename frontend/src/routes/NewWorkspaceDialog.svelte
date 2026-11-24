@@ -22,12 +22,16 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
+    import XmiImportDialog from "./XmiImportDialog.svelte";
+
     let { showDialog = $bindable(), existingNames = [] } = $props();
 
     const workspaceInputId = `workspaceName-${uuidv4()}`;
     const invalidCharacters = /[/\\?#]/;
 
     let workspaceNameUserInput = $state("");
+    let showXmiImportDialog = $state(false);
+    let handedOverName = $state("");
 
     const trimmedName = $derived(workspaceNameUserInput.trim());
     const nameExists = $derived(
@@ -48,6 +52,17 @@
         workspaceNameUserInput = "";
     }
 
+    /**
+     * Hands the name over to the export import, which creates the workspace from a model. This
+     * dialog closes as it does so: two open at once stack their backdrops, and the name has to be
+     * held on to because closing resets the input it came from.
+     */
+    function importFromXmi() {
+        handedOverName = trimmedName;
+        showDialog = false;
+        showXmiImportDialog = true;
+    }
+
     async function createWorkspace() {
         if (!(await workspaceState.create(trimmedName))) {
             return;
@@ -62,6 +77,9 @@
     {onClose}
     primaryLabel="Create Workspace"
     onPrimary={createWorkspace}
+    secondaryLabel="From XMI…"
+    onSecondary={importFromXmi}
+    disableSecondary={nameHasInvalidCharacters}
     title="New Workspace"
     disablePrimary={disableSubmit}
 >
@@ -84,3 +102,8 @@
         {/if}
     </div>
 </ActionDialog>
+
+<XmiImportDialog
+    bind:showDialog={showXmiImportDialog}
+    initialWorkspaceName={handedOverName}
+/>

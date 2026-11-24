@@ -63,6 +63,11 @@
         closeDialog();
     }
 
+    /**
+     * Closes on an interaction that is genuinely outside. A layer lying over the dialog — the list
+     * of a combo box, or another dialog — is not: without this the dialog underneath would close
+     * on the first click into the one above it and take it down with it.
+     */
     function handleInteractOutside(event) {
         event.preventDefault();
         if (event.target?.closest?.("[data-dialog-layer]")) {
@@ -76,6 +81,7 @@
     <BitsUiDialog.Portal>
         <BitsUiDialog.Overlay class="bg-dialog-backlight fixed inset-0 z-40" />
         <BitsUiDialog.Content
+            data-dialog-layer
             class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded border border-solid p-2 shadow outline-none {size}"
             {onkeydown}
             onEscapeKeydown={handleEscapeKeydown}

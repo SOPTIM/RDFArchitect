@@ -20,12 +20,12 @@ import { graphStore } from "$lib/stores/graphStore.ts";
 import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 import { workspaceState } from "$lib/workspaceState.svelte.js";
 
-import { ImportProgress } from "./importProgress.svelte.js";
-
-const POLL_INTERVAL_MS = 300;
-const MAX_FAILED_POLLS = 3;
-
-const INVALID_WORKSPACE_NAME_CHARACTERS = /[/\\?#]/;
+import {
+    ImportProgress,
+    importedSchemaNamesOf,
+} from "./importProgress.svelte.js";
+import { ImportStatusPoller } from "./importStatusPoller.js";
+import { hasInvalidCharacters } from "./workspaceName.js";
 
 /**
  * Opens the workspace an import wrote into, on its first imported graph.
@@ -54,7 +54,7 @@ export function newWorkspaceNameError(name, existingNames) {
     if (existingNames.includes(trimmed)) {
         return `A workspace named "${trimmed}" already exists`;
     }
-    if (INVALID_WORKSPACE_NAME_CHARACTERS.test(trimmed)) {
+    if (hasInvalidCharacters(trimmed)) {
         return "Name must not contain / \\ ? or #";
     }
     return "";
@@ -71,8 +71,7 @@ export class ImportJobRunner {
     workspaceName = null;
     jobId = null;
 
-    #pollTimeout = null;
-    #failedPolls = 0;
+    #poller = new ImportStatusPoller();
     #onStatus;
 
     /** @param {(progress: ImportProgress) => void} [onStatus] called with every status polled */
@@ -94,7 +93,6 @@ export class ImportJobRunner {
         const progress = new ImportProgress();
         this.progress = progress;
         this.workspaceName = workspaceName;
-        this.#failedPolls = 0;
 
         const { data, error } = await upload({
             onUploadProgress: percent => progress.uploadProgress(percent),
@@ -124,7 +122,7 @@ export class ImportJobRunner {
             // Cancelled while the files were still going up, so the job needs to hear about it.
             await graphStore.cancelImport(workspaceName, data.jobId);
         }
-        this.#poll();
+        this.#follow(progress);
     }
 
     cancel() {
@@ -142,7 +140,7 @@ export class ImportJobRunner {
      *     how the import ended, `null` if there was none
      */
     async dismiss() {
-        this.#stopPolling();
+        this.#poller.stop();
         const progress = this.progress;
         const jobId = this.jobId;
         const workspaceName = this.workspaceName;
@@ -153,10 +151,10 @@ export class ImportJobRunner {
         if (!progress) {
             return null;
         }
-        let status = {
-            state: progress.jobState,
-            importedSchemaNames: progress.importedSchemaNames,
-        };
+        let state = progress.jobState;
+        let importedSchemaNames = progress.finished
+            ? progress.importedSchemaNames
+            : importedSchemaNamesOf({ files: progress.files });
         if (!progress.finished) {
             progress.cancel();
             if (workspaceName && jobId) {
@@ -167,64 +165,26 @@ export class ImportJobRunner {
                     workspaceName,
                     jobId,
                 );
-                status = data ?? status;
+                if (data) {
+                    state = data.state;
+                    importedSchemaNames = importedSchemaNamesOf(data);
+                }
             }
         }
-        return {
-            workspaceName,
-            state: status.state,
-            importedSchemaNames: status.importedSchemaNames ?? [],
-        };
+        return { workspaceName, state, importedSchemaNames };
     }
 
     /**
-     * Polls the backend until the job is done, the prefix question included: polling is what tells
-     * the backend somebody is still there to answer it. A single timeout is kept in flight, so
-     * dismissing the import or finishing it ends the polling.
+     * Follows the job until it is done, the prefix question included: polling is what tells the
+     * backend somebody is still there to answer it.
      */
-    #poll() {
-        this.#stopPolling();
-        this.#pollTimeout = setTimeout(async () => {
-            const progress = this.progress;
-            const jobId = this.jobId;
-            if (!progress || !jobId) {
-                return;
-            }
-
-            const { data, error } = await graphStore.getImportStatus(
-                this.workspaceName,
-                jobId,
-            );
-
-            if (this.progress !== progress) {
-                return;
-            }
-            if (error || !data) {
-                // A single missed poll is not worth giving up on, the import keeps running.
-                this.#failedPolls += 1;
-                if (this.#failedPolls > MAX_FAILED_POLLS) {
-                    progress.fail(
-                        "The progress of the import could not be read.",
-                    );
-                    return;
-                }
-                this.#poll();
-                return;
-            }
-
-            this.#failedPolls = 0;
-            progress.apply(data);
-            this.#onStatus(progress);
-            if (!progress.finished) {
-                this.#poll();
-            }
-        }, POLL_INTERVAL_MS);
-    }
-
-    #stopPolling() {
-        if (this.#pollTimeout !== null) {
-            clearTimeout(this.#pollTimeout);
-            this.#pollTimeout = null;
-        }
+    #follow(progress) {
+        const workspaceName = this.workspaceName;
+        const jobId = this.jobId;
+        this.#poller.follow(
+            () => graphStore.getImportStatus(workspaceName, jobId),
+            progress,
+            () => this.#onStatus(progress),
+        );
     }
 }

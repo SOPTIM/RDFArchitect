@@ -22,7 +22,16 @@ import {
     ImportJobRunner,
     newWorkspaceNameError,
 } from "$lib/utils/importJob.svelte.js";
-import { JobState } from "$lib/utils/importProgress.svelte.js";
+import { JobState, OutcomeKind } from "$lib/utils/importProgress.svelte.js";
+
+function workspaceImported(schemaNames) {
+    return {
+        kind: OutcomeKind.WORKSPACE_IMPORTED,
+        schemaNames,
+        notices: [],
+        cancelled: false,
+    };
+}
 
 vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: { getImportStatus: vi.fn(), cancelImport: vi.fn() },
@@ -69,7 +78,7 @@ describe("ImportJobRunner", () => {
         const status = {
             state: JobState.COMPLETED,
             files: [],
-            importedSchemaNames: ["http://example.org/core"],
+            outcome: workspaceImported(["http://example.org/core"]),
         };
         vi.mocked(graphStore.getImportStatus).mockResolvedValue({
             data: status,
@@ -97,7 +106,7 @@ describe("ImportJobRunner", () => {
         const finished = {
             state: JobState.COMPLETED,
             files: [],
-            importedSchemaNames: ["http://example.org/core"],
+            outcome: workspaceImported(["http://example.org/core"]),
         };
         vi.mocked(graphStore.getImportStatus)
             .mockResolvedValueOnce({ data: running })

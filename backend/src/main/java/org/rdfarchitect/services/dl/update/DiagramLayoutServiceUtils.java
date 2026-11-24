@@ -135,10 +135,42 @@ public class DiagramLayoutServiceUtils {
                         .max(Integer::compare)
                         .orElse(0);
 
+        insertDiagramObjectPointAt(
+                diagramLayoutModel,
+                diagramObjectMRID,
+                xPosition,
+                yPosition,
+                maxZPosition + 1,
+                sequenceNumber,
+                gluePointMRID);
+    }
+
+    /**
+     * Helper method for creating and inserting a {@link DiagramObjectPoint} whose z position the
+     * caller already knows.
+     *
+     * <p>Reading the highest z of a diagram costs a query over every point it holds, which a caller
+     * filling a whole diagram pays once per point. One laying out a known order knows the z without
+     * asking.
+     *
+     * @param diagramLayoutModel the model into which the diagram object point is inserted
+     * @param diagramObjectMRID the mRID of the diagram object the point belongs to
+     * @param zPosition the z position, where a higher one is drawn in front
+     * @param sequenceNumber the position of the point within its diagram object, or null
+     * @param gluePointMRID the glue point the point belongs to, or null
+     */
+    public void insertDiagramObjectPointAt(
+            Model diagramLayoutModel,
+            MRID diagramObjectMRID,
+            double xPosition,
+            double yPosition,
+            int zPosition,
+            Integer sequenceNumber,
+            MRID gluePointMRID) {
         var diagramObjectPoint =
                 DiagramObjectPoint.builder()
                         .mRID(new MRID(UUID.randomUUID()))
-                        .position(new XYZPosition(xPosition, yPosition, maxZPosition + 1))
+                        .position(new XYZPosition(xPosition, yPosition, zPosition))
                         .belongsToDiagramObject(diagramObjectMRID)
                         .sequenceNumber(sequenceNumber)
                         .belongsToGluePoint(gluePointMRID)
