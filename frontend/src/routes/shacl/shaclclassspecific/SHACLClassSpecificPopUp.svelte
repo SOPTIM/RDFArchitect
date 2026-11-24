@@ -35,6 +35,7 @@
     import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import ClassConstraintsView from "./ClassConstraintsView.svelte";
+    import ClassReferencedVia from "./ClassReferencedVia.svelte";
 
     import { goto } from "$app/navigation";
 
@@ -131,6 +132,17 @@
         goto(workbenchHref(documentId, line));
     }
 
+    /** Opens a class the list beside the rules names, in the same schema. */
+    function openRelatedClass(classObject) {
+        showDialog = false;
+        navigateToClass({
+            workspaceName,
+            schemaName,
+            packageUUID: classObject.belongsToCategory,
+            classUUID: classObject.uuid,
+        });
+    }
+
     /** The header button: the document the class's own rules are in, when there is one. */
     function openClassInWorkbench() {
         const first = firstDocumentOf({ custom: customShacl });
@@ -166,22 +178,34 @@
             </p>
         {/if}
 
-        {#if loading}
-            <div class="flex flex-1 items-center justify-center">
-                <LoadingSpinner />
-            </div>
-        {:else}
-            <div class="min-h-0 flex-1">
-                {#key fetchKey}
-                    <ClassConstraintsView
-                        custom={customShacl}
-                        generated={generatedShacl}
-                        {termSource}
-                        {prefixes}
-                        onopen={openInWorkbench}
-                    />
-                {/key}
-            </div>
-        {/if}
+        <div class="flex min-h-0 flex-1 gap-3">
+            {#if loading}
+                <div class="flex flex-1 items-center justify-center">
+                    <LoadingSpinner />
+                </div>
+            {:else}
+                <div class="min-h-0 flex-1">
+                    {#key fetchKey}
+                        <ClassConstraintsView
+                            custom={customShacl}
+                            generated={generatedShacl}
+                            {termSource}
+                            {prefixes}
+                            onopen={openInWorkbench}
+                        />
+                    {/key}
+                </div>
+            {/if}
+            <aside
+                class="border-border w-1/5 min-w-40 shrink-0 overflow-y-auto border-l pl-3"
+            >
+                <ClassReferencedVia
+                    {workspaceName}
+                    {schemaName}
+                    classUUID={reactiveClass.uuid.value}
+                    onClickOnClass={openRelatedClass}
+                />
+            </aside>
+        </div>
     </div>
 </ActionDialog>

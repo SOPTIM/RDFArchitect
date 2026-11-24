@@ -166,11 +166,61 @@ describe("SHACLClassSpecificPopUp", () => {
         expect(editorState.selectedGraph.getValue()).toBe(SCHEMA);
     });
 
-    test("shows the class's constraints without a references sidebar", async () => {
-        await render();
-        await vi.waitFor(() => expect(button("mine.ttl")).toBeTruthy());
+    test("lists the classes of the class's own schema that refer to it", async () => {
+        api.getClassesReferencingThisClass.mockResolvedValue({
+            data: {
+                classesReferencingThisClass: {
+                    attributes: [],
+                    associations: [
+                        { uuid: "owner-uuid", label: "Owner" },
+                        { uuid: "holder-uuid", label: "Holder" },
+                    ],
+                    superClasses: [{ uuid: "base-uuid", label: "Base" }],
+                },
+            },
+        });
 
-        expect(dialog().textContent).not.toContain("Referenced");
-        expect(api.getClassesReferencingThisClass).not.toHaveBeenCalled();
+        await render();
+
+        await vi.waitFor(() => expect(button("Owner")).toBeTruthy());
+        expect(api.getClassesReferencingThisClass).toHaveBeenCalledWith({
+            path: {
+                workspaceName: WORKSPACE,
+                schemaName: SCHEMA,
+                classUUID: "class-uuid",
+            },
+        });
+        const text = dialog().textContent;
+        expect(text).toContain("Referenced by");
+        expect(text).toContain("Associations");
+        expect(text).not.toContain("Attributes");
+        expect(text.indexOf("Holder")).toBeLessThan(text.indexOf("Owner"));
+        expect(text).toContain("Inherits from");
+        expect(button("Base")).toBeTruthy();
+    });
+
+    test("opens a class the list names, in the class's schema", async () => {
+        api.getClassesReferencingThisClass.mockResolvedValue({
+            data: {
+                classesReferencingThisClass: {
+                    associations: [
+                        {
+                            uuid: "owner-uuid",
+                            label: "Owner",
+                            belongsToCategory: "package-uuid",
+                        },
+                    ],
+                },
+            },
+        });
+        await render();
+        await vi.waitFor(() => expect(button("Owner")).toBeTruthy());
+
+        button("Owner").click();
+
+        expect(editorState.selectedWorkspace.getValue()).toBe(WORKSPACE);
+        expect(editorState.selectedGraph.getValue()).toBe(SCHEMA);
+        expect(editorState.selectedClass.getValue()?.id).toBe("owner-uuid");
+        expect(editorState.selectedDiagram.getValue()?.id).toBe("package-uuid");
     });
 });
