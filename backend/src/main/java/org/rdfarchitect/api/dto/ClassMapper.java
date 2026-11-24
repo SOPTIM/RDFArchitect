@@ -39,12 +39,14 @@ public interface ClassMapper {
     @Mapping(target = "prefix", source = "uri.prefix")
     @Mapping(target = "label", source = "label.value")
     @Mapping(target = "comment", source = "comment.value")
+    @Mapping(target = "superClass", source = "superClasses")
     @Mapping(target = "belongsToCategory", source = "belongsToCategory.uuid")
     ClassDTO toDTO(CIMClass cimClass);
 
     List<ClassDTO> toDTOList(List<CIMClass> cimClassList);
 
     @Mapping(target = "uri", source = ".")
+    @Mapping(target = "superClasses", source = "superClass")
     @Mapping(target = "belongsToCategory", ignore = true)
     // Wird separat behandelt
     CIMClass toCIMObject(ClassDTO dto);
@@ -58,10 +60,16 @@ public interface ClassMapper {
         return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
     }
 
-    default SuperClassDTO mapSuperClass(RDFSSubClassOf superClass) {
-        if (superClass == null) {
+    /**
+     * The first superclass only. A class may declare several and the graph keeps all of them, but
+     * the API has carried one since before that was possible, and the editor shows one. Saving a
+     * class therefore collapses it to this one; see the javadoc of {@link #buildSuperClasses}.
+     */
+    default SuperClassDTO mapSuperClass(List<RDFSSubClassOf> superClasses) {
+        if (superClasses == null || superClasses.isEmpty()) {
             return null;
         }
+        var superClass = superClasses.getFirst();
         return new SuperClassDTO(superClass.getUri().getPrefix(), superClass.getUri().getSuffix());
     }
 
@@ -69,12 +77,19 @@ public interface ClassMapper {
         return new URI(dto.getPrefix() + dto.getLabel());
     }
 
-    default RDFSSubClassOf buildSuperClass(SuperClassDTO dto) {
+    /**
+     * The superclasses a saved class keeps, which is the one the API carries and no more. A class
+     * imported with several therefore loses the others the first time it is saved — the same way a
+     * package loses its parent and an association its stereotypes, and to be resolved with them.
+     */
+    default List<RDFSSubClassOf> buildSuperClasses(SuperClassDTO dto) {
         if (dto == null) {
-            return null;
+            return Collections.emptyList();
         }
-        return new RDFSSubClassOf(
-                new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
+        return List.of(
+                new RDFSSubClassOf(
+                        new URI(dto.getPrefix() + dto.getLabel()),
+                        new RDFSLabel(dto.getLabel(), "en")));
     }
 
     default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {

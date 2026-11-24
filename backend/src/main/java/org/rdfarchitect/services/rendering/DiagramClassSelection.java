@@ -18,7 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 
 import java.util.LinkedHashMap;
@@ -59,7 +59,7 @@ public final class DiagramClassSelection {
      * @param filter the filter the diagram is shown with
      * @return the selected classes
      */
-    public static SelectedClasses select(ICIMModelFacade cimModel, GraphFilter filter) {
+    public static SelectedClasses select(ICIMModelReader cimModel, GraphFilter filter) {
         var classes = new LinkedHashMap<String, ICIMClass>();
 
         if (filter.getAllowedUUIDs() != null) {

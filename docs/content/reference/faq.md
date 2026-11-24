@@ -47,9 +47,9 @@ The workspace has been locked against edits. Select the workspace and use **Edit
 
 Check whether the classes are in a package that is not visible under the current view filter. Open **Edit → View Filter** and ensure external packages are shown if the missing classes come from an imported dependency.
 
-### My RDF/XML file is larger than 50 MB.
+### My file is too large to upload.
 
-The default upload limit is 50 MB. For larger files, an administrator can raise the limits described in the [installation guide](/admin-guide/installation#file-upload-size). For most CGMES releases, 50 MB is more than enough; the profiles themselves are usually a few MB each.
+The default upload limit is 256 MB. For larger files, an administrator can raise the limits described in the [installation guide](/admin-guide/installation#file-upload-size). For most CGMES releases the default is far more than enough; the profiles themselves are usually a few MB each, and even a full Enterprise Architect model export stays below 100 MB.
 
 ## Editing
 

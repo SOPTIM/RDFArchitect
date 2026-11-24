@@ -34,11 +34,15 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.graph.InvalidPrefixException;
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase;
 import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase.WorkspaceImportResult;
 import org.rdfarchitect.services.archive.importing.InvalidWorkspaceArchiveException;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
+import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportJobStatus;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
+import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
+import org.rdfarchitect.services.update.graph.ImportOutcome.WorkspaceImported;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
@@ -48,6 +52,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,8 +120,8 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:IMPORTED");
-        assertThat(status.importedSchemaNames()).containsExactly("first", "second");
-        assertThat(status.failedImports()).isEmpty();
+        assertThat(graphsImported(status).schemaNames()).containsExactly("first", "second");
+        assertThat(graphsImported(status).failedFileNames()).isEmpty();
     }
 
     @Test
@@ -144,6 +149,25 @@ class ImportJobServiceTest {
     @Test
     void startImport_uploadedFilesAreTakenOverSoTheySurviveTheRequest() throws Exception {
         var received = new AtomicReference<MultipartFile>();
+        var content = new AtomicReference<byte[]>();
+        service =
+                jobService(
+                        (workspaceName, files, schemaNames, listener) -> {
+                            received.set(files.getFirst());
+                            content.set(contentOf(files.getFirst()));
+                            return new ImportResult();
+                        });
+
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+
+        awaitFinished(jobId);
+        assertThat(received.get()).isInstanceOf(SpooledMultipartFile.class);
+        assertThat(content.get()).isEqualTo(SCHEMA.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void startImport_dropsTheSpooledUploadOnceTheJobIsDone() throws Exception {
+        var received = new AtomicReference<MultipartFile>();
         service =
                 jobService(
                         (workspaceName, files, schemaNames, listener) -> {
@@ -154,8 +178,37 @@ class ImportJobServiceTest {
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
         awaitFinished(jobId);
-        assertThat(received.get()).isInstanceOf(InMemoryMultipartFile.class);
-        assertThat(received.get().getBytes()).isEqualTo(SCHEMA.getBytes(StandardCharsets.UTF_8));
+        assertThatThrownBy(() -> received.get().getInputStream())
+                .isInstanceOf(NoSuchFileException.class);
+    }
+
+    /** The service under test, wired with the real export reader and a stubbed graph import. */
+    private static ImportJobService jobService(ImportGraphsUseCase importGraphs) {
+        return new ImportJobService(
+                importGraphs,
+                xmiImportService(),
+                (workspaceName, archive, listener) -> {
+                    throw new UnsupportedOperationException();
+                });
+    }
+
+    /** The service under test, wired with a stubbed workspace import. */
+    private ImportJobService workspaceJobService(ImportWorkspaceUseCase importWorkspace) {
+        return new ImportJobService(realImportService(), xmiImportService(), importWorkspace);
+    }
+
+    private static ImportXmiService xmiImportService() {
+        var database = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        return new ImportXmiService(database, new XmiDiagramStore());
+    }
+
+    /** Reads an uploaded file while the import still owns it. */
+    private static byte[] contentOf(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
     }
 
     @Test
@@ -322,7 +375,7 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("out of memory");
         // The graph is in the store whether the job survived or not, so the caller has to hear
         // about it; otherwise it stays invisible until the workspace is reloaded by hand.
-        assertThat(status.importedSchemaNames()).containsExactly("first");
+        assertThat(graphsImported(status).schemaNames()).containsExactly("first");
     }
 
     @Test
@@ -347,7 +400,7 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:FAILED", "third.ttl:SKIPPED");
-        assertThat(status.failedImports()).containsExactly("second.ttl");
+        assertThat(graphsImported(status).failedFileNames()).containsExactly("second.ttl");
     }
 
     @Test
@@ -428,7 +481,7 @@ class ImportJobServiceTest {
 
         var waiting = awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
         assertThat(waiting.prefixComparison()).containsExactly(COMPARISON);
-        assertThat(waiting.importedSchemaNames()).isEmpty();
+        assertThat(waiting.outcome()).isNull();
         assertThat(waiting.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -501,7 +554,7 @@ class ImportJobServiceTest {
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.CANCELLED);
-        assertThat(status.importedSchemaNames()).isEmpty();
+        assertThat(graphsImported(status).schemaNames()).isEmpty();
         assertThat(status.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -518,6 +571,18 @@ class ImportJobServiceTest {
 
         assertThat(jobId).isNotEqualTo(abandonedJobId);
         assertThat(awaitFinished(abandonedJobId).state()).isEqualTo(JobState.CANCELLED);
+    }
+
+    /** What the job wrote, failing the test when it produced some other kind of outcome. */
+    private static GraphsImported graphsImported(ImportJobStatus status) {
+        assertThat(status.outcome()).isInstanceOf(GraphsImported.class);
+        return (GraphsImported) status.outcome();
+    }
+
+    /** What the workspace import wrote, failing the test when it produced some other outcome. */
+    private static WorkspaceImported workspaceImported(ImportJobStatus status) {
+        assertThat(status.outcome()).isInstanceOf(WorkspaceImported.class);
+        return (WorkspaceImported) status.outcome();
     }
 
     /**
@@ -587,8 +652,7 @@ class ImportJobServiceTest {
     void startWorkspaceImport_reportsTheImportedGraphsAndTheNotices() {
         var received = new AtomicReference<String>();
         service =
-                new ImportJobService(
-                        realImportService(),
+                workspaceJobService(
                         (workspaceName, archive, listener) -> {
                             received.set(
                                     workspaceName
@@ -612,16 +676,17 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("http://example.org/core:IMPORTED");
-        assertThat(status.importedSchemaNames()).containsExactly("http://example.org/core");
-        assertThat(status.notices()).containsExactly("Written by a newer version.");
+        assertThat(workspaceImported(status).schemaNames())
+                .containsExactly("http://example.org/core");
+        assertThat(workspaceImported(status).notices())
+                .containsExactly("Written by a newer version.");
         assertThat(status.problems()).isEmpty();
     }
 
     @Test
     void startWorkspaceImport_cancelledTooLateToStopIt_isCompleted() {
         service =
-                new ImportJobService(
-                        realImportService(),
+                workspaceJobService(
                         (workspaceName, archive, listener) -> {
                             ((ImportJob) listener).requestCancel();
                             return new WorkspaceImportResult(
@@ -631,14 +696,14 @@ class ImportJobServiceTest {
         var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("archive")));
 
         assertThat(status.state()).isEqualTo(JobState.COMPLETED);
-        assertThat(status.importedSchemaNames()).containsExactly("http://example.org/core");
+        assertThat(workspaceImported(status).schemaNames())
+                .containsExactly("http://example.org/core");
     }
 
     @Test
     void startWorkspaceImport_invalidArchive_failsListingEveryProblem() {
         service =
-                new ImportJobService(
-                        realImportService(),
+                workspaceJobService(
                         (workspaceName, archive, listener) -> {
                             throw new InvalidWorkspaceArchiveException(
                                     List.of("manifest.json: first", "colors.json: second"));
@@ -650,7 +715,7 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("The workspace file cannot be imported.");
         assertThat(status.problems())
                 .containsExactly("manifest.json: first", "colors.json: second");
-        assertThat(status.importedSchemaNames()).isEmpty();
+        assertThat(workspaceImported(status).schemaNames()).isEmpty();
     }
 
     @Test
@@ -658,8 +723,7 @@ class ImportJobServiceTest {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
         service =
-                new ImportJobService(
-                        realImportService(),
+                workspaceJobService(
                         (workspaceName, archive, listener) -> {
                             running.countDown();
                             await().atMost(TIMEOUT).until(() -> release.getCount() == 0);
@@ -689,14 +753,6 @@ class ImportJobServiceTest {
                 "file", "ws.rdfa", "application/zip", content.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static ImportJobService jobService(ImportGraphsUseCase importGraphsUseCase) {
-        return new ImportJobService(
-                importGraphsUseCase,
-                (workspaceName, archive, listener) -> {
-                    throw new UnsupportedOperationException();
-                });
-    }
-
     private ImportGraphsUseCase realImportService() {
         return new ImportGraphsService(
                 new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig())));
@@ -716,6 +772,167 @@ class ImportJobServiceTest {
             latch.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Reading exports and choosing from them
+    // -------------------------------------------------------------------------
+
+    @Test
+    void startXmiScan_reportsThePackagesTheExportHolds() {
+        service = jobService(realImportService());
+
+        var jobId = service.startXmiScan(DATASET, List.of(export()));
+
+        var status = awaitFinished(jobId);
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(((ImportOutcome.PackagesScanned) status.outcome()).packages())
+                .extracting(ImportXmiUseCase.ScannedPackage::name)
+                .contains("Topology", "TopologyCore", "ExampleStandard");
+    }
+
+    @Test
+    void startPackageImport_buildsTheChosenPackageFromTheExportTheReadKept() {
+        // The whole point of keeping it: a 100 MB export is not uploaded twice.
+        service = jobService(realImportService());
+        var readJobId = service.startXmiScan(DATASET, List.of(export()));
+        awaitFinished(readJobId);
+
+        var importJobId =
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of());
+
+        assertThat(importJobId).isPresent();
+        var status = awaitFinished(importJobId.orElseThrow());
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(graphsImported(status).schemaNames()).containsExactly("Topology");
+    }
+
+    @Test
+    void startPackageImport_reportsTheProgressPerPackageRatherThanPerExport() {
+        service = jobService(realImportService());
+        var readJobId = service.startXmiScan(DATASET, List.of(export()));
+        awaitFinished(readJobId);
+
+        var importJobId =
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of());
+
+        assertThat(awaitFinished(importJobId.orElseThrow()).files())
+                .extracting(file -> file.fileName() + ":" + file.state())
+                .containsExactly("Topology:IMPORTED", "Diagrams:IMPORTED");
+    }
+
+    @Test
+    void startPackageImport_aSecondTimeIsRejected() {
+        // The exports went with the first one, and a read that kept nothing cannot be chosen from
+        // again without saying so.
+        service = jobService(realImportService());
+        var readJobId = service.startXmiScan(DATASET, List.of(export()));
+        awaitFinished(readJobId);
+        awaitFinished(
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of())
+                        .orElseThrow());
+
+        assertThatThrownBy(
+                        () ->
+                                service.startPackageImport(
+                                        DATASET, readJobId, List.of(topology()), List.of()))
+                .isInstanceOf(ResourceConflictException.class);
+    }
+
+    @Test
+    void startPackageImport_refusedWhileAnotherImportRuns_leavesTheReadItsExports()
+            throws Exception {
+        // The read gives its exports up before the second job claims the session. Refused there,
+        // they have to go back: otherwise they are spooled with nobody left to delete them, and
+        // the read the user is standing on cannot be built from at all.
+        var running = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        service = jobService(blockingImportService(running, release));
+        var readJobId = service.startXmiScan(DATASET, List.of(export()));
+        awaitFinished(readJobId);
+        var blockingJobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+
+        assertThatThrownBy(
+                        () ->
+                                service.startPackageImport(
+                                        DATASET, readJobId, List.of(topology()), List.of()))
+                .isInstanceOf(ResourceConflictException.class);
+
+        release.countDown();
+        awaitFinished(blockingJobId);
+        var importJobId =
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of());
+        assertThat(importJobId).isPresent();
+        assertThat(awaitFinished(importJobId.orElseThrow()).state()).isEqualTo(JobState.COMPLETED);
+    }
+
+    @Test
+    void cancel_readThatIsThroughAlready_letsGoOfTheExportsItKept() {
+        // Closing the dialog on the package choice cancels the read, which has long finished. The
+        // request has to free the export all the same: nothing else reclaims it until the job
+        // expires, and an export is a hundred megabytes.
+        service = jobService(realImportService());
+        var readJobId = service.startXmiScan(DATASET, List.of(export()));
+        awaitFinished(readJobId);
+
+        assertThat(service.cancel(DATASET, readJobId)).isTrue();
+
+        assertThatThrownBy(
+                        () ->
+                                service.startPackageImport(
+                                        DATASET, readJobId, List.of(topology()), List.of()))
+                .isInstanceOf(ResourceConflictException.class);
+    }
+
+    @Test
+    void startPackageImport_forAJobTheSessionDoesNotHave_isEmpty() {
+        service = jobService(realImportService());
+
+        assertThat(
+                        service.startPackageImport(
+                                DATASET, UUID.randomUUID(), List.of(topology()), List.of()))
+                .isEmpty();
+    }
+
+    private static SelectedPackageDTO topology() {
+        return new SelectedPackageDTO(
+                0,
+                "EAPK_TOPOLOGY",
+                "Topology",
+                null,
+                null,
+                null,
+                "http://example.com/ns/Extension#");
+    }
+
+    @Test
+    void startXmiScan_marksThePackagesThatDeclareAProfile() {
+        // DomainProfile is not among them although it is named like one: its metadata class
+        // states a baseUML and a date, and neither is a uri.
+        service = jobService(realImportService());
+
+        var jobId = service.startXmiScan(DATASET, List.of(export()));
+
+        var status = awaitFinished(jobId);
+        assertThat(((ImportOutcome.PackagesScanned) status.outcome()).packages())
+                .filteredOn(ImportXmiUseCase.ScannedPackage::profile)
+                .extracting(ImportXmiUseCase.ScannedPackage::name)
+                .containsExactlyInAnyOrder("Topology", "Me\u00dfwerte", "CoreEquipment-EU");
+    }
+
+    private MultipartFile export() {
+        try {
+            return new MockMultipartFile(
+                    "files",
+                    "profiles-export.xml",
+                    "text/xml",
+                    java.nio.file.Files.readAllBytes(
+                            java.nio.file.Path.of(
+                                    "src/test/java/org/rdfarchitect/xmi/read/testdata/profiles-export.xml")));
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
         }
     }
 

@@ -38,8 +38,8 @@ import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
+import org.rdfarchitect.services.update.graph.GraphImportListener;
 import org.rdfarchitect.services.update.graph.ImportGraphsService;
-import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -89,7 +89,7 @@ final class CgmesWorkspace {
                 profiles.stream().map(CgmesWorkspace::file).map(MultipartFile.class::cast).toList();
         var result =
                 new ImportGraphsService(databasePort)
-                        .importGraphs(workspace, files, null, ImportProgressListener.NOOP);
+                        .importGraphs(workspace, files, null, GraphImportListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
         var schemaNames = result.importedSchemaNames();
 
