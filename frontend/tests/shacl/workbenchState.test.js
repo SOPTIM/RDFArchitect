@@ -1470,6 +1470,23 @@ describe("a validation that fails", () => {
         expect(workbench.validationError).toBeNull();
     });
 
+    test("says no more about the buffer once another document opens", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.path.endsWith("/validate/text")
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+        workbench.text = `${SHAPES}# typed\n`;
+        await workbench.validateBuffer();
+        expect(workbench.validationError).not.toBeNull();
+
+        workbench.revert();
+        await workbench.select(CUSTOM);
+
+        expect(workbench.validationError).toBeNull();
+    });
+
     test("says a text too large for the server was refused as such", async () => {
         await workbench.load();
         const answer = server.respond;

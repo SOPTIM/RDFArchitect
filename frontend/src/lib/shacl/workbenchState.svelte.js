@@ -178,8 +178,10 @@ export class ShapesWorkbench {
     /** What validating the open buffer last found, or null before it has answered. */
     /** @type {import("$lib/api/generated").ShapesValidationReport | null} */
     bufferReport = $state(null);
-    /** Why the last validation failed, or null when it did not. */
-    validationError = $state(null);
+    /** Why validating the open buffer last failed, or null when it did not. */
+    #bufferError = $state(null);
+    /** Why validating the stored documents last failed, or null when it did not. */
+    #reportError = $state(null);
     /**
      * Whether the workspace forbids changes.
      *
@@ -330,6 +332,11 @@ export class ShapesWorkbench {
     /** The profiles the shapes were checked against, for the inspector. */
     get profiles() {
         return this.report?.profiles ?? [];
+    }
+
+    /** Why the last validation failed, or null when it did not. */
+    get validationError() {
+        return this.#bufferError ?? this.#reportError;
     }
 
     /** Whether validation has answered for anything yet. */
@@ -489,6 +496,7 @@ export class ShapesWorkbench {
         this.detached = null;
         this.bufferReport = null;
         this.#bufferShown = false;
+        this.#bufferError = null;
         if (documentId === null) {
             this.#replaceBuffer("");
             this.#textReady = true;
@@ -1050,11 +1058,11 @@ export class ShapesWorkbench {
             }
             if (error) {
                 this.report = null;
-                this.validationError = validationFailure(error);
+                this.#reportError = validationFailure(error);
                 return null;
             }
             this.report = data;
-            this.validationError = null;
+            this.#reportError = null;
             const storedOpen = data?.documents?.some(
                 result => result.documentId === this.selectedId,
             );
@@ -1110,13 +1118,13 @@ export class ShapesWorkbench {
                 return null;
             }
             if (error) {
-                this.validationError = validationFailure(error, response);
+                this.#bufferError = validationFailure(error, response);
                 return null;
             }
             this.#bufferRunShown = run;
             this.bufferReport = data;
             this.#bufferShown = true;
-            this.validationError = null;
+            this.#bufferError = null;
             return data;
         } finally {
             // Cleared by the last run to finish, not the first: an older answer arriving must
