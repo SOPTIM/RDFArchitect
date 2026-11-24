@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.api.controller.datasets.graphs.shacl;
 
+import org.apache.commons.io.FileSystem;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,7 +29,13 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 
-/** What a SHACL download is negotiated and named as. */
+/**
+ * What a SHACL download is negotiated and named as.
+ *
+ * <p>Three endpoints answer with one — a schema's combined shapes, the shapes generated from it,
+ * and a chosen selection of documents — and they have to agree on the media types offered and on
+ * what the file is called.
+ */
 public final class SHACLFileResponse {
 
     /**
@@ -80,15 +87,15 @@ public final class SHACLFileResponse {
         return named(schemaName + "-shacl", format, outStream);
     }
 
-    /** The download, named after the workspace it was exported from. */
-    public static ResponseEntity<byte[]> ofWorkspace(
-            String workspaceName, RDFFormat format, ByteArrayOutputStream outStream) {
-        return named(workspaceName + "-shacl", format, outStream);
-    }
-
-    private static ResponseEntity<byte[]> named(
+    /**
+     * The download, named {@code stem} and the format's extension. What a file name on Windows
+     * cannot hold is replaced by {@code _}, since a document's name may hold anything.
+     */
+    public static ResponseEntity<byte[]> named(
             String stem, RDFFormat format, ByteArrayOutputStream outStream) {
-        var fileName = stem + "." + format.getLang().getFileExtensions().getFirst();
+        var fileName =
+                FileSystem.WINDOWS.toLegalFileName(
+                        stem + "." + format.getLang().getFileExtensions().getFirst(), '_');
         return ResponseEntity.ok()
                 .headers(DownloadHeaders.attachment(fileName))
                 // Stated, since Spring would otherwise pick from the Accept header on its own and

@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.irix.IRIs;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -70,7 +71,7 @@ class TurtleSubjectLinesAgainstTurtleFilesTest {
             var text = Files.readString(file, StandardCharsets.UTF_8);
             var model = ModelFactory.createDefaultModel();
             RDFParser.fromString(text, Lang.TURTLE).parse(model);
-            var lines = TurtleSubjectLines.linesBySubject(text, model);
+            var lines = TurtleSubjectLines.linesBySubject(text, IRIs.getBaseStr(), model);
 
             var subjects = new TreeSet<String>();
             model.listSubjects()

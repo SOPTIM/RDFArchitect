@@ -61,7 +61,7 @@ Per-workspace namespace table with validation for unique prefixes. Prefixes can 
 
 ### Undo, redo, and version history
 
-Edits are journaled per workspace: one linear history across all of its schemas, including the changes that span several of them. Up to 256 changes per workspace by default; older states are folded into the state they started from as history grows. Schema import, deletion and renaming, the namespace table, custom SHACL, diagrams and diagram layout take part in the same history. Undo and redo are available via menu and keyboard shortcut, say what they took back and where, and ask before a step that would make a schema or diagram disappear.
+Edits are journaled per workspace: one linear history across all of its schemas, including the changes that span several of them. Up to 256 changes per workspace by default; older states are folded into the state they started from as history grows. Schema import, deletion and renaming, the namespace table, constraints documents, diagrams and diagram layout take part in the same history. Undo and redo are available via menu and keyboard shortcut, say what they took back and where, and ask before a step that would make a schema or diagram disappear.
 
 ### Changelog view
 
@@ -103,7 +103,15 @@ SHACL shapes are generated automatically from the schema. They include, among ot
 
 ### Custom SHACL side-by-side
 
-Import the official SHACL of a CGMES/ENTSO-E release and store it next to the generated shapes. Custom SHACL can be edited freely and is not regenerated when the schema changes. Both sets are visible at graph level and at class level.
+Import the official SHACL of a CGMES/ENTSO-E release and store it next to the generated shapes. Each file stays its own document, keeping its name and its text byte for byte. Custom SHACL can be edited freely and is not regenerated when the schema changes. Both sets are visible per schema in the constraints workbench and per class in the class editor.
+
+### Constraints workbench
+
+A dedicated editor for a workspace's constraints: a tree of its schemas and the documents applying to each, a Turtle editor with completion, hover and go-to-definition fed by the live CIM schema, and a problems panel. Constraints are validated against the schema as you type — do these classes and properties exist, do the cardinalities agree, does the embedded SPARQL refer to real terms — with every problem reported at its line and column.
+
+### Conformance check: does the schema still match its constraints?
+
+Compares the shapes a schema implies with the constraints documents applying to it and reports where they have drifted apart: what the schema implies and the file omits, what the file constrains that the schema does not have, and — the case worth acting on — what the two assert that cannot both be true. Answered per class and property, so naming differences between generated and official shapes do not matter.
 
 ### Read-only workspaces
 
@@ -115,7 +123,7 @@ One-click immutable copy of a workspace, stored in Fuseki, reachable by a URL wi
 
 ### Export
 
-Every graph can be exported to RDF/XML, Turtle, or N-Triples, using the active namespace table and an optional auto-generated profile header placed as the first resource (matching ENTSO-E release conventions). SHACL can be exported separately as TTL.
+Every graph can be exported to RDF/XML, Turtle, or N-Triples, using the active namespace table and an optional auto-generated profile header placed as the first resource (matching ENTSO-E release conventions). Constraints are exported separately, choosing which of the workspace's documents and whether to include the generated shapes.
 
 ### Open REST API
 
@@ -173,7 +181,7 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Changelog                             | View → Changelog                                 |
 | Compare schemas                       | View → Compare Schemas                           |
 | Migrate schema (7-step wizard)        | View → Migrate Schema                            |
-| Full SHACL view (generated+custom)    | View → View Constraints (SHACL)                  |
+| Constraints workbench (SHACL)         | View → Constraints (SHACL)                       |
 | Help / feedback / about               | Help menu                                        |
 | Search across the workspace           | Search bar at the top                            |
 | Property-specific constraints (SHACL) | Class editor → SHACL icon next to each row       |

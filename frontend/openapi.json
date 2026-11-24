@@ -1455,6 +1455,12 @@
           "id" : {
             "type" : "string"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
           }
@@ -1747,6 +1753,12 @@
             "format" : "double",
             "type" : "number"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
           }
@@ -1769,6 +1781,9 @@
             "type" : "array"
           },
           "propertyType" : {
+            "type" : "string"
+          },
+          "summary" : {
             "type" : "string"
           }
         },
@@ -2550,6 +2565,22 @@
         "properties" : {
           "id" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapeOrigin" : {
+        "properties" : {
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -3695,7 +3726,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The literal name of the dataset.",
                 "type" : "string"
@@ -6885,85 +6916,6 @@
         "tags" : [
           "shacl"
         ]
-      },
-      "put" : {
-        "description" : "Replace the SHACL rules of an association.",
-        "operationId" : "replaceAssociationSHACL",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class.",
-            "in" : "path",
-            "name" : "classUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the association.",
-            "in" : "path",
-            "name" : "associationUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "description" : "The SHACL shapes to be inserted.",
-                "type" : "string"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "replace SHACL of an association",
-        "tags" : [
-          "shacl"
-        ]
       }
     },
     "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/attributes" : {
@@ -7262,85 +7214,6 @@
         "tags" : [
           "shacl"
         ]
-      },
-      "put" : {
-        "description" : "Replace the SHACL rules of an attribute.",
-        "operationId" : "replaceAttributeSHACL",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class.",
-            "in" : "path",
-            "name" : "classUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the association.",
-            "in" : "path",
-            "name" : "attributeUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "description" : "The SHACL shapes to be inserted.",
-                "type" : "string"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "replace SHACL of an attribute",
-        "tags" : [
-          "shacl"
-        ]
       }
     },
     "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/enumentries" : {
@@ -7615,78 +7488,6 @@
           }
         },
         "summary" : "Get SHACL related to a class",
-        "tags" : [
-          "shacl"
-        ]
-      }
-    },
-    "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/shacl/custom" : {
-      "put" : {
-        "description" : "Replace or insert SHACL rules related to a class.",
-        "operationId" : "putSHACL",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class.",
-            "in" : "path",
-            "name" : "classUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "description" : "The SHACL shapes to be inserted.",
-                "type" : "string"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Replace or insert SHACL",
         "tags" : [
           "shacl"
         ]
@@ -9912,129 +9713,9 @@
         ]
       }
     },
-    "/api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/file" : {
-      "get" : {
-        "description" : "Export the rdf-shacl graph",
-        "operationId" : "getCustomSHACLAsFile",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/n-triples" : { },
-              "application/rdf+json" : { },
-              "application/rdf+xml" : { },
-              "text/turtle" : { }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "export shacl",
-        "tags" : [
-          "shacl"
-        ]
-      },
-      "put" : {
-        "description" : "Replace or insert a shacl graph stored in a file",
-        "operationId" : "replaceGraphWithFile",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "multipart/form-data" : {
-              "schema" : {
-                "properties" : {
-                  "file" : {
-                    "description" : "The file containing the shacl graph to be inserted",
-                    "format" : "binary",
-                    "type" : "string"
-                  }
-                },
-                "required" : [
-                  "file"
-                ],
-                "type" : "object"
-              }
-            }
-          }
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Replace/Insert shacl",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
     "/api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/namespaces/ttl" : {
       "get" : {
-        "description" : "Export the namespaces of the custom SHACL graph for a given graph identifier.",
+        "description" : "Export the prefixes of the enabled constraints documents, which the constraints of the schema's classes and properties are read from.",
         "operationId" : "getCustomSHACLNamespacesAsString",
         "parameters" : [
           {
@@ -10075,246 +9756,6 @@
           }
         },
         "summary" : "export custom SHACL namespaces",
-        "tags" : [
-          "shacl"
-        ]
-      }
-    },
-    "/api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/string" : {
-      "get" : {
-        "description" : "Export the rdf-shacl graph as String",
-        "operationId" : "getCustomSHACLAsString",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "text/turtle" : { }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "export shacl",
-        "tags" : [
-          "shacl"
-        ]
-      },
-      "put" : {
-        "description" : "Replace or insert a shacl graph stored in a Turtle String",
-        "operationId" : "replaceGraphWithGraphString",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "description" : "The entire SHACL graph as a string",
-                "type" : "string"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Replace/Insert shacl",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
-    "/api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/{shaclShapeURI}" : {
-      "delete" : {
-        "description" : "Delete a shacl shape form a shacl graph",
-        "operationId" : "deleteShape",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The property shape to delete.",
-            "in" : "path",
-            "name" : "shaclShapeURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "delete a shacl shape",
-        "tags" : [
-          "shacl"
-        ]
-      },
-      "put" : {
-        "description" : "Replace or insert a shacl shape from a shacl graph with the given triples in a valid turtle syntax.",
-        "operationId" : "replaceShape",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "workspaceName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The name of the schema.",
-            "in" : "path",
-            "name" : "schemaName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The property shape to replace.",
-            "in" : "path",
-            "name" : "shaclShapeURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "description" : "the triples to replace, requires valid turtle syntax.",
-                "type" : "string"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Replace/Insert shacl shape",
         "tags" : [
           "shacl"
         ]
@@ -11418,7 +10859,7 @@
     },
     "/api/workspaces/{workspaceName}/shacl/export/file" : {
       "get" : {
-        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from schemas. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text.",
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from schemas. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text, and a single document is named after itself; anything else after the workspace.",
         "operationId" : "exportSelection",
         "parameters" : [
           {

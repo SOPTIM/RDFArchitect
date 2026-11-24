@@ -1131,6 +1131,51 @@ describe("moving a document", () => {
         expect(workbench.canMove("b", 1, EQ_SCHEMA)).toBe(false);
         expect(await workbench.move("b", 1, EQ_SCHEMA)).toBe(false);
     });
+
+    /** Reorders as the backend does: to the index asked for, the rest renumbered densely. */
+    function reorderingServer() {
+        const answer = server.respond;
+        server.respond = (entry, url) => {
+            const documentId = entry.path.match(/\/documents\/([^/]+)$/)?.[1];
+            if (entry.method === "PATCH" && entry.query.has("order")) {
+                const ordered = [...server.documents].sort(
+                    (x, y) => x.order - y.order,
+                );
+                const moved = ordered.find(
+                    document => document.id === documentId,
+                );
+                ordered.splice(ordered.indexOf(moved), 1);
+                ordered.splice(Number(entry.query.get("order")), 0, moved);
+                server.documents = ordered.map((document, order) => ({
+                    ...document,
+                    order,
+                }));
+            }
+            return answer(entry, url);
+        };
+    }
+
+    test("takes two moves in quick succession both", async () => {
+        server.documents = [
+            listed("a", 0, [EQ_SCHEMA]),
+            listed("b", 1, [EQ_SCHEMA]),
+            listed("c", 2, [EQ_SCHEMA]),
+        ];
+        reorderingServer();
+        await workbench.load();
+        const gate = holdRequests(entry => entry.method === "PATCH");
+
+        const first = workbench.move("c", -1, EQ_SCHEMA);
+        const second = workbench.move("c", -1, EQ_SCHEMA);
+        gate.release();
+        await Promise.all([first, second]);
+
+        expect(
+            [...server.documents]
+                .sort((x, y) => x.order - y.order)
+                .map(document => document.id),
+        ).toEqual(["c", "a", "b"]);
+    });
 });
 
 describe("the generated shapes", () => {

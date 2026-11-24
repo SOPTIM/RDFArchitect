@@ -682,24 +682,56 @@ class ShapesDocumentsApiTest {
                 .andExpect(jsonPath("$.schemas[0]").value(SCHEMA));
     }
 
+    private String downloadNameOf(String accept, List<UUID> documentIds, String... generatedFor)
+            throws Exception {
+        var request =
+                get(BASE + "/export/file")
+                        .param(
+                                "documentId",
+                                documentIds.stream().map(UUID::toString).toArray(String[]::new))
+                        .header(HttpHeaders.ACCEPT, accept);
+        if (generatedFor.length > 0) {
+            request.param("generatedFor", generatedFor);
+        }
+        var response =
+                mockMvc.perform(request).andExpect(status().isOk()).andReturn().getResponse();
+        return ContentDisposition.parse(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+                .getFilename();
+    }
+
     @Test
-    void anExportIsNamedAfterTheWorkspace() throws Exception {
+    void aDocumentExportedAloneIsNamedAfterIt() throws Exception {
         var document = givenDocument("eq.ttl", SHAPES);
 
-        mockMvc.perform(
-                        get(BASE + "/export/file")
-                                .param("documentId", document.getId().toString())
-                                .header(HttpHeaders.ACCEPT, "text/turtle"))
-                .andExpect(status().isOk())
-                .andExpect(
-                        result ->
-                                assertThat(
-                                                ContentDisposition.parse(
-                                                                result.getResponse()
-                                                                        .getHeader(
-                                                                                HttpHeaders
-                                                                                        .CONTENT_DISPOSITION))
-                                                        .getFilename())
-                                        .isEqualTo("cgmes-shacl.ttl"));
+        assertThat(downloadNameOf("text/turtle", List.of(document.getId()))).isEqualTo("eq.ttl");
+        assertThat(downloadNameOf("application/rdf+xml", List.of(document.getId())))
+                .isEqualTo("eq.rdf");
+    }
+
+    @Test
+    void aDocumentNamedWithoutAnExtensionGetsTheFormatsOne() throws Exception {
+        var document = givenDocument("My rules", SHAPES);
+
+        assertThat(downloadNameOf("text/turtle", List.of(document.getId())))
+                .isEqualTo("My rules.ttl");
+    }
+
+    @Test
+    void whatAFileNameCannotHoldIsReplacedInTheDownloadsName() throws Exception {
+        var document = givenDocument("rules: a/b.ttl", SHAPES);
+
+        assertThat(downloadNameOf("text/turtle", List.of(document.getId())))
+                .isEqualTo("rules_ a_b.ttl");
+    }
+
+    @Test
+    void anExportOfMoreThanOneDocumentIsNamedAfterTheWorkspace() throws Exception {
+        var first = givenDocument("eq.ttl", SHAPES);
+        var second = givenDocument("tp.ttl", SHAPES.replace("Line", "Terminal"));
+
+        assertThat(downloadNameOf("text/turtle", List.of(first.getId(), second.getId())))
+                .isEqualTo("cgmes-shacl.ttl");
+        assertThat(downloadNameOf("text/turtle", List.of(first.getId()), SCHEMA))
+                .isEqualTo("cgmes-shacl.ttl");
     }
 }

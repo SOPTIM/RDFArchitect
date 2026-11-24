@@ -33,6 +33,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.ValueChange;
@@ -265,7 +266,11 @@ class ChangeLogAttributionTest {
             createGraph(GRAPH_A);
 
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-                transaction.graph(GRAPH_A).getCustomSHACL().add(triple("s p o"));
+                transaction
+                        .createShapesDocument(
+                                "shapes.ttl", ShapesDocument.Origin.AUTHORED, List.of(GRAPH_A))
+                        .getGraph()
+                        .add(triple("s p o"));
                 transaction.commit("changed the shapes");
             }
 

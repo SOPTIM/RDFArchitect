@@ -52,15 +52,17 @@ The dialog stays open while the import runs and shows a progress bar together wi
 
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
-A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
+A separate import path for custom SHACL shapes. Each imported file becomes its own constraints document next to the schema graph, keeping its name and its text exactly as written, and can then be edited, validated and compared with the schema in the constraints workbench (see [SHACL](./shacl)).
 
 ### Import a workspace file (File → Import → Workspace (.rdfa))
 
-**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours, SHACL constraints documents and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
+**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours, constraints documents and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
 
 The workspace file is a zip; rename it to `.zip` to look inside. Its top level holds the workspace, each schema sits in `schemas/<schema name>/schema.ttl` and can be used on its own, and `manifest.json` lists the schemas. The manifest's `formatVersion` (`MAJOR.MINOR`) says which RDFArchitect versions read it: any file of the same major version imports, and one with a newer minor version imports with a notice that the parts this version does not know were left out.
 
-The constraints documents sit in `shacl/`. `shacl/documents.json` lists each document with its name, the file it was imported from, whether it is enabled, its position and the names of the schemas it applies to, and `shacl/<document id>.ttl` holds its text exactly as it was saved, comments included. A document may name a schema the file does not contain; it then applies to no schema until one of that name exists. A file of format 1.0 holds no constraints documents and imports without any.
+The constraints documents sit in `shacl/`. `shacl/documents.json` lists each document with its name, the file it was imported from, whether it is enabled, its position and the names of the schemas it applies to, and `shacl/<document id>.ttl` holds its text exactly as it was saved, comments included. A document may name a schema the file does not contain; it then applies to no schema until one of that name exists.
+
+Each schema folder also holds `shacl.ttl`: the enabled documents that apply to the schema, merged into one graph. RDFArchitect versions that read format 1.0 take a schema's constraints from that file, so they keep them when they open a newer file. Importing a file of format 1.1 or later ignores it and reads `shacl/` instead. In a file of format 1.0, `shacl.ttl` is all there is: each schema's constraints become a constraints document named `<schema name>-shacl.ttl` that applies to that schema, and a schema without constraints gets none.
 
 ### Create an empty schema (Edit → New → Schema)
 

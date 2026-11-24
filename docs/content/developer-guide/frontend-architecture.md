@@ -13,7 +13,7 @@ sidebar_position: 4
 - **bits-ui** for headless dialog, menubar, and dropdown primitives, wrapped in project-local components under `src/lib/components/bitsui/`.
 - **SvelteFlow** for diagram rendering, with **elkjs** for auto-layout.
 - **Mermaid** for the deprecated alternative renderer, which is no longer developed.
-- **CodeMirror 6** with `codemirror-lang-turtle` for the TTL editors.
+- **Monaco** for the Turtle editor of the constraints workbench, highlighted with TextMate grammars (`vscode-textmate`, `vscode-oniguruma`) so the SPARQL inside `sh:select` is highlighted too.
 - **Asciidoctor.js** for rendering class comments.
 - **Vitest** for unit tests, **jsdom** for the DOM environment.
 
@@ -27,7 +27,7 @@ SvelteKit's filesystem routing is used straightforwardly:
 /changelog         →  Edit history view
 /compare           →  Compare results view
 /migrate           →  7-step migration wizard
-/shacl/...         →  SHACL views
+/shacl             →  Constraints workbench
 ```
 
 The editor listens to URL parameters `?workspace=...&schema=...&package=...` to support deep links.

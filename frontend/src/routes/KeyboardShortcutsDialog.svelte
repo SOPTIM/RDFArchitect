@@ -103,7 +103,7 @@
                     keys: ["Ctrl", "Shift", "D"],
                 },
                 {
-                    description: "View Constraints (SHACL)",
+                    description: "Constraints (SHACL)",
                     keys: ["Ctrl", "Shift", "L"],
                 },
             ],

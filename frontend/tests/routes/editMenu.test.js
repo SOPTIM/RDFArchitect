@@ -39,6 +39,8 @@ const LEGACY = {
     profileClassUuid: "uuid-equipment-version",
 };
 
+const page = vi.hoisted(() => ({ url: new URL("http://localhost/mainpage") }));
+
 let mounted = null;
 let target = null;
 
@@ -110,6 +112,7 @@ function headerHintButton() {
 }
 
 vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
+vi.mock("$app/state", () => ({ page }));
 
 vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: { getGraphs: vi.fn(), renameGraph: vi.fn() },
@@ -148,6 +151,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    page.url = new URL("http://localhost/mainpage");
     if (mounted) unmount(mounted);
     target?.remove();
     mounted = null;
@@ -245,5 +249,36 @@ describe("Edit menu", () => {
         } finally {
             release();
         }
+    });
+
+    function deleteSchemaDialog() {
+        return [...document.querySelectorAll("[role=dialog]")].find(dialog =>
+            dialog.textContent.includes("Delete Schema"),
+        );
+    }
+
+    function pressDelete() {
+        shortcutStore.handleEvent(
+            new KeyboardEvent("keydown", { key: "Delete", code: "Delete" }),
+        );
+        flushSync();
+    }
+
+    // The schema the navigation has selected is not on screen there, and Delete in the editor
+    // means the text.
+    test("Delete offers nothing to delete on the constraints workbench", async () => {
+        page.url = new URL("http://localhost/shacl");
+
+        pressDelete();
+        await Promise.resolve();
+        flushSync();
+
+        expect(deleteSchemaDialog()).toBeUndefined();
+    });
+
+    test("Delete offers to delete the selected schema elsewhere", async () => {
+        pressDelete();
+
+        await vi.waitFor(() => expect(deleteSchemaDialog()).toBeDefined());
     });
 });

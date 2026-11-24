@@ -91,7 +91,11 @@
             shortcutStore.register(
                 "shaclImport",
                 ["ctrl", "shift", "i"],
-                () => (showSHACLUploadDialog = true),
+                () => {
+                    if (!isWorkspaceReadOnly) {
+                        showSHACLUploadDialog = true;
+                    }
+                },
                 true,
             ),
             shortcutStore.register(
@@ -174,6 +178,7 @@
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLUploadDialog = true)}
+                    disabled={isWorkspaceReadOnly}
                     faIcon={faUpload}
                     altText="Ctrl+Shift+I"
                 >

@@ -77,11 +77,26 @@ class WorkspaceArchiveFormat10CompatibilityTest {
     }
 
     @Test
-    void importsWithoutShapesDocuments() {
+    void turnsTheConstraintsOfEachSchemaIntoADocumentApplyingToIt() {
         importArchive();
 
+        var schemaName = "61970-600-2_Header-AP-Voc-RDFS2020";
+        var written = unzip(archive).get("schemas/" + schemaName + "/shacl.ttl");
         try (var transaction = databasePort.beginTransaction("imported", ReadWrite.READ)) {
-            assertThat(transaction.shapesDocuments()).isEmpty();
+            assertThat(transaction.shapesDocuments().values())
+                    .singleElement()
+                    .satisfies(
+                            document -> {
+                                assertThat(document.getName()).isEqualTo(schemaName + "-shacl.ttl");
+                                assertThat(document.getSchemas()).containsExactly(schemaName);
+                                assertThat(document.isEnabled()).isTrue();
+                                assertThat(document.getRawText()).isEqualTo(written);
+                                assertThat(
+                                                document.getGraph()
+                                                        .isIsomorphicWith(
+                                                                ArchiveFiles.turtle(written)))
+                                        .isTrue();
+                            });
         }
     }
 

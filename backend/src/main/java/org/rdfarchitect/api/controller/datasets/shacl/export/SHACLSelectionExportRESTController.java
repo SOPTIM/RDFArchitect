@@ -45,9 +45,9 @@ import java.util.UUID;
 /**
  * Exporting a chosen set of a workspace's constraints.
  *
- * <p>The older endpoints offer three fixed combinations — generated, custom, or both. Since a
- * workspace holds several documents, which of them belongs in an export is a question only the user
- * can answer, so this one takes the answer.
+ * <p>A workspace holds several documents, and which of them belongs in an export is a question only
+ * the user can answer, so this endpoint takes the answer: the documents named, with or without the
+ * shapes generated from schemas.
  */
 @RestController
 @RequestMapping("api/workspaces/{workspaceName}/shacl/export")
@@ -65,7 +65,9 @@ public class SHACLSelectionExportRESTController {
                     "Exports the named constraints documents as one file, optionally merged with the "
                             + "shapes generated from schemas. A document is included because it "
                             + "was asked for, whether or not it is enabled for validation. A single "
-                            + "document exported as Turtle on its own is returned as its stored text.",
+                            + "document exported as Turtle on its own is returned as its stored text, "
+                            + "and a single document is named after itself; anything else after the "
+                            + "workspace.",
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
@@ -105,16 +107,19 @@ public class SHACLSelectionExportRESTController {
                 originURL);
 
         var format = SHACLFileResponse.rdfFormat(acceptHeader);
+        // An empty documentId= arrives as null, and names nothing.
+        var documents =
+                documentIds == null
+                        ? List.<UUID>of()
+                        : documentIds.stream().filter(Objects::nonNull).toList();
+        var schemas = SchemaParameter.names(generatedFor);
         var outStream =
                 shaclExportUseCase.exportSelectedSHACLGraph(
-                        workspaceName,
-                        format,
-                        // An empty documentId= arrives as null, and names nothing.
-                        documentIds == null
-                                ? List.of()
-                                : documentIds.stream().filter(Objects::nonNull).toList(),
-                        SchemaParameter.names(generatedFor));
+                        workspaceName, format, documents, schemas);
 
-        return SHACLFileResponse.ofWorkspace(workspaceName, format, outStream);
+        return SHACLFileResponse.named(
+                shaclExportUseCase.selectionFileStem(workspaceName, documents, schemas),
+                format,
+                outStream);
     }
 }

@@ -21,19 +21,18 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
-import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -45,9 +44,11 @@ import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.database.StaleWriteException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
 import org.rdfarchitect.services.ChangeDescriptions;
+import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
+import org.rdfarchitect.services.shacl.effective.ConstraintFormatter;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
@@ -56,37 +57,40 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
+import org.rdfarchitect.shacl.dto.ShapeOrigin;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Stores and reads SHACL shapes, of which there are two separate stores: each graph's single custom
- * SHACL graph, and the workspace's {@link ShapesDocument shapes documents}. Nothing here reads one
- * on behalf of the other.
+ * Stores and reads the workspace's {@link ShapesDocument shapes documents}.
+ *
+ * <p>Reads span every enabled document (see {@code readEnabledShapes}). Writes address one document
+ * at a time, through {@link #replaceShapesDocumentText}, which keeps that document's text
+ * authoritative.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
-        implements SHACLInsertUseCase,
-                SHACLExportUseCase,
+        implements SHACLExportUseCase,
                 SHACLGetClassRelationsUseCase,
                 SHACLGetShapeUseCase,
-                SHACLReplaceShapeUseCase,
-                SHACLDeleteShapeUseCase,
-                SHACLUpdateUseCase,
                 SHACLDocumentUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLStoringService.class);
@@ -98,40 +102,6 @@ public class SHACLStoringService
     private static final String DEFAULT_DOCUMENT_NAME = "constraints";
 
     private final DatabasePort databasePort;
-
-    @Override
-    public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var storedGraph = ctx.getCustomSHACL();
-            storedGraph.clear();
-            var storedModel = ModelFactory.createModelForGraph(storedGraph);
-            var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
-            storedModel.clearNsPrefixMap();
-            storedModel.add(newModel);
-            storedModel.setNsPrefixes(newModel);
-
-            transaction.commit("Replaced the custom SHACL");
-        }
-    }
-
-    @Override
-    public ByteArrayOutputStream exportCustomSHACLGraph(
-            GraphIdentifier graphIdentifier, RDFFormat format) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
-            try (var outStream = new ByteArrayOutputStream()) {
-                customSHACL.write(outStream, format.getLang().getName());
-                return outStream;
-            } catch (Exception e) {
-                logger.warn("Error while writing SHACL graph to output stream", e);
-                return new ByteArrayOutputStream();
-            }
-        }
-    }
 
     @Override
     public ByteArrayOutputStream exportGeneratedSHACLGraph(
@@ -173,7 +143,7 @@ public class SHACLStoringService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction, graphIdentifier.schemaName());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
@@ -196,8 +166,7 @@ public class SHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction);
             try (var outStream = new ByteArrayOutputStream()) {
                 var prefixModel = ModelFactory.createDefaultModel();
                 prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
@@ -232,7 +201,7 @@ public class SHACLStoringService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
@@ -240,15 +209,111 @@ public class SHACLStoringService
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
             var shaclResult = new CustomAndGeneratedTuple<SHACLToClassRelations>();
-            shaclResult.setCustom(getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
+            var custom = getSHACLToClassRelations(ontologyModel, customSHACL, classUUID);
+            attributeToDocuments(custom, transaction);
+            shaclResult.setCustom(custom);
             shaclResult.setGenerated(
                     getSHACLToClassRelations(ontologyModel, generatedSHACL, classUUID));
             return shaclResult;
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Where a shape came from, and what it asks for
+    // -------------------------------------------------------------------------
+
+    /**
+     * Names the documents behind every shape of a merged result.
+     *
+     * <p>The shapes were read from the union of the enabled documents, which is the only way to
+     * answer "what constrains this class" — official constraints are split across files. Merging is
+     * also what throws away the one thing a reader needs in order to change a rule, so it is put
+     * back here.
+     *
+     * <p>Shapes are matched by the id the fetchers already produce, which is {@code
+     * RDFNode.toString()} — the IRI for a named shape, the label for a blank node. The merge scopes
+     * a blank node's label by its document, and the index below scopes it the same way, so an
+     * inlined property shape is attributed as reliably as a named one.
+     */
+    private static void attributeToDocuments(
+            SHACLToClassRelations relations, WorkspaceTransaction transaction) {
+        var byId = originsById(transaction);
+        for (NodeShape shape : orEmpty(relations.getNodeShapes())) {
+            shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+        }
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            for (PropertyShape shape : orEmpty(wrapper.getPropertyShapes())) {
+                shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+            }
+        }
+    }
+
+    /** Where every subject of the enabled documents is stated, by shape id. */
+    private static Map<String, List<ShapeOrigin>> originsById(WorkspaceTransaction transaction) {
+        var byId = new LinkedHashMap<String, List<ShapeOrigin>>();
+        transaction.shapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> indexSubjects(byId, document));
+        return byId;
+    }
+
+    /**
+     * Records every subject a document states something about, under its shape id.
+     *
+     * <p>The lines every subject starts on are taken in one scan of the text. Scanning per subject
+     * would be quadratic in the file's length on an official file with thousands of subjects, paid
+     * on every open of the class-constraints dialog.
+     *
+     * <p>Lines are counted in the document's own text rather than in a re-serialisation, because
+     * the text is what the workbench will open and the line has to agree with it. A blank-node
+     * shape has no subject to look for, and a document held without its text has no lines; both
+     * simply get no line.
+     */
+    private static void indexSubjects(
+            Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        var lines =
+                TurtleSubjectLines.linesBySubject(
+                        document.getRawText(), ShapesDocument.BASE_IRI, model);
+        var seen = new HashSet<String>();
+        model.listSubjects()
+                .forEachRemaining(
+                        subject -> {
+                            var id =
+                                    model.asRDFNode(ShapesUnion.scoped(subject.asNode(), document))
+                                            .toString();
+                            if (!seen.add(id)) {
+                                return;
+                            }
+                            byId.computeIfAbsent(id, ignored -> new ArrayList<>())
+                                    .add(
+                                            ShapeOrigin.builder()
+                                                    .documentId(document.getId())
+                                                    .documentName(document.getName())
+                                                    .line(
+                                                            subject.isURIResource()
+                                                                    ? lines.get(subject.getURI())
+                                                                    : null)
+                                                    .build());
+                        });
+    }
+
+    private static List<PropertyShapesWrapper> concat(
+            List<PropertyShapesWrapper> first, List<PropertyShapesWrapper> second) {
+        var all = new ArrayList<>(orEmpty(first));
+        all.addAll(orEmpty(second));
+        return all;
+    }
+
+    private static <T> List<T> orEmpty(List<T> list) {
+        return list == null ? List.of() : list;
+    }
+
     private SHACLToClassRelations getSHACLToClassRelations(
-            Model ontologyModel, Model shaclModel, UUID classUUID) {
+            Model ontologyModel, Model statedShapes, UUID classUUID) {
+        var shaclModel = withImpliedPropertyShapeTypes(statedShapes);
         var classUri =
                 ontologyModel
                         .listSubjectsWithProperty(
@@ -259,13 +324,74 @@ public class SHACLStoringService
         prefixMapping.setNsPrefixes(shaclModel.getNsPrefixMap());
         var shaclShapesFetcher = new SHACLShapesFetcher(shaclModel);
         var shaclToClassAssigner = new PropertyShapeToClassAssigner(shaclModel, ontologyModel);
-        return SHACLToClassRelations.builder()
-                .namespaces(prefixMappingToTtlString(prefixMapping))
-                .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
-                .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
-                .derivedPropertyShapes(
-                        shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
-                .build();
+        var relations =
+                SHACLToClassRelations.builder()
+                        .namespaces(prefixMappingToTtlString(prefixMapping))
+                        .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
+                        .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
+                        .derivedPropertyShapes(
+                                shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
+                        .build();
+        summarise(
+                relations, shaclModel, prefixMapping, ClassHierarchy.of(ontologyModel.getGraph()));
+        return relations;
+    }
+
+    /**
+     * The shapes, plus {@code a sh:PropertyShape} on every value of {@code sh:property} that does
+     * not say so itself.
+     *
+     * <p>Being the value of {@code sh:property} is what makes a node a property shape; the type is
+     * optional, and inline rules usually leave it off. The lookups that sort rules onto the class's
+     * properties match on the type, so without it an inline rule appeared only in its node shape's
+     * Turtle and never on the property it constrains.
+     */
+    private static Model withImpliedPropertyShapeTypes(Model shapes) {
+        var implied = ModelFactory.createDefaultModel();
+        shapes.listObjectsOfProperty(SHACLM.property)
+                .filterKeep(RDFNode::isResource)
+                .mapWith(RDFNode::asResource)
+                .filterDrop(shape -> shapes.contains(shape, RDF.type, SHACLM.PropertyShape))
+                .forEachRemaining(shape -> implied.add(shape, RDF.type, SHACLM.PropertyShape));
+        if (implied.isEmpty()) {
+            return shapes;
+        }
+        var union = ModelFactory.createUnion(shapes, implied);
+        union.setNsPrefixes(shapes.getNsPrefixMap());
+        return union;
+    }
+
+    /**
+     * Puts the effective rule of each property into words, so it can be read without expanding the
+     * Turtle underneath it.
+     *
+     * <p>Shapes are looked up by the id the fetcher recorded, which is {@code RDFNode.toString()};
+     * building the index once and matching on it exactly avoids having to guess how a blank node
+     * spells itself.
+     */
+    private static void summarise(
+            SHACLToClassRelations relations,
+            Model shaclModel,
+            PrefixMapping prefixes,
+            ClassHierarchy hierarchy) {
+        var subjects = new HashMap<String, Node>();
+        shaclModel
+                .listSubjects()
+                .forEachRemaining(subject -> subjects.put(subject.toString(), subject.asNode()));
+
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            var shapes =
+                    orEmpty(wrapper.getPropertyShapes()).stream()
+                            .map(shape -> subjects.get(shape.getId()))
+                            .filter(Objects::nonNull)
+                            .toList();
+            wrapper.setSummary(
+                    ConstraintFormatter.describe(
+                            EffectiveConstraints.readAll(shaclModel.getGraph(), shapes),
+                            prefixes,
+                            hierarchy));
+        }
     }
 
     private String prefixMappingToTtlString(PrefixMapping prefixMapping) {
@@ -293,7 +419,7 @@ public class SHACLStoringService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var property =
                     ontologyModel
@@ -311,6 +437,9 @@ public class SHACLStoringService
 
             List<PropertyShape> customPropertyShapes =
                     getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
+            var origins = originsById(transaction);
+            customPropertyShapes.forEach(
+                    shape -> shape.setOrigins(origins.getOrDefault(shape.getId(), List.of())));
             var generatedPropertyShapes =
                     new SHACLShapesFetcher(generatedShacl)
                             .getPropertyShapesOfProperty(ontologyModel, property.getURI());
@@ -346,7 +475,7 @@ public class SHACLStoringService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classUri =
                     ontologyModel
@@ -373,154 +502,12 @@ public class SHACLStoringService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(transaction);
             var shaclToClassAssigner =
                     new PropertyShapeToClassAssigner(
                             customSHACL, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             return shaclToClassAssigner.getPropertyShapes(classUUID);
         }
-    }
-
-    @Override
-    public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
-            var deleteModel = ModelFactory.createDefaultModel();
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-            customSHACL.remove(deleteModel);
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Deleted", "SHACL shape", ChangeDescriptions.localName(shaclShapeURI)));
-        }
-    }
-
-    @Override
-    public void replaceSHACLShape(
-            GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
-            Model insertModel = parseTriplesToModel(shaclToInsert);
-            Model deleteModel = ModelFactory.createDefaultModel();
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-            customSHACL.remove(deleteModel);
-            customSHACL.add(insertModel);
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Replaced",
-                            "SHACL shape",
-                            ChangeDescriptions.localName(shaclShapeURI)));
-        }
-    }
-
-    private Model parseTriplesToModel(String triples) {
-        if (triples.trim().isEmpty()) {
-            return ModelFactory.createDefaultModel();
-        }
-        Model model = ModelFactory.createDefaultModel();
-        try (StringReader reader = new StringReader(triples)) {
-            return model.read(reader, null, "TURTLE");
-        }
-    }
-
-    @Override
-    public void updateClassSHACL(
-            GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
-            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            var insertModel = parseTriplesToModel(ttlShaclString);
-            var deleteModel = getClassShaclModel(ontologyModel, customSHACL, classUUID);
-
-            customSHACL.remove(deleteModel);
-            customSHACL.clearNsPrefixMap();
-            customSHACL.setNsPrefixes(insertModel);
-            customSHACL.add(insertModel);
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Updated the SHACL of",
-                            "class",
-                            ChangeDescriptions.className(ctx.getRdfGraph(), classUUID)));
-        }
-    }
-
-    @Override
-    public void updatePropertyShacl(
-            GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
-        var insertModel = parseTriplesToModel(ttlShaclString);
-
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.schemaName());
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
-            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-
-            var customPropertyShapes =
-                    getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
-
-            var deleteModel = ModelFactory.createDefaultModel();
-            for (var propertyShape : customPropertyShapes) {
-                copySHACLShapeToNewModel(
-                        customSHACL,
-                        deleteModel,
-                        ResourceFactory.createResource(propertyShape.getId()));
-            }
-            customSHACL.remove(deleteModel);
-            customSHACL.clearNsPrefixMap();
-            customSHACL.setNsPrefixes(insertModel);
-            customSHACL.add(insertModel);
-            transaction.commit("Updated the SHACL of a property");
-        }
-    }
-
-    /**
-     * Get all shacl shapes related to a class as a model.
-     *
-     * @param ontologyModel the ontology model
-     * @param customSHACL the model containing the custom SHACL shapes
-     * @param classUUID the class uuid
-     * @return a model containing all SHACL shapes related to the class
-     */
-    private Model getClassShaclModel(Model ontologyModel, Model customSHACL, UUID classUUID) {
-        var classUri =
-                ontologyModel
-                        .listSubjectsWithProperty(
-                                RDFA.uuid, ontologyModel.createLiteral(classUUID.toString()))
-                        .next()
-                        .getURI();
-        var nodeShapes = new SHACLShapesFetcher(customSHACL).getNodeShapesOfClass(classUri);
-        var propertyShapeWrappers =
-                new PropertyShapeToClassAssigner(customSHACL, ontologyModel)
-                        .getPropertyShapes(classUUID);
-        // get all shape uris to remove
-        var shapesToRemove = new ArrayList<String>();
-        for (var nodeShape : nodeShapes) {
-            shapesToRemove.add(nodeShape.getId());
-        }
-        for (var propertyShapeWrapper : propertyShapeWrappers) {
-            for (var propertyShape : propertyShapeWrapper.getPropertyShapes()) {
-                shapesToRemove.add(propertyShape.getId());
-            }
-        }
-        Model deleteModel = ModelFactory.createDefaultModel();
-        for (var shapeToRemove : shapesToRemove) {
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shapeToRemove));
-        }
-        return deleteModel;
-    }
-
-    /** Copies a shape with what it holds inline and the SPARQL constraints it names. */
-    private static void copySHACLShapeToNewModel(
-            Model originalModel, Model newModel, Resource subject) {
-        GraphUtils.copyWithBlankNodes(originalModel, newModel, subject, Set.of(SHACLM.sparql));
     }
 
     // -------------------------------------------------------------------------
@@ -670,6 +657,24 @@ public class SHACLStoringService
         }
     }
 
+    @Override
+    public String selectionFileStem(
+            String workspaceName, Collection<UUID> documentIds, Collection<String> generatedFor) {
+        var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+        if (ids.size() != 1 || !generatedFor.isEmpty()) {
+            return workspaceName + "-shacl";
+        }
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            var name = requireDocument(transaction, ids.iterator().next()).getName();
+            var extension = name.lastIndexOf('.');
+            // An imported document keeps its file's name, extension included, and the download
+            // takes the extension of the format it is written in.
+            return extension > 0 && RDFLanguages.filenameToLang(name) != null
+                    ? name.substring(0, extension)
+                    : name;
+        }
+    }
+
     /**
      * Exports the named documents as one file, optionally merged with schemas' generated shapes.
      *
@@ -729,49 +734,19 @@ public class SHACLStoringService
         }
     }
 
+    private static Model readEnabledShapes(WorkspaceTransaction transaction) {
+        return ShapesUnion.enabled(transaction.shapesDocuments().values());
+    }
+
+    private static Model readEnabledShapes(WorkspaceTransaction transaction, String schemaName) {
+        return ShapesUnion.enabledFor(transaction.shapesDocuments().values(), schemaName);
+    }
+
     /** The named documents merged in the workspace's own order, whether enabled or not. */
     private static Model readShapesOf(WorkspaceTransaction transaction, Set<UUID> documentIds) {
-        var union = ModelFactory.createDefaultModel();
-        transaction.shapesDocuments().values().stream()
-                .filter(document -> documentIds.contains(document.getId()))
-                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(document -> addWithPrefixes(union, document));
-        return union;
-    }
-
-    /**
-     * Adds a document's triples. The first document to declare a prefix keeps it, so a later
-     * document rebinding it cannot change what earlier shapes mean.
-     *
-     * <p>Blank nodes stay apart per document: a label only identifies a node within the document it
-     * was normalised in, and merging on it would fold together two lists that merely look alike.
-     */
-    private static void addWithPrefixes(Model union, ShapesDocument document) {
-        var model = ModelFactory.createModelForGraph(document.getGraph());
-        model.getNsPrefixMap()
-                .forEach(
-                        (prefix, uri) -> {
-                            if (union.getNsPrefixURI(prefix) == null) {
-                                union.setNsPrefix(prefix, uri);
-                            }
-                        });
-        var scope = document.getId() + ":";
-        document.getGraph()
-                .find()
-                .forEach(
-                        triple ->
-                                union.getGraph()
-                                        .add(
-                                                Triple.create(
-                                                        scoped(triple.getSubject(), scope),
-                                                        triple.getPredicate(),
-                                                        scoped(triple.getObject(), scope))));
-    }
-
-    private static Node scoped(Node node, String scope) {
-        return node.isBlank()
-                ? NodeFactory.createBlankNode(scope + node.getBlankNodeLabel())
-                : node;
+        return ShapesUnion.of(
+                transaction.shapesDocuments().values(),
+                document -> documentIds.contains(document.getId()));
     }
 
     /**

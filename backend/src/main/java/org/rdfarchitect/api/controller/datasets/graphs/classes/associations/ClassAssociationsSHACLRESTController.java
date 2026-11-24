@@ -22,10 +22,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
-import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
 import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.slf4j.Logger;
@@ -33,8 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,8 +48,6 @@ public class ClassAssociationsSHACLRESTController {
             LoggerFactory.getLogger(ClassAssociationsSHACLRESTController.class);
 
     private final SHACLGetShapeUseCase shaclGetShapeUseCase;
-
-    private final SHACLUpdateUseCase shaclUpdateUseCase;
 
     @Operation(
             summary = "Get SHACL related to an association",
@@ -95,48 +89,5 @@ public class ClassAssociationsSHACLRESTController {
                 associationUUID,
                 originURL);
         return shacl;
-    }
-
-    @Operation(
-            summary = "replace SHACL of an association",
-            description = "Replace the SHACL rules of an association.",
-            tags = {"shacl"})
-    @PutMapping
-    public String replaceAssociationSHACL(
-            @Parameter(description = "The name/url of the inquirer.")
-                    @RequestHeader(
-                            value = HttpHeaders.ORIGIN,
-                            required = false,
-                            defaultValue = "unknown")
-                    String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String workspaceName,
-            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
-            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
-            @Parameter(description = "The uuid of the association.") @PathVariable
-                    String associationUUID,
-            @Parameter(description = "The SHACL shapes to be inserted.") @RequestBody
-                    String shaclString) {
-        logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}/shacl\" from \"{}\".",
-                workspaceName,
-                schemaName,
-                classUUID,
-                associationUUID,
-                originURL);
-
-        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
-
-        shaclUpdateUseCase.updatePropertyShacl(
-                graphIdentifier, UUID.fromString(associationUUID), shaclString);
-
-        logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}/shacl\" to \"{}\".",
-                workspaceName,
-                schemaName,
-                classUUID,
-                associationUUID,
-                originURL);
-        return Response.SUCCESS;
     }
 }

@@ -16,62 +16,95 @@
   -->
 
 <script>
-    import { onMount } from "svelte";
-
     import { getClassesReferencingThisClass } from "$lib/api/generated/index.ts";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
-    let { classUUID, onClickOnClass } = $props();
+    let { workspaceName, schemaName, classUUID, onClickOnClass } = $props();
+
+    /**
+     * The relations the backend reports, in the order they are shown in. Super classes are not
+     * classes referring to this one, so they get a heading of their own.
+     */
+    const RELATIONS = [
+        { key: "attributes", heading: "Referenced by", label: "Attributes" },
+        {
+            key: "associations",
+            heading: "Referenced by",
+            label: "Associations",
+        },
+        { key: "superClasses", heading: "Inherits from", label: null },
+    ];
+
     let classesReferencingThisClass = $state({});
-    let classWorkspaceName = $derived(
-        editorState.selectedClassWorkspace.getValue() ??
-            editorState.selectedWorkspace.getValue(),
+
+    /** Only the relations that name a class: an empty one says nothing about this class. */
+    const relations = $derived(
+        RELATIONS.map(relation => ({
+            ...relation,
+            classes: [
+                ...(classesReferencingThisClass[relation.key] ?? []),
+            ].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "")),
+        })).filter(relation => relation.classes.length > 0),
     );
-    let classSchemaName = $derived(
-        editorState.selectedClassGraph.getValue() ??
-            editorState.selectedGraph.getValue(),
-    );
-    onMount(() => fetchClassesReferencingThisClass(classUUID));
-    function fetchClassesReferencingThisClass(classUUID) {
-        getClassesReferencingThisClass({
-            path: {
-                workspaceName: classWorkspaceName,
-                schemaName: classSchemaName,
-                classUUID: classUUID,
-            },
-        })
-            .then(res => res.data)
-            .then(data => {
-                classesReferencingThisClass =
-                    data?.classesReferencingThisClass ?? {};
+
+    // Read in the class's own schema: the dialog can be about a class of another schema than the
+    // one selected.
+    $effect(() => {
+        const path = { workspaceName, schemaName, classUUID };
+        classesReferencingThisClass = {};
+        if (!workspaceName || !schemaName || !classUUID) {
+            return;
+        }
+        let current = true;
+        getClassesReferencingThisClass({ path })
+            .then(({ data }) => {
+                if (current) {
+                    classesReferencingThisClass =
+                        data?.classesReferencingThisClass ?? {};
+                }
             })
-            .catch(() => {
-                classesReferencingThisClass = {};
-            });
-    }
+            .catch(() => {});
+        return () => (current = false);
+    });
 </script>
 
-<!-- right column for navigating to referencing classes -->
-<p class="mx-1">Classes referencing this class via:</p>
-{#each Object.entries(classesReferencingThisClass) as [relationType, classList]}
-    <p class="under mx-1">
-        {relationType}:
-    </p>
-    {#if classList.length === 0}
-        <p class="ml-4">
-            not referenced via "{relationType}".
+<!--
+  @component
+  The classes of the schema that refer to this one through an attribute or an association, and the
+  classes it inherits from.
+-->
+
+<section class="space-y-3 text-sm">
+    {#if relations.length === 0}
+        <p class="text-text-subtle italic">
+            No other class of the schema refers to it.
         </p>
     {/if}
-    {#each classList as classObject}
-        <div class="ml-4 w-fit">
-            <ButtonControl
-                callOnClick={() => {
-                    onClickOnClass(classObject.uuid);
-                }}
-            >
-                {classObject.label}
-            </ButtonControl>
-        </div>
+    {#each ["Referenced by", "Inherits from"] as heading (heading)}
+        {@const shown = relations.filter(
+            relation => relation.heading === heading,
+        )}
+        {#if shown.length > 0}
+            <div>
+                <h3 class="text-default-text font-semibold">{heading}</h3>
+                {#each shown as relation (relation.key)}
+                    {#if relation.label}
+                        <p class="text-text-subtle mt-1">{relation.label}</p>
+                    {/if}
+                    <ul class="ml-2">
+                        {#each relation.classes as classObject (classObject.uuid)}
+                            <li>
+                                <button
+                                    class="text-blue cursor-pointer text-left hover:underline"
+                                    title="Open {classObject.label}"
+                                    onclick={() => onClickOnClass(classObject)}
+                                >
+                                    {classObject.label}
+                                </button>
+                            </li>
+                        {/each}
+                    </ul>
+                {/each}
+            </div>
+        {/if}
     {/each}
-{/each}
+</section>

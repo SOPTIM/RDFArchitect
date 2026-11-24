@@ -237,6 +237,8 @@ export class ShapesWorkbench {
     #saveInFlight = null;
     /** The last change to which schemas a document applies, which the next one waits for. */
     #schemaChanges = Promise.resolve();
+    /** The moves asked for, one after the other, as `#schemaChanges` does for applies-to. */
+    #moves = Promise.resolve();
     #unwatchReadOnly = null;
 
     #workspaceName;
@@ -881,17 +883,25 @@ export class ShapesWorkbench {
      * overrides another.
      */
     async move(documentId, offset, schemaName = null) {
-        const peers = this.#peersIn(schemaName);
-        const from = peers.findIndex(document => document.id === documentId);
-        const neighbour = from < 0 ? undefined : peers[from + offset];
-        if (!neighbour) {
-            return false;
-        }
-        return this.#update(documentId, {
-            order: this.documents.findIndex(
-                document => document.id === neighbour.id,
-            ),
+        // Each move starts from where the one before left the list: two quick moves computed from
+        // the same listing would both ask for the same place, and move it once.
+        const move = this.#moves.then(() => {
+            const peers = this.#peersIn(schemaName);
+            const from = peers.findIndex(
+                document => document.id === documentId,
+            );
+            const neighbour = from < 0 ? undefined : peers[from + offset];
+            if (!neighbour) {
+                return false;
+            }
+            return this.#update(documentId, {
+                order: this.documents.findIndex(
+                    document => document.id === neighbour.id,
+                ),
+            });
         });
+        this.#moves = move.catch(() => {});
+        return move;
     }
 
     async remove(documentId) {

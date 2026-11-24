@@ -51,7 +51,8 @@ public class SHACLCustomNamespacesRestController {
     @Operation(
             summary = "export custom SHACL namespaces",
             description =
-                    "Export the namespaces of the custom SHACL graph for a given graph identifier.",
+                    "Export the prefixes of the enabled constraints documents, which the"
+                            + " constraints of the schema's classes and properties are read from.",
             tags = {"shacl"},
             responses = {
                 @ApiResponse(

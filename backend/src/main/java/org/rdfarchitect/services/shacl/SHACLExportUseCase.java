@@ -28,15 +28,6 @@ import java.util.UUID;
 public interface SHACLExportUseCase {
 
     /**
-     * Export the custom SHACL graph for a given graph identifier.
-     *
-     * @param graphIdentifier The identifier of the graph to export SHACL for.
-     * @param format The format to export the SHACL graph in.
-     * @return A ByteArrayOutputStream containing the exported SHACL graph.
-     */
-    ByteArrayOutputStream exportCustomSHACLGraph(GraphIdentifier graphIdentifier, RDFFormat format);
-
-    /**
      * Export the generated SHACL graph for a given graph identifier with a specific shape URI.
      *
      * @param graphIdentifier The identifier of the graph to export SHACL for.
@@ -58,13 +49,12 @@ public interface SHACLExportUseCase {
     ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format);
 
-    ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
-
     /**
      * Exports the chosen shapes documents as one file, optionally merged with shapes generated from
      * schemas.
      *
-     * <p>A document is included because the caller named it, whether or not it is enabled.
+     * <p>Named documents are exported whether or not they are enabled: disabling a document says it
+     * takes no part in validation, while asking for it here says the user wants it in this file.
      *
      * @param workspaceName The workspace holding the documents.
      * @param format The format to export in.
@@ -79,9 +69,24 @@ public interface SHACLExportUseCase {
             Collection<String> generatedFor);
 
     /**
-     * Export the custom SHACL namespaces for a given graph identifier.
+     * What a download of the selection {@link #exportSelectedSHACLGraph} exports is called, without
+     * its extension: the document's own name for a document exported on its own, and the
+     * workspace's otherwise.
      *
-     * @param graphIdentifier The identifier of the graph to export SHACL namespaces for.
+     * @param workspaceName The workspace holding the documents.
+     * @param documentIds The documents to include.
+     * @param generatedFor Names of the schemas whose generated shapes to merge in.
+     */
+    String selectionFileStem(
+            String workspaceName, Collection<UUID> documentIds, Collection<String> generatedFor);
+
+    ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
+
+    /**
+     * Exports the prefixes of the enabled shapes documents: of every one, as the constraints of a
+     * schema's classes and properties are read from every one.
+     *
+     * @param graphIdentifier The schema whose constraints are shown.
      * @param format The format to export the SHACL namespaces in.
      * @return A ByteArrayOutputStream containing the exported SHACL namespaces.
      */
