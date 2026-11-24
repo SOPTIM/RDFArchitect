@@ -139,6 +139,52 @@ class ConformanceComparatorTest {
     }
 
     @Test
+    void twoDatatypesTheDocumentsRequireTogetherCannotBothHold() {
+        var findings =
+                compare(
+                        shapes("sh:datatype xsd:string"),
+                        shapes("sh:datatype xsd:string ; sh:datatype xsd:integer"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.CONTRADICTED);
+                            assertThat(finding.getMessage())
+                                    .isEqualTo(
+                                            "The documents require a value to be both xsd:integer"
+                                                    + " and xsd:string, which none can be.");
+                        });
+    }
+
+    @Test
+    void aNodeKindAdmittingTheOtherIsADifferenceNotAContradiction() {
+        var findings =
+                compare(shapes("sh:nodeKind sh:IRI"), shapes("sh:nodeKind sh:BlankNodeOrIRI"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding ->
+                                assertThat(finding.getKind())
+                                        .isEqualTo(ConformanceFinding.Kind.DIFFERENT));
+    }
+
+    @Test
+    void nodeKindsAdmittingNothingInCommonContradict() {
+        var findings =
+                compare(shapes("sh:nodeKind sh:Literal"), shapes("sh:nodeKind sh:BlankNodeOrIRI"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding ->
+                                assertThat(finding.getKind())
+                                        .isEqualTo(ConformanceFinding.Kind.CONTRADICTED));
+    }
+
+    @Test
     void aRequirementTheOtherSideForbidsIsAContradiction() {
         var findings = compare(shapes("sh:minCount 1"), shapes("sh:maxCount 0"));
 

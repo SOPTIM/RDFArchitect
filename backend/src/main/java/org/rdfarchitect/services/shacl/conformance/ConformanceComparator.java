@@ -25,8 +25,10 @@ import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -389,6 +391,8 @@ final class ConformanceComparator {
             EffectiveConstraints.Constraint document,
             Context context) {
         var reasons = new ArrayList<String>();
+        unsatisfiable("schema requires", schema, context).ifPresent(reasons::add);
+        unsatisfiable("documents require", document, context).ifPresent(reasons::add);
         if (disjoint(schema.dataTypes(), document.dataTypes())) {
             reasons.add(
                     "A value cannot be both %s and %s."
@@ -406,7 +410,13 @@ final class ConformanceComparator {
                     "A value cannot be an instance of both %s and %s."
                             .formatted(context.valueType(schema), context.valueType(document)));
         }
-        if (disjoint(schema.nodeKinds(), document.nodeKinds())) {
+        var schemaKinds = NodeKinds.admitted(schema.nodeKinds());
+        var documentKinds = NodeKinds.admitted(document.nodeKinds());
+        if (schemaKinds != null
+                && documentKinds != null
+                && !schemaKinds.isEmpty()
+                && !documentKinds.isEmpty()
+                && Collections.disjoint(schemaKinds, documentKinds)) {
             reasons.add(
                     "A value cannot be both %s and %s."
                             .formatted(
@@ -430,6 +440,57 @@ final class ConformanceComparator {
                             .formatted(document.minCount(), schema.maxCount()));
         }
         return reasons;
+    }
+
+    /**
+     * What one side requires that no value can be, on its own: every {@code sh:datatype} and every
+     * {@code sh:nodeKind} stated applies, so two different datatypes, or node kinds sharing no kind
+     * of node, rule out every value.
+     */
+    private static Optional<String> unsatisfiable(
+            String side, EffectiveConstraints.Constraint constraint, Context context) {
+        if (constraint.dataTypes().size() > 1) {
+            return Optional.of(
+                    "The %s a value to be both %s, which none can be."
+                            .formatted(side, context.terms(constraint.dataTypes())));
+        }
+        if (constraint.nodeKinds().size() > 1
+                && NodeKinds.admitted(constraint.nodeKinds()).isEmpty()) {
+            return Optional.of(
+                    "The %s a value to be both %s, which none can be."
+                            .formatted(side, context.terms(constraint.nodeKinds())));
+        }
+        return Optional.empty();
+    }
+
+    /** The kinds of node {@code sh:nodeKind} values admit together. */
+    private static final class NodeKinds {
+
+        private static final String SH = "http://www.w3.org/ns/shacl#";
+
+        private static final Map<String, Set<Character>> KINDS =
+                Map.of(
+                        SH + "BlankNode", Set.of('B'),
+                        SH + "IRI", Set.of('I'),
+                        SH + "Literal", Set.of('L'),
+                        SH + "BlankNodeOrIRI", Set.of('B', 'I'),
+                        SH + "BlankNodeOrLiteral", Set.of('B', 'L'),
+                        SH + "IRIOrLiteral", Set.of('I', 'L'));
+
+        private NodeKinds() {}
+
+        /**
+         * The kinds of node all of {@code nodeKinds} admit together, or {@code null} when none is
+         * stated. A value SHACL does not define admits nothing.
+         */
+        static Set<Character> admitted(Set<String> nodeKinds) {
+            if (nodeKinds.isEmpty()) {
+                return null;
+            }
+            var admitted = new HashSet<>(Set.of('B', 'I', 'L'));
+            nodeKinds.forEach(kind -> admitted.retainAll(KINDS.getOrDefault(kind, Set.of())));
+            return admitted;
+        }
     }
 
     /**
