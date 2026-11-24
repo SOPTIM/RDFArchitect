@@ -53,6 +53,8 @@ Run it:
 
 When you change backend routes or DTOs, regenerate the contract itself from the backend module with `mvn exec:java@export-openapi` and commit the updated `frontend/openapi.json`; backend CI fails if the committed contract has drifted from the controllers. See [Adding a feature](./adding-a-feature) for the end-to-end flow.
 
+The contract covers the server and the desktop app: the export runs the backend with the `desktop` profile added and snapshots switched on. The endpoints only the desktop app has are tagged `desktop` and answer 404 on a server.
+
 ## IDE setup
 
 - **IntelliJ IDEA** (Community works) for the backend. Import as a Maven project. Enable the Lombok plugin and "Annotation Processing" — Lombok and MapStruct both rely on it.

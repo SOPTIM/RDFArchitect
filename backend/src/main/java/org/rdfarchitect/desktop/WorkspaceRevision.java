@@ -31,6 +31,9 @@ import java.util.UUID;
  */
 public record WorkspaceRevision(UUID changeId, boolean readOnly) {
 
+    private static final String READ_ONLY = ":read-only";
+    private static final String EDITABLE = ":editable";
+
     /**
      * Returns where the workspace stands now.
      *
@@ -42,5 +45,31 @@ public record WorkspaceRevision(UUID changeId, boolean readOnly) {
             return null;
         }
         return new WorkspaceRevision(changeId, databasePort.isReadOnly(workspaceName));
+    }
+
+    /**
+     * Reads a revision back from its {@link #version()}.
+     *
+     * @param version the text {@link #version()} returned
+     * @return the revision
+     * @throws IllegalArgumentException if the text is no version
+     */
+    public static WorkspaceRevision ofVersion(String version) {
+        if (version.endsWith(READ_ONLY)) {
+            return new WorkspaceRevision(changeIdOf(version, READ_ONLY), true);
+        }
+        if (version.endsWith(EDITABLE)) {
+            return new WorkspaceRevision(changeIdOf(version, EDITABLE), false);
+        }
+        throw new IllegalArgumentException("Not a workspace version: " + version);
+    }
+
+    /** Returns the revision as text, which a window passes back once it has saved the file. */
+    public String version() {
+        return changeId + (readOnly ? READ_ONLY : EDITABLE);
+    }
+
+    private static UUID changeIdOf(String version, String suffix) {
+        return UUID.fromString(version.substring(0, version.length() - suffix.length()));
     }
 }

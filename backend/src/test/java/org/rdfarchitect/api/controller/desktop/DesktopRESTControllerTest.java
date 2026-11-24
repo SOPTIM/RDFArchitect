@@ -17,106 +17,280 @@
 
 package org.rdfarchitect.api.controller.desktop;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.config.AppVersionResolver;
-import org.rdfarchitect.config.SchemaConfig;
-import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
-import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.desktop.ClientPresence;
-import org.rdfarchitect.desktop.DesktopWorkspaceFiles;
-import org.rdfarchitect.desktop.OpenRequests;
-import org.rdfarchitect.desktop.SavedWorkspaces;
-import org.rdfarchitect.desktop.WorkspaceFileLocations;
-import org.rdfarchitect.desktop.WorkspaceRecovery;
-import org.rdfarchitect.desktop.WorkspaceRevision;
+import org.rdfarchitect.api.dto.desktop.DesktopStatusDTO;
+import org.rdfarchitect.api.dto.desktop.OpenRequestDTO;
+import org.rdfarchitect.api.dto.desktop.RecoveredWorkspaceDTO;
+import org.rdfarchitect.services.desktop.DiscardRecoveredWorkspaceUseCase;
+import org.rdfarchitect.services.desktop.GetDesktopInfoUseCase;
+import org.rdfarchitect.services.desktop.GetOpenRequestFileUseCase;
+import org.rdfarchitect.services.desktop.GetRecoveredWorkspaceUseCase;
+import org.rdfarchitect.services.desktop.GetWorkspaceFileUseCase;
+import org.rdfarchitect.services.desktop.ListRecoveredWorkspacesUseCase;
+import org.rdfarchitect.services.desktop.MarkOpenedFromRequestUseCase;
+import org.rdfarchitect.services.desktop.MarkOpenedFromRequestUseCase.Result;
+import org.rdfarchitect.services.desktop.MarkWorkspaceSavedUseCase;
+import org.rdfarchitect.services.desktop.OpenRequestFile;
+import org.rdfarchitect.services.desktop.ReportWindowClosedUseCase;
+import org.rdfarchitect.services.desktop.ReportWindowOpenUseCase;
+import org.rdfarchitect.services.desktop.RequestOpenFileUseCase;
+import org.rdfarchitect.services.desktop.SaveWorkspaceToFileUseCase;
+import org.rdfarchitect.services.desktop.WorkspaceFileDownload;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class DesktopRESTControllerTest {
 
-    private static final Path FILE = Path.of("/data/Draft.rdfa");
+    private final ReportWindowOpenUseCase reportWindowOpen = mock(ReportWindowOpenUseCase.class);
+    private final GetWorkspaceFileUseCase getWorkspaceFile = mock(GetWorkspaceFileUseCase.class);
+    private final SaveWorkspaceToFileUseCase saveWorkspaceToFile =
+            mock(SaveWorkspaceToFileUseCase.class);
+    private final MarkWorkspaceSavedUseCase markWorkspaceSaved =
+            mock(MarkWorkspaceSavedUseCase.class);
+    private final RequestOpenFileUseCase requestOpenFile = mock(RequestOpenFileUseCase.class);
+    private final GetOpenRequestFileUseCase getOpenRequestFile =
+            mock(GetOpenRequestFileUseCase.class);
+    private final MarkOpenedFromRequestUseCase markOpenedFromRequest =
+            mock(MarkOpenedFromRequestUseCase.class);
+    private final ListRecoveredWorkspacesUseCase listRecovered =
+            mock(ListRecoveredWorkspacesUseCase.class);
+    private final GetRecoveredWorkspaceUseCase getRecovered =
+            mock(GetRecoveredWorkspaceUseCase.class);
+    private final DiscardRecoveredWorkspaceUseCase discardRecovered =
+            mock(DiscardRecoveredWorkspaceUseCase.class);
 
-    private final DesktopWorkspaceFiles workspaceFiles = mock(DesktopWorkspaceFiles.class);
-    private DatabasePort databasePort;
-    private DesktopRESTController controller;
+    private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        databasePort.createDataset("Draft");
-        var fileLocations = new WorkspaceFileLocations(databasePort);
-        fileLocations.remember("Draft", FILE);
-        controller =
-                new DesktopRESTController(
-                        mock(ClientPresence.class),
-                        new SavedWorkspaces(databasePort),
-                        workspaceFiles,
-                        mock(WorkspaceRecovery.class),
-                        mock(OpenRequests.class),
-                        fileLocations,
-                        new AppVersionResolver("1.2.3"));
-    }
-
-    @AfterEach
-    void tearDown() {
-        SessionContext.clear();
+        mockMvc =
+                MockMvcBuilders.standaloneSetup(
+                                new DesktopRESTController(
+                                        mock(GetDesktopInfoUseCase.class),
+                                        reportWindowOpen,
+                                        mock(ReportWindowClosedUseCase.class),
+                                        getWorkspaceFile,
+                                        saveWorkspaceToFile,
+                                        markWorkspaceSaved,
+                                        requestOpenFile,
+                                        getOpenRequestFile,
+                                        markOpenedFromRequest,
+                                        listRecovered,
+                                        getRecovered,
+                                        discardRecovered))
+                        .build();
     }
 
     @Test
-    void savesToAFileOneSaveAtATime() throws Exception {
-        var revision = WorkspaceRevision.current(databasePort, "Draft");
-        var writes = new AtomicInteger();
-        var firstWriting = new CountDownLatch(1);
-        var finishFirst = new CountDownLatch(1);
-        when(workspaceFiles.writeTo("Draft", FILE))
-                .thenAnswer(
-                        _ -> {
-                            if (writes.incrementAndGet() == 1) {
-                                firstWriting.countDown();
-                                finishFirst.await();
-                            }
-                            return revision;
-                        });
-        var sessionId = SessionContext.getSessionId();
-        Runnable save =
-                () -> {
-                    SessionContext.setSessionId(sessionId);
-                    try {
-                        controller.saveToFile("Draft");
-                    } finally {
-                        SessionContext.clear();
-                    }
-                };
+    void reportWindowOpen_session_answersItsStatus() throws Exception {
+        when(reportWindowOpen.reportWindowOpen("w"))
+                .thenReturn(
+                        new DesktopStatusDTO(
+                                "run", List.of("Draft"), List.of(), Map.of("Draft", "id-1")));
 
-        var first = Thread.ofPlatform().start(save);
-        assertThat(firstWriting.await(5, TimeUnit.SECONDS)).isTrue();
-        var second = Thread.ofPlatform().start(save);
-        try {
-            var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (second.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
-                Thread.sleep(5);
-            }
+        mockMvc.perform(post("/api/desktop/windows/w/heartbeat"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.instanceId").value("run"))
+                .andExpect(jsonPath("$.unsavedWorkspaces[0]").value("Draft"))
+                .andExpect(jsonPath("$.workspaceIds.Draft").value("id-1"));
+    }
 
-            assertThat(second.getState()).isEqualTo(Thread.State.BLOCKED);
-            assertThat(writes).hasValue(1);
-        } finally {
-            finishFirst.countDown();
-            first.join();
-            second.join();
-        }
-        assertThat(writes).hasValue(2);
+    @Test
+    void getWorkspaceFile_workspace_namesItsVersionAndId() throws Exception {
+        var id = UUID.randomUUID();
+        when(getWorkspaceFile.getWorkspaceFile("Draft One"))
+                .thenReturn(
+                        new WorkspaceFileDownload(
+                                new byte[] {'P', 'K'}, "Draft One.rdfa", "v:editable", id));
+
+        mockMvc.perform(get("/api/desktop/workspaces/Draft One/file"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/zip"))
+                .andExpect(
+                        header().string(
+                                        DesktopRESTController.WORKSPACE_VERSION_HEADER,
+                                        "v:editable"))
+                .andExpect(
+                        header().string(DesktopRESTController.WORKSPACE_ID_HEADER, id.toString()))
+                .andExpect(
+                        header().string("Content-Disposition", containsString("Draft One.rdfa")));
+    }
+
+    @Test
+    void saveWorkspaceToFile_noFile_answersConflict() throws Exception {
+        when(saveWorkspaceToFile.saveWorkspaceToFile("Draft")).thenReturn(false);
+
+        mockMvc.perform(post("/api/desktop/workspaces/Draft/file"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void saveWorkspaceToFile_file_answersNoContent() throws Exception {
+        when(saveWorkspaceToFile.saveWorkspaceToFile("Draft")).thenReturn(true);
+
+        mockMvc.perform(post("/api/desktop/workspaces/Draft/file"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void markWorkspaceSaved_version_passesItOn() throws Exception {
+        when(markWorkspaceSaved.markWorkspaceSaved("Draft", "v:editable")).thenReturn(true);
+
+        mockMvc.perform(
+                        put("/api/desktop/workspaces/Draft/saved")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"version\":\"v:editable\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(markWorkspaceSaved).markWorkspaceSaved("Draft", "v:editable");
+    }
+
+    @Test
+    void markWorkspaceSaved_noBody_savesTheCurrentVersion() throws Exception {
+        when(markWorkspaceSaved.markWorkspaceSaved("Draft", null)).thenReturn(true);
+
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/saved"))
+                .andExpect(status().isNoContent());
+
+        verify(markWorkspaceSaved).markWorkspaceSaved("Draft", null);
+    }
+
+    @Test
+    void markWorkspaceSaved_workspaceBeingWritten_answersConflict() throws Exception {
+        when(markWorkspaceSaved.markWorkspaceSaved("Draft", null)).thenReturn(false);
+
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/saved"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void markWorkspaceSaved_notAVersion_answersBadRequest() throws Exception {
+        when(markWorkspaceSaved.markWorkspaceSaved("Draft", "latest"))
+                .thenThrow(new IllegalArgumentException("Not a workspace version: latest"));
+
+        mockMvc.perform(
+                        put("/api/desktop/workspaces/Draft/saved")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"version\":\"latest\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void requestOpenFile_path_answersTheRequest() throws Exception {
+        when(requestOpenFile.requestOpenFile("/data/Draft.rdfa"))
+                .thenReturn(new OpenRequestDTO("r1", "Draft.rdfa", "/data/Draft.rdfa"));
+
+        mockMvc.perform(
+                        post("/api/desktop/open-requests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"path\":\"/data/Draft.rdfa\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("r1"));
+    }
+
+    @Test
+    void requestOpenFile_noPathOrNoWorkspaceFile_answersBadRequest() throws Exception {
+        when(requestOpenFile.requestOpenFile(any()))
+                .thenThrow(new IllegalArgumentException("Not a workspace file"));
+
+        mockMvc.perform(
+                        post("/api/desktop/open-requests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(
+                        post("/api/desktop/open-requests")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"path\":\"/data/notes.txt\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getOpenRequestFile_knownOrUnknown_answersFileOrNotFound() throws Exception {
+        when(getOpenRequestFile.getOpenRequestFile("r1"))
+                .thenReturn(Optional.of(new OpenRequestFile("Draft.rdfa", new byte[] {'P'})));
+        when(getOpenRequestFile.getOpenRequestFile("missing")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/desktop/open-requests/r1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("Draft.rdfa")));
+        mockMvc.perform(get("/api/desktop/open-requests/missing")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void markOpenedFromRequest_eachResult_answersItsStatus() throws Exception {
+        when(markOpenedFromRequest.markOpenedFromRequest("Draft", "done"))
+                .thenReturn(Result.RECORDED);
+        when(markOpenedFromRequest.markOpenedFromRequest("Draft", "missing"))
+                .thenReturn(Result.UNKNOWN_REQUEST);
+        when(markOpenedFromRequest.markOpenedFromRequest("Draft", "busy")).thenReturn(Result.BUSY);
+
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/opened-from/done"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/opened-from/missing"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/desktop/workspaces/Draft/opened-from/busy"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void listRecoveredWorkspaces_keptWorkspaces_listsThem() throws Exception {
+        when(listRecovered.listRecoveredWorkspaces())
+                .thenReturn(
+                        List.of(
+                                new RecoveredWorkspaceDTO(
+                                        "Draft-1.rdfa",
+                                        "Draft",
+                                        Instant.parse("2026-11-24T10:00:00Z"))));
+
+        mockMvc.perform(get("/api/desktop/recovery"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("Draft-1.rdfa"))
+                .andExpect(jsonPath("$[0].workspaceName").value("Draft"));
+    }
+
+    @Test
+    void getRecoveredWorkspace_knownOrUnknown_answersFileOrNotFound() throws Exception {
+        when(getRecovered.getRecoveredWorkspace("Draft-1.rdfa"))
+                .thenReturn(Optional.of(new byte[] {'P', 'K'}));
+        when(getRecovered.getRecoveredWorkspace("missing.rdfa")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/desktop/recovery/Draft-1.rdfa"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/zip"));
+        mockMvc.perform(get("/api/desktop/recovery/missing.rdfa")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void discardRecoveredWorkspace_knownOrUnknown_answersNoContentOrNotFound() throws Exception {
+        when(discardRecovered.discardRecoveredWorkspace("Draft-1.rdfa")).thenReturn(true);
+        when(discardRecovered.discardRecoveredWorkspace("missing.rdfa")).thenReturn(false);
+
+        mockMvc.perform(delete("/api/desktop/recovery/Draft-1.rdfa"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/desktop/recovery/missing.rdfa"))
+                .andExpect(status().isNotFound());
     }
 }

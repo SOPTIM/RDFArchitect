@@ -48,6 +48,10 @@ import java.util.Objects;
  * <p>Boots the full Spring application on an ephemeral port (server.port=0), fetches the spec,
  * normalizes it, writes it to disk, and shuts the context down. CI runs this and diffs the result
  * so the committed spec can never drift from the controllers.
+ *
+ * <p>The document describes both deployments: the application runs with the {@code desktop} profile
+ * added, so that the endpoints only the desktop app has (tag {@code desktop}) are in it, and with
+ * snapshots and the API docs switched on, which that profile switches off.
  */
 public final class OpenApiSpecExport {
 
@@ -58,8 +62,13 @@ public final class OpenApiSpecExport {
     public static void main(String[] args) throws IOException {
         // Use an ephemeral port so we never collide with a developer's running backend.
         System.setProperty("server.port", "0");
+        System.setProperty("snapshots.enabled", "true");
+        System.setProperty("springdoc.api-docs.enabled", "true");
+        System.setProperty("desktop.exit-when-closed", "false");
 
-        try (ConfigurableApplicationContext ctx = SpringApplication.run(Launcher.class, args)) {
+        var application = new SpringApplication(Launcher.class);
+        application.setAdditionalProfiles("desktop");
+        try (ConfigurableApplicationContext ctx = application.run(args)) {
             if (!(ctx instanceof WebServerApplicationContext webCtx)) {
                 throw new IllegalStateException(
                         "Expected a WebServerApplicationContext but got " + ctx.getClass());
@@ -68,7 +77,7 @@ public final class OpenApiSpecExport {
             String rawSpec =
                     RestClient.create()
                             .get()
-                            .uri("http://localhost:" + port + "/v3/api-docs")
+                            .uri("http://127.0.0.1:" + port + "/v3/api-docs")
                             .retrieve()
                             .body(String.class);
 

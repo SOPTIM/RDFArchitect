@@ -24,7 +24,6 @@ import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -62,20 +61,6 @@ public class SavedWorkspaces {
     public void markSaved(String workspaceName, WorkspaceRevision revision) {
         Objects.requireNonNull(revision, "revision");
         savedRevisions.put(key(workspaceName), revision);
-    }
-
-    /**
-     * Records that the workspace was saved at the given change, for a file the browser wrote.
-     * Whether editing is disabled is read now, moments after the browser wrote the file.
-     *
-     * @param workspaceName the workspace, in the current session
-     * @param changeId the change it stood on when it was written to the file
-     */
-    public void markSaved(String workspaceName, UUID changeId) {
-        Objects.requireNonNull(changeId, "changeId");
-        markSaved(
-                workspaceName,
-                new WorkspaceRevision(changeId, databasePort.isReadOnly(workspaceName)));
     }
 
     /**

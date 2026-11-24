@@ -22,12 +22,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 /** What a window of the desktop app needs to know about the session, sent with each heartbeat. */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class DesktopStatusDTO {
+
+    /**
+     * Names this run of the desktop app. A window that gets another one talks to a backend that was
+     * started anew, without the workspaces it showed.
+     */
+    private String instanceId;
 
     /** The workspaces holding changes that no file has, sorted by name. */
     private List<String> unsavedWorkspaces;
@@ -37,4 +44,10 @@ public class DesktopStatusDTO {
      * the operating system rather than chosen in the browser. Sorted by name.
      */
     private List<String> workspacesWithFile;
+
+    /**
+     * The id of each workspace by its name. An id stays through renames and is never given to
+     * another workspace, so a window can tell a workspace from one created anew under its name.
+     */
+    private Map<String, String> workspaceIds;
 }

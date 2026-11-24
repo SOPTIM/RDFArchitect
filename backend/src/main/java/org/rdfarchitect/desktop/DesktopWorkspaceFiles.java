@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.UUID;
 
 /** Writes workspaces to workspace files for the desktop app's Save. */
 @Service
@@ -38,8 +39,10 @@ public class DesktopWorkspaceFiles {
      * @param content the workspace file, see {@link WorkspaceArchiveFormat}
      * @param fileName the name to suggest for it
      * @param revision where the workspace stood when it was written
+     * @param workspaceId the id of the workspace, see {@link DatabasePort#workspaceId}
      */
-    public record WorkspaceFile(byte[] content, String fileName, WorkspaceRevision revision) {}
+    public record WorkspaceFile(
+            byte[] content, String fileName, WorkspaceRevision revision, UUID workspaceId) {}
 
     private final DatabasePort databasePort;
     private final ExportWorkspaceUseCase exportWorkspaceUseCase;
@@ -77,7 +80,10 @@ public class DesktopWorkspaceFiles {
             var revision = WorkspaceRevision.current(databasePort, workspaceName);
             var content = exportWorkspaceUseCase.exportWorkspace(workspaceName);
             return new WorkspaceFile(
-                    content, WorkspaceArchiveFormat.fileNameFor(workspaceName), revision);
+                    content,
+                    WorkspaceArchiveFormat.fileNameFor(workspaceName),
+                    revision,
+                    databasePort.workspaceId(workspaceName));
         }
     }
 }

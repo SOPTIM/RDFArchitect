@@ -21,8 +21,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * The version of a workspace that was written to a file: the one its download named in {@code
  * X-Workspace-Version}, or {@code null} for the version it stands on now, as for a workspace that
@@ -33,5 +31,5 @@ import java.util.UUID;
 @AllArgsConstructor
 public class SavedVersionDTO {
 
-    private UUID version;
+    private String version;
 }

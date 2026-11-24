@@ -78,7 +78,7 @@ class SavedWorkspacesTest {
         addSchema("a");
         assertThat(savedWorkspaces.unsavedWorkspaces()).containsExactly(WORKSPACE);
 
-        savedWorkspaces.markSaved(WORKSPACE, databasePort.currentChangeId(WORKSPACE));
+        savedWorkspaces.markSaved(WORKSPACE, WorkspaceRevision.current(databasePort, WORKSPACE));
         assertThat(savedWorkspaces.unsavedWorkspaces()).isEmpty();
 
         addSchema("b");
@@ -101,7 +101,7 @@ class SavedWorkspacesTest {
     @Test
     void disablingEditingIsAChangeTheFileDoesNotHave() {
         addSchema("a");
-        savedWorkspaces.markSaved(WORKSPACE, databasePort.currentChangeId(WORKSPACE));
+        savedWorkspaces.markSaved(WORKSPACE, WorkspaceRevision.current(databasePort, WORKSPACE));
 
         databasePort.disableEditing(WORKSPACE);
         assertThat(savedWorkspaces.unsavedWorkspaces()).containsExactly(WORKSPACE);

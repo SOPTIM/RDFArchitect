@@ -878,6 +878,43 @@
         },
         "type" : "object"
       },
+      "DesktopInfoDTO" : {
+        "properties" : {
+          "application" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DesktopStatusDTO" : {
+        "properties" : {
+          "instanceId" : {
+            "type" : "string"
+          },
+          "unsavedWorkspaces" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "workspaceIds" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "workspacesWithFile" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "DiagramLayoutDTO" : {
         "properties" : {
           "allEdges" : {
@@ -1503,6 +1540,20 @@
         },
         "type" : "object"
       },
+      "OpenRequestDTO" : {
+        "properties" : {
+          "fileName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "PackageDTO" : {
         "properties" : {
           "comment" : {
@@ -1877,6 +1928,21 @@
         },
         "type" : "object"
       },
+      "RecoveredWorkspaceDTO" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "savedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "workspaceName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "RenderingDataDTO" : {
         "properties" : {
           "format" : {
@@ -2104,6 +2170,14 @@
               "$ref" : "#/components/schemas/PropertyShapesWrapper"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SavedVersionDTO" : {
+        "properties" : {
+          "version" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2960,6 +3034,390 @@
         "summary" : "compare schemas",
         "tags" : [
           "comparison"
+        ]
+      }
+    },
+    "/api/desktop" : {
+      "get" : {
+        "description" : "Identifies the running desktop app. Only in the desktop app.",
+        "operationId" : "getDesktopInfo",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DesktopInfoDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Desktop app",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/open-requests" : {
+      "post" : {
+        "description" : "Registers a workspace file on this computer to be opened, as the launcher does for a double-clicked .rdfa file. A window opened at /mainpage?open=<id> then opens it. Only in the desktop app.",
+        "operationId" : "requestOpenFile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OpenRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OpenRequestDTO"
+                }
+              }
+            },
+            "description" : "Registered"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OpenRequestDTO"
+                }
+              }
+            },
+            "description" : "No readable workspace file"
+          }
+        },
+        "summary" : "Open a workspace file",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/open-requests/{requestId}" : {
+      "get" : {
+        "description" : "The content of a workspace file registered to be opened. Only in the desktop app.",
+        "operationId" : "getOpenRequestFile",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No such request or file"
+          }
+        },
+        "summary" : "Workspace file to open",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/recovery" : {
+      "get" : {
+        "description" : "The unsaved workspaces the desktop app kept when it last stopped, newest first. Only in the desktop app.",
+        "operationId" : "listRecoveredWorkspaces",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/RecoveredWorkspaceDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Workspaces kept from the previous run",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/recovery/{id}" : {
+      "delete" : {
+        "description" : "Removes the copy, once it is restored or not wanted. Only in the desktop app.",
+        "operationId" : "discardRecoveredWorkspace",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Removed"
+          },
+          "404" : {
+            "description" : "No such copy"
+          }
+        },
+        "summary" : "Discard a workspace kept from the previous run",
+        "tags" : [
+          "desktop"
+        ]
+      },
+      "get" : {
+        "description" : "The workspace file of a workspace kept from the previous run. Only in the desktop app.",
+        "operationId" : "getRecoveredWorkspace",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No such copy"
+          }
+        },
+        "summary" : "Workspace kept from the previous run",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/windows/{windowId}/goodbye" : {
+      "post" : {
+        "description" : "Tells the desktop app that a window has closed or is reloading. Only in the desktop app.",
+        "operationId" : "reportWindowClosed",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "windowId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Window closed",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/windows/{windowId}/heartbeat" : {
+      "post" : {
+        "description" : "Tells the desktop app that a window is still open, and answers which workspaces of the session hold unsaved changes. The app shuts down once no window has sent one for a while. Only in the desktop app.",
+        "operationId" : "reportWindowOpen",
+        "parameters" : [
+          {
+            "description" : "An id the window chose for itself.",
+            "in" : "path",
+            "name" : "windowId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DesktopStatusDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Window heartbeat",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/workspaces/{workspaceName}/file" : {
+      "get" : {
+        "description" : "The workspace as a workspace file, as File → Export → Workspace writes it. The X-Workspace-Version header names the version it holds, to be passed to PUT .../saved once the file is written, and X-Workspace-Id the workspace. Only in the desktop app.",
+        "operationId" : "getWorkspaceFile",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Workspace file",
+        "tags" : [
+          "desktop"
+        ]
+      },
+      "post" : {
+        "description" : "Writes the workspace to the file it was opened from on this computer and records it as saved. 409 if it has no such file. Only in the desktop app.",
+        "operationId" : "saveWorkspaceToFile",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Saved"
+          },
+          "409" : {
+            "description" : "The workspace has no file"
+          }
+        },
+        "summary" : "Save a workspace to its file",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/workspaces/{workspaceName}/opened-from/{requestId}" : {
+      "put" : {
+        "description" : "Records that the workspace was opened from the file of an open request: it is saved, and Save writes to that file. The request is removed once this is recorded. 409 while the workspace is being changed; the request stays for another try. Only in the desktop app.",
+        "operationId" : "markOpenedFromRequest",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Recorded"
+          },
+          "404" : {
+            "description" : "No such request"
+          },
+          "409" : {
+            "description" : "The workspace is being changed right now"
+          }
+        },
+        "summary" : "Workspace opened from a registered file",
+        "tags" : [
+          "desktop"
+        ]
+      }
+    },
+    "/api/desktop/workspaces/{workspaceName}/saved" : {
+      "put" : {
+        "description" : "Records that the workspace was saved to a file, at the version given or, without one, as it stands now. 409 while it is being changed and no version is given. Only in the desktop app.",
+        "operationId" : "markWorkspaceSaved",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SavedVersionDTO"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Recorded"
+          },
+          "400" : {
+            "description" : "Not a version"
+          },
+          "409" : {
+            "description" : "The workspace is being changed right now"
+          }
+        },
+        "summary" : "Workspace saved",
+        "tags" : [
+          "desktop"
         ]
       }
     },

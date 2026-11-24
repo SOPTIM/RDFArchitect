@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.desktop;
 
+import io.swagger.v3.oas.annotations.Hidden;
+
 import org.rdfarchitect.config.AppVersionResolver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -42,6 +44,7 @@ import java.util.Properties;
  */
 @RestController
 @Profile("desktop")
+@Hidden
 public class RuntimeConfigController {
 
     static final MediaType JAVASCRIPT = MediaType.parseMediaType("text/javascript;charset=UTF-8");
