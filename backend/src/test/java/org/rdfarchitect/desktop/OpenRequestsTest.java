@@ -20,9 +20,11 @@ package org.rdfarchitect.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -55,6 +57,34 @@ class OpenRequestsTest {
         assertThatThrownBy(
                         () -> openRequests.add(Files.createDirectory(directory.resolve("x.rdfa"))))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void add_linkNamedLikeAWorkspaceFileToAnotherFile_isRefused() throws Exception {
+        var secret = Files.writeString(directory.resolve("id_rsa"), "secret");
+        var link = createLinkOrSkip(directory.resolve("Draft.rdfa"), secret);
+
+        assertThatThrownBy(() -> openRequests.add(link))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void add_linkToAWorkspaceFile_keepsThePathItLeadsTo() throws Exception {
+        var file = Files.writeString(directory.resolve("Real.rdfa"), "zip");
+        var link = createLinkOrSkip(directory.resolve("Link.rdfa"), file);
+
+        var request = openRequests.add(link);
+
+        assertThat(request.path()).isEqualTo(file.toRealPath());
+        assertThat(request.fileName()).isEqualTo("Real.rdfa");
+    }
+
+    private static Path createLinkOrSkip(Path link, Path target) {
+        try {
+            return Files.createSymbolicLink(link, target);
+        } catch (IOException | UnsupportedOperationException e) {
+            return Assumptions.abort("No symbolic links here: " + e);
+        }
     }
 
     @Test

@@ -19,6 +19,7 @@ package org.rdfarchitect.desktop;
 
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -51,14 +52,20 @@ public class OpenRequests {
     private final Map<String, OpenRequest> requests = new ConcurrentHashMap<>();
 
     /**
-     * Registers a workspace file to open.
+     * Registers a workspace file to open. Follows symbolic links first, so that a link named like a
+     * workspace file cannot point at another file.
      *
      * @param file the file
-     * @return the request naming it
+     * @return the request naming it, with the path the links lead to
      * @throws IllegalArgumentException if it is not a readable workspace file
      */
     public OpenRequest add(Path file) {
-        var path = file.toAbsolutePath().normalize();
+        Path path;
+        try {
+            path = file.toAbsolutePath().toRealPath();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Cannot read " + file, e);
+        }
         var name = path.getFileName();
         if (name == null
                 || !name.toString()
