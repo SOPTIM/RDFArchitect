@@ -14,10 +14,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
-"""Renders the app icons from the mark in frontend/static/favicon.svg.
+"""Renders the app icons and the splash screen.
 
-Writes the icons of the desktop installers (desktop/icons/) and of the web app manifest
-(frontend/static/icons/). The results are committed; run this again only when the mark changes.
+Draws the mark itself (BLUE, LETTERS and mark()): a copy of frontend/static/favicon.svg, which it
+does not read. A change to the mark has to be made in both.
+
+Writes the icons and the splash screen of the desktop app (desktop/icons/) and the icons of the web
+app manifest (frontend/static/icons/). The results are committed; run this again only when the
+mark changes.
 
 Needs Inkscape on the PATH and Pillow (pip install pillow). The mark sets its letters in
 Helvetica Neue or Arial; without either, fontconfig substitutes Liberation Sans.

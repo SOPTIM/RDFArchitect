@@ -85,7 +85,7 @@ mvn -B exec:java -Dexec.mainClass=org.rdfarchitect.desktop.DesktopLauncher \
   -Dexec.args="--browser=none --desktop.user-interface=file:../frontend/build/"
 ```
 
-The icons in `desktop/icons/` and `frontend/static/icons/` are rendered from `frontend/static/favicon.svg` by `desktop/icons/generate.py`.
+`desktop/icons/generate.py` renders the icons and the splash screen in `desktop/icons/` and the icons in `frontend/static/icons/`. It draws the mark itself, as a copy of `frontend/static/favicon.svg`, so a change to the mark has to be made in both.
 
 ## Docker images
 
