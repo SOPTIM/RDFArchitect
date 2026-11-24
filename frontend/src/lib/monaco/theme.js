@@ -50,8 +50,8 @@ export const THEME_OPTIONS = [
 /**
  * The colours of everything the editor draws outside the text: its context menu, the completion
  * list, the hover. Monaco resolves these into the CSS variables its own widgets are painted with,
- * which is why they are set here rather than in a stylesheet — `monaco-menus.css` only has the
- * shape of those menus to answer for.
+ * which is why they are set here rather than in a stylesheet. The context menu is drawn in a shadow
+ * root, which the app's stylesheets do not reach, so these colours are all of it the app sets.
  *
  * A menu's selected row is `list.hover*` rather than `menu.selection*`: that is the pair Monaco's
  * menu styles actually read.

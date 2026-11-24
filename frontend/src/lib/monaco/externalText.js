@@ -36,11 +36,11 @@
  *
  * @returns whether the text was changed. Text the editor already holds is left alone, so a
  *     keystroke — which sets the bound value from the editor itself — does not bounce back as an
- *     edit that would move the cursor.
+ *     edit that would move the cursor. See `holdsText`.
  */
 export function pushExternalText(editor, next) {
     const model = editor?.getModel?.();
-    if (!editor || !model || model.getValue() === next) {
+    if (!editor || !model || holdsText(editor, next)) {
         return false;
     }
     const viewState = editor.saveViewState();
@@ -76,4 +76,24 @@ export function openText(editor, next) {
     editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
     editor.setPosition({ lineNumber: 1, column: 1 });
     return true;
+}
+
+/**
+ * Whether the editor holds `text`, as Monaco would hold it.
+ *
+ * A model has one line ending throughout and keeps a leading byte order mark out of its text, so a
+ * text with mixed line endings or a mark is held differently from how it was given. Putting it in
+ * again would change nothing but add a step to undo.
+ */
+export function holdsText(editor, text) {
+    const model = editor?.getModel?.();
+    if (!model) {
+        return false;
+    }
+    const held = model.getValue();
+    return (
+        held === text ||
+        held ===
+            text.replace(/^\uFEFF/, "").replace(/\r\n|\r|\n/g, model.getEOL())
+    );
 }
