@@ -18,7 +18,7 @@
 <script>
     import { untrack } from "svelte";
 
-    import { openText, pushExternalText } from "./externalText.js";
+    import { holdsText, openText, pushExternalText } from "./externalText.js";
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
@@ -36,7 +36,9 @@
         onchange = undefined,
         /**
          * Which document `value` belongs to. A change opens the new text with a history of its
-         * own; without one, every new value is an undoable edit to the text before it.
+         * own; without one, every new value is an undoable edit to the text before it. When the key
+         * changes before its text arrives, the text that follows still opens the document, as long
+         * as nothing was typed in between.
          */
         documentKey = undefined,
         /** Shown while the text is empty, to say what the box is for. */
@@ -69,6 +71,26 @@
 
     /** The `documentKey` whose text the editor holds. */
     let shownKey = undefined;
+
+    /**
+     * Set when `documentKey` changed without a new text: the editor shows the previous document's
+     * text under the new key, and the next text from outside opens the document rather than
+     * becoming an edit that undo would take back to the previous document.
+     */
+    let awaitingText = false;
+
+    /**
+     * The text last put in from outside, and the model version that holds it.
+     *
+     * Monaco holds a text with one line ending throughout and without a byte order mark, so what
+     * it holds can differ from what it was given. `value` keeps the given text until the user
+     * edits, and gets it back when undo returns to this version, so a document does not read as
+     * changed just because it was opened.
+     */
+    let givenText = { version: undefined, text: undefined };
+
+    /** Counts the texts put in from outside; the markers are set again after each. */
+    let givenTexts = $state(0);
 
     /**
      * Where to put the cursor once the editor exists and holds the text being revealed in — a link
@@ -111,15 +133,27 @@
                     insertSpaces: true,
                     fixedOverflowWidgets: true,
                 });
+                givenText = {
+                    version: created.getModel().getAlternativeVersionId(),
+                    text: value ?? "",
+                };
                 editor = created;
 
-                created.onDidChangeModelContent(() => {
-                    value = created.getValue();
-                    // Monaco reports a programmatic setValue the same way it reports typing, so
-                    // only an edit the user made is worth revalidating for.
-                    if (!applyingExternalChange) {
-                        onchange?.();
+                // The model's own event rather than the editor's: on undo, the editor reports the
+                // change before the model has its alternative version id back.
+                created.getModel().onDidChangeContent(() => {
+                    // Monaco reports text put in from outside the same way it reports typing. The
+                    // parent already holds that text, and Monaco's spelling of it is no edit.
+                    if (applyingExternalChange) {
+                        return;
                     }
+                    awaitingText = false;
+                    value =
+                        created.getModel().getAlternativeVersionId() ===
+                        givenText.version
+                            ? givenText.text
+                            : created.getValue();
+                    onchange?.();
                 });
                 if (autoGrow) {
                     const grow = () => {
@@ -174,11 +208,24 @@
         }
         applyingExternalChange = true;
         try {
+            let applied;
             if (key !== shownKey) {
-                openText(editor, next);
+                awaitingText =
+                    shownKey !== undefined && holdsText(editor, next);
+                applied = openText(editor, next);
                 shownKey = key;
+            } else if (awaitingText && !holdsText(editor, next)) {
+                awaitingText = false;
+                applied = openText(editor, next);
             } else {
-                pushExternalText(editor, next);
+                applied = pushExternalText(editor, next);
+            }
+            if (applied) {
+                givenText = {
+                    version: editor.getModel().getAlternativeVersionId(),
+                    text: next,
+                };
+                untrack(() => (givenTexts += 1));
             }
         } finally {
             applyingExternalChange = false;
@@ -231,14 +278,14 @@
         monaco?.editor.setTheme(themeName);
     });
 
-    // Also after every change of text, not only of findings. Opening a document empties the editor
-    // and then fills it, while the findings — read from the stored report — stay the same object:
-    // set against the empty text, the markers did not survive the text arriving, and a document
-    // opened with errors showed them in the problems panel but nowhere in the editor.
+    // Set again after every text put in from outside, not only for new findings: a parent may empty
+    // the editor and then fill it while the findings stay the same object, and markers set against
+    // the empty text do not survive the text arriving. Not after typing, though: Monaco moves the
+    // markers with the text being edited, and setting them again would put them back on the lines
+    // the findings were made for.
     $effect(() => {
         const model = editor?.getModel();
-        void value;
-        void documentKey;
+        void givenTexts;
         if (!monaco || !model) {
             return;
         }

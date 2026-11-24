@@ -153,10 +153,6 @@ class GraphUtilsNormalizeBlankNodesTest {
         assertTrue(blankLabels(normalized(text)).containsAll(blankLabels(alone)));
     }
 
-    /**
-     * Refining splits a list of identical values two cells a pass, so a long enough one could take
-     * longer than anybody waits. It has to end anyway, and still as a list.
-     */
     /** Nor may it rename true duplicates, which share a label just as lookalikes do. */
     @Test
     void duplicatesKeepTheirLabelWhenLookalikesElsewhereSplit() {
@@ -178,6 +174,32 @@ class GraphUtilsNormalizeBlankNodesTest {
         assertTrue(blankLabels(normalized(text)).containsAll(blankLabels(normalized(duplicates))));
     }
 
+    /**
+     * Nor when they share their label with a lookalike that splits off: what stays together is
+     * still a duplicate, however long refining takes anywhere else.
+     */
+    @Test
+    void duplicatesKeepTheirLabelWhenALookalikeAmongThemSplitsOff() {
+        var part =
+                PREFIXES
+                        + "ex:S ex:has "
+                        + nested(13, "ex:same")
+                        + " , "
+                        + nested(13, "ex:same")
+                        + " , "
+                        + nested(13, "ex:other")
+                        + " .\n";
+        var alone = blankLabels(normalized(part));
+
+        assertTrue(blankLabels(normalized(part + listsSharing(40))).containsAll(alone));
+        assertTrue(blankLabels(normalized(part + listsSharing(60))).containsAll(alone));
+    }
+
+    /**
+     * Refining splits a list of identical values two cells a pass, from both ends inwards, so a
+     * long one takes as many passes as it has cells. It has to end quickly anyway, still as a list,
+     * and with the same labels on every read.
+     */
     @Test
     void aHugeListOfTheSameValueEndsAndStaysAList() {
         var text = PREFIXES + "ex:A sh:path ex:p ; sh:in ( " + "ex:same ".repeat(20_000) + ") .\n";
@@ -189,6 +211,84 @@ class GraphUtilsNormalizeBlankNodesTest {
 
         assertEquals(0, forkingCells(result));
         assertEquals(graph.size(), result.size());
+        assertEquals(result.find().toSet(), normalized(text).find().toSet());
+    }
+
+    /** Lists that share thousands of members split one cell a pass, and must read the same too. */
+    @Test
+    void longListsSharingThousandsOfMembersGetTheSameLabelsOnEveryRead() {
+        var text = PREFIXES + listsSharing(2_500);
+
+        var result = normalized(text);
+
+        assertEquals(0, forkingCells(result));
+        assertEquals(parse(text).size(), result.size());
+        assertEquals(result.find().toSet(), normalized(text).find().toSet());
+    }
+
+    /**
+     * Two blank nodes with many edges each, which nothing around them changes, are fingerprinted
+     * once, however many passes a list elsewhere needs. They are duplicates and become one.
+     */
+    @Test
+    void wideDuplicatesMergeWhileALongListElsewhereStillSplits() {
+        var values =
+                IntStream.range(0, 20_000)
+                        .mapToObj(Integer::toString)
+                        .collect(Collectors.joining(", "));
+        var text =
+                PREFIXES
+                        + "ex:S ex:has [ ex:p "
+                        + values
+                        + " ] , [ ex:p "
+                        + values
+                        + " ] .\n"
+                        + "ex:A sh:path ex:p ; sh:in ( "
+                        + "ex:same ".repeat(4_000)
+                        + ") .\n";
+        var graph = parse(text);
+
+        var result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(10), () -> GraphUtils.normalizeBlankNodes(graph));
+
+        assertEquals(graph.size() - 20_001, result.size());
+        assertEquals(0, forkingCells(result));
+    }
+
+    /** Past its budget, refining stops and keeps the remaining look-alikes apart. */
+    @Test
+    void refiningPastItsBudgetMergesNothing() {
+        var graph =
+                parse(
+                        PREFIXES
+                                + "ex:A sh:path ex:p ; sh:in ( "
+                                + "ex:same ".repeat(4_000)
+                                + ") .\n");
+
+        var result = GraphUtils.normalizeBlankNodes(graph, 1_000);
+
+        assertEquals(0, forkingCells(result));
+        assertEquals(graph.size(), result.size());
+    }
+
+    /** Blank nodes nested {@code depth} deep, the innermost pointing at {@code end}. */
+    private static String nested(int depth, String end) {
+        return "[ ex:next ".repeat(depth) + end + " ]".repeat(depth);
+    }
+
+    /** Two lists that share {@code members} values and differ only in their last one. */
+    private static String listsSharing(int members) {
+        var shared =
+                IntStream.range(0, members)
+                        .mapToObj(i -> "ex:v" + i)
+                        .collect(Collectors.joining(" "));
+        return "ex:A sh:path ex:p ; sh:in ( "
+                + shared
+                + " ex:endA ) .\n"
+                + "ex:B sh:path ex:p ; sh:in ( "
+                + shared
+                + " ex:endB ) .\n";
     }
 
     private static long forkingCells(Graph graph) {

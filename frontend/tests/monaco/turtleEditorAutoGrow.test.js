@@ -19,50 +19,7 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, expect, test, vi } from "vitest";
 
 import TurtleEditor from "../../src/lib/monaco/TurtleEditor.svelte";
-
-/** Just enough of Monaco to size the box: it measures the text once, while being created. */
-const fake = vi.hoisted(() => {
-    const state = { text: "", contentHeight: 0, sizeListeners: [] };
-    const model = {
-        getValue: () => state.text,
-        setValue: text => (state.text = text),
-        getFullModelRange: () => ({}),
-        pushEditOperations: () => {},
-        pushStackElement: () => {},
-        getLineCount: () => 1,
-        getWordAtPosition: () => null,
-        getLineMaxColumn: () => 1,
-        dispose: () => {},
-    };
-    const editor = {
-        getModel: () => model,
-        getValue: () => state.text,
-        onDidChangeModelContent: () => {},
-        onDidContentSizeChange: listener => state.sizeListeners.push(listener),
-        getContentHeight: () => state.contentHeight,
-        addAction: () => {},
-        updateOptions: () => {},
-        setScrollPosition: () => {},
-        setPosition: () => {},
-        saveViewState: () => null,
-        restoreViewState: () => {},
-        dispose: () => {},
-    };
-    const api = {
-        KeyMod: { CtrlCmd: 0 },
-        KeyCode: { KeyS: 0 },
-        MarkerSeverity: { Error: 8, Warning: 4, Info: 2 },
-        editor: {
-            create: (_container, options) => {
-                state.text = options.value;
-                return editor;
-            },
-            setTheme: () => {},
-            setModelMarkers: () => {},
-        },
-    };
-    return { state, api };
-});
+import { fake } from "./fakeMonaco.js";
 
 let target;
 let component;
@@ -93,7 +50,6 @@ afterEach(() => {
         unmount(component);
     }
     target?.remove();
-    fake.state.sizeListeners.length = 0;
 });
 
 test("an auto-growing editor fits the text it opens with", async () => {
