@@ -71,6 +71,7 @@ public class SemanticChangeAnalyser {
             for (var attribute : tripleClassChange.getAttributes()) {
                 var attributeChange = getSemanticChangesForAttribute(attribute);
                 if (attributeChange != null) {
+                    attributeChange.setDomain(semanticChangeObject.getIri());
                     semanticChangeObject.getAttributes().add(attributeChange);
                 }
             }
@@ -79,15 +80,16 @@ public class SemanticChangeAnalyser {
             for (var association : tripleClassChange.getAssociations()) {
                 var associationChange = getSemanticChangesForAssociation(association);
                 if (associationChange != null) {
+                    associationChange.setDomain(semanticChangeObject.getIri());
                     semanticChangeObject.getAssociations().add(associationChange);
                 }
             }
         }
         if (tripleClassChange.getEnumEntries() != null) {
             for (var enumEntry : tripleClassChange.getEnumEntries()) {
-                semanticChangeObject
-                        .getEnumEntries()
-                        .add(getSemanticChangesForEnumEntry(enumEntry));
+                var enumEntryChange = getSemanticChangesForEnumEntry(enumEntry);
+                enumEntryChange.setDomain(semanticChangeObject.getIri());
+                semanticChangeObject.getEnumEntries().add(enumEntryChange);
             }
         }
 

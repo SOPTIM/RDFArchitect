@@ -34,6 +34,8 @@
 
     import { goto } from "$app/navigation";
 
+    let { downloaded = $bindable() } = $props();
+
     export async function onNext() {
         await goto("/mainpage");
     }
@@ -47,6 +49,7 @@
                 response.headers.get("content-disposition"),
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
+            downloaded = true;
         } catch (e) {
             console.error(`Failed to generate ${label}:`, e);
             toastStore.error(

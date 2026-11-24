@@ -19,7 +19,8 @@ package org.rdfarchitect.services.schemamigration.renamings;
 
 import lombok.experimental.UtilityClass;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
@@ -31,6 +32,7 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @UtilityClass
 public class RenameObjectBuilder {
@@ -40,15 +42,24 @@ public class RenameObjectBuilder {
      * resource, so callers keep their static type instead of casting the result back.
      */
     public <T extends SemanticResourceChange> T createRenameObject(
-            RenameCandidate<T> renameCandidate) {
-        var addedResource = renameCandidate.getNewResource();
-        var deletedResource = renameCandidate.getOldResource();
+            ResourceMapping<T> resourceMapping) {
+        var addedResource = resourceMapping.getNewResources().getFirst();
+        var oldResources = resourceMapping.getOldResources();
+        var deletedResource = oldResources.getFirst();
         // every SemanticResourceChange subtype overrides copy() covariantly
         @SuppressWarnings("unchecked")
         var result = (T) addedResource.copy();
         result.setOldIRI(deletedResource.getIri());
-        result.setSemanticResourceChangeType(SemanticResourceChangeType.RENAME);
-        result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
+        result.setAdditionalOldIRIs(
+                oldResources.stream().skip(1).map(SemanticResourceChange::getIri).toList());
+        result.setSemanticResourceChangeType(
+                switch (resourceMapping.getType()) {
+                    case MOVE -> SemanticResourceChangeType.MOVE;
+                    case MERGE -> SemanticResourceChangeType.MERGE;
+                    case SPLIT -> SemanticResourceChangeType.SPLIT;
+                    case RENAME, UNMAPPED -> SemanticResourceChangeType.RENAME;
+                });
+        result.setChanges(mergeChangesFromAllOldResources(addedResource, oldResources));
 
         if (result instanceof SemanticClassChange classChange
                 && addedResource instanceof SemanticClassChange addedClass
@@ -56,6 +67,32 @@ public class RenameObjectBuilder {
             mergeClassMembers(addedClass, deletedClass, classChange);
         }
 
+        return result;
+    }
+
+    private <T extends SemanticResourceChange>
+            List<SemanticFieldChange> mergeChangesFromAllOldResources(
+                    T addedResource, List<T> oldResources) {
+        return oldResources.stream()
+                .flatMap(
+                        oldResource ->
+                                mergeChanges(addedResource.getChanges(), oldResource.getChanges())
+                                        .stream())
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public <T extends SemanticResourceChange> List<T> createSplitObjects(
+            ResourceMapping<T> resourceMapping) {
+        var deletedResource = resourceMapping.getOldResources().getFirst();
+        var result = new ArrayList<T>();
+        for (var addedResource : resourceMapping.getNewResources()) {
+            var siblingMapping =
+                    new ResourceMapping<>(
+                            deletedResource, addedResource, resourceMapping.getConfidenceScore());
+            siblingMapping.setType(MappingType.SPLIT);
+            result.add(createRenameObject(siblingMapping));
+        }
         return result;
     }
 

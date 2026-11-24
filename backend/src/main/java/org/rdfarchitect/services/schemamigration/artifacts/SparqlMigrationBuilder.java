@@ -24,11 +24,18 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +43,19 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
     private final SparqlUpdateGenerator updateGenerator;
 
+    private record ScriptContext(
+            Map<String, List<SemanticAttributeChange>> attributeGroups,
+            Map<String, List<SemanticAssociationChange>> associationGroups,
+            Set<String> emittedAttributeGroups,
+            Set<String> emittedAssociationGroups,
+            Map<String, String> renamedClasses) {}
+
     @Override
     public String generateMigrationScript(List<SemanticClassChange> classChanges) {
+        var scriptContext = collectScriptContext(classChanges);
         var sb = new StringBuilder();
         for (var classChange : classChanges) {
-            var classBlock = generateUpdateForClass(classChange);
+            var classBlock = generateUpdateForClass(classChange, scriptContext);
             if (!classBlock.isBlank()) {
                 sb.append(classBlock);
             }
@@ -48,7 +63,34 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         return sb.toString();
     }
 
-    private String generateUpdateForClass(SemanticClassChange classChange) {
+    private ScriptContext collectScriptContext(List<SemanticClassChange> classChanges) {
+        var allAttributes = new ArrayList<SemanticAttributeChange>();
+        var allAssociations = new ArrayList<SemanticAssociationChange>();
+        for (var classChange : classChanges) {
+            allAttributes.addAll(classChange.getAttributes());
+            allAssociations.addAll(classChange.getAssociations());
+        }
+
+        return new ScriptContext(
+                groupSplitSiblings(allAttributes),
+                groupSplitSiblings(allAssociations),
+                new HashSet<>(),
+                new HashSet<>(),
+                collectRenamedClasses(classChanges));
+    }
+
+    private Map<String, String> collectRenamedClasses(List<SemanticClassChange> classChanges) {
+        var renamedClasses = new HashMap<String, String>();
+        for (var classChange : classChanges) {
+            for (var oldIri : classChange.getAllOldIRIs()) {
+                renamedClasses.put(oldIri, classChange.getIri());
+            }
+        }
+        return renamedClasses;
+    }
+
+    private String generateUpdateForClass(
+            SemanticClassChange classChange, ScriptContext scriptContext) {
         var sb = new StringBuilder();
 
         appendComment(sb, classChange);
@@ -69,7 +111,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             processClassChanges(classChange, sb);
         }
 
-        processPropertyChanges(classChange, sb);
+        processPropertyChanges(classChange, sb, scriptContext);
 
         return sb.toString();
     }
@@ -82,16 +124,18 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 
-    private void processPropertyChanges(SemanticClassChange classChange, StringBuilder sb) {
+    private void processPropertyChanges(
+            SemanticClassChange classChange, StringBuilder sb, ScriptContext scriptContext) {
         for (var attribute : classChange.getAttributes()) {
-            var block = generateUpdateForAttribute(attribute, classChange.getIri());
+            var block = generateUpdateForAttribute(attribute, classChange.getIri(), scriptContext);
             if (!block.isBlank()) {
                 sb.append(block);
             }
         }
 
         for (var association : classChange.getAssociations()) {
-            var block = generateUpdateForAssociation(association);
+            var block =
+                    generateUpdateForAssociation(association, classChange.getIri(), scriptContext);
             if (!block.isBlank()) {
                 sb.append(block);
             }
@@ -108,7 +152,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     }
 
     private String generateUpdateForAttribute(
-            SemanticAttributeChange attributeChange, String classIri) {
+            SemanticAttributeChange attributeChange, String classIri, ScriptContext scriptContext) {
         var sb = new StringBuilder();
         appendComment(sb, attributeChange);
 
@@ -116,6 +160,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                 switch (attributeChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
                     case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case MOVE, MERGE ->
+                            updateGenerator.generateMovePropertyUpdate(
+                                            attributeChange, scriptContext.renamedClasses())
+                                    + initializeTargetInstances(attributeChange, classIri);
+                    case SPLIT -> generateSplitAttributeUpdate(attributeChange, scriptContext);
                     case ADD ->
                             updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
                     case ADDED_FROM_INHERITANCE ->
@@ -133,11 +182,34 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
         var type = attributeChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
-                || type == SemanticResourceChangeType.RENAME) {
+                || type == SemanticResourceChangeType.RENAME
+                || type == SemanticResourceChangeType.MOVE
+                || type == SemanticResourceChangeType.SPLIT
+                || type == SemanticResourceChangeType.MERGE) {
             processAttributeFieldChanges(attributeChange, classIri, sb);
         }
 
         return sb.toString();
+    }
+
+    private String generateSplitAttributeUpdate(
+            SemanticAttributeChange attributeChange, ScriptContext scriptContext) {
+        var group = scriptContext.attributeGroups().get(attributeChange.getOldIRI());
+        if (group == null
+                || !scriptContext.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
+            return "";
+        }
+        return updateGenerator.generateSplitPropertyUpdate(group, scriptContext.renamedClasses());
+    }
+
+    private String generateSplitAssociationUpdate(
+            SemanticAssociationChange associationChange, ScriptContext scriptContext) {
+        var group = scriptContext.associationGroups().get(associationChange.getOldIRI());
+        if (group == null
+                || !scriptContext.emittedAssociationGroups().add(associationChange.getOldIRI())) {
+            return "";
+        }
+        return updateGenerator.generateSplitPropertyUpdate(group, scriptContext.renamedClasses());
     }
 
     private void processAttributeFieldChanges(
@@ -147,8 +219,6 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     switch (change.getSemanticFieldChangeType()) {
                         case DATATYPE_CHANGE -> {
                             if (attributeChange.isDataTypesEquivalent()) {
-                                // the datatypes were declared interchangeable, so every existing
-                                // value stays as it is and nothing has to be migrated
                                 yield null;
                             } else if (!attributeChange.getAllowedValues().isEmpty()) {
                                 yield updateGenerator.generateEnumDatatypeChangedUpdate(
@@ -174,6 +244,21 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 
+    private String initializeTargetInstances(
+            SemanticPropertyChange propertyChange, String classIri) {
+        if (!propertyChange.isTargetInstancesNeedValue()) {
+            return "";
+        }
+        return switch (propertyChange) {
+            case SemanticAttributeChange attribute ->
+                    updateGenerator.generateAddAttributeToSingleClassUpdate(attribute, classIri);
+            case SemanticAssociationChange association ->
+                    updateGenerator.generateAddAssociationToSingleClassUpdate(
+                            association, classIri);
+            default -> "";
+        };
+    }
+
     private String generateUpdateForEnumEntry(SemanticEnumEntryChange enumEntryChange) {
         var sb = new StringBuilder();
         appendComment(sb, enumEntryChange);
@@ -181,7 +266,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (enumEntryChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeleteEnumEntryUpdate(enumEntryChange);
-                    case RENAME -> updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
+                    case RENAME, MOVE, SPLIT, MERGE ->
+                            updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
                     default -> null;
                 };
 
@@ -208,7 +294,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 
-    private String generateUpdateForAssociation(SemanticAssociationChange associationChange) {
+    private String generateUpdateForAssociation(
+            SemanticAssociationChange associationChange,
+            String classIri,
+            ScriptContext scriptContext) {
         var sb = new StringBuilder();
         appendComment(sb, associationChange);
 
@@ -218,9 +307,17 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case ADD -> updateGenerator.generateAddAssociationUpdate(associationChange);
                     case ADDED_FROM_INHERITANCE ->
                             updateGenerator.generateAddAssociationToSingleClassUpdate(
-                                    associationChange, associationChange.getIri());
+                                    associationChange, classIri);
+                    case DELETED_FROM_INHERITANCE ->
+                            updateGenerator.generateDeletePropertyFromSingleClassUpdate(
+                                    associationChange, classIri);
                     case RENAME ->
                             updateGenerator.generateRenameAssociationUpdate(associationChange);
+                    case MOVE, MERGE ->
+                            updateGenerator.generateMovePropertyUpdate(
+                                            associationChange, scriptContext.renamedClasses())
+                                    + initializeTargetInstances(associationChange, classIri);
+                    case SPLIT -> generateSplitAssociationUpdate(associationChange, scriptContext);
                     default -> null;
                 };
 
@@ -230,7 +327,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
         var type = associationChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
-                || type == SemanticResourceChangeType.RENAME) {
+                || type == SemanticResourceChangeType.RENAME
+                || type == SemanticResourceChangeType.MOVE
+                || type == SemanticResourceChangeType.SPLIT
+                || type == SemanticResourceChangeType.MERGE) {
             processAssociationFieldChanges(associationChange, sb);
         }
 
@@ -264,5 +364,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                 sb.append("# ").append(line).append("\n");
             }
         }
+    }
+
+    <T extends SemanticResourceChange> Map<String, List<T>> groupSplitSiblings(List<T> properties) {
+        return properties.stream()
+                .filter(p -> p.getSemanticResourceChangeType() == SemanticResourceChangeType.SPLIT)
+                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI));
     }
 }
