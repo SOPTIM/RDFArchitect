@@ -59,9 +59,9 @@ export const workspaceState = {
     },
 
     /**
-     * Activates the first workspace whenever none is active while the session has some. `load`
-     * does the same, but only when the list is reloaded, and the selection can be cleared while
-     * the editor stays open: the logo does so. The editor then waits for a workspace forever.
+     * Activates the first workspace whenever none is active while the session has some, also when
+     * the selection is cleared while the editor stays open, as the logo does. `load` only does so
+     * when the list is reloaded.
      *
      * Must be called while a component initialises, since it installs an effect.
      *
