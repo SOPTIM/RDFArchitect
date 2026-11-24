@@ -26,12 +26,22 @@ export const shortcutStore = {
      * @param {string[] | string[][]} keys - e.g. ["ctrl", "s"] or [["ctrl", "s"], ["ctrl", "shift", "s"]]
      * @param {(event: KeyboardEvent) => void} handler - receives the keydown event, e.g. to tell a held key by event.repeat
      * @param closeDialogs define if the shortcut should close open dialogs (default: false). If true, all open dialogs will be closed before executing the handler.
-     * @param {() => boolean} [isActive] whether the shortcut applies right now. One that does not
-     *     still keeps the browser's own action for the keys from running, but leaves them to the
-     *     next shortcut registered for the same keys, e.g. the class editor's Ctrl+S, which only
-     *     saves a class that was changed, to the desktop app's Save.
+     * @param {object} [options]
+     * @param {() => boolean} [options.isActive] whether the shortcut applies right now. One that
+     *     does not still keeps the browser's own action for the keys from running, but leaves them
+     *     to the next shortcut registered for the same keys, e.g. the class editor's Ctrl+S, which
+     *     only saves a class that was changed, to the desktop app's Save.
+     * @param {boolean} [options.whileTyping] whether the shortcut also works while the focus is in
+     *     a text field, like Save in a desktop app. Others leave the keys to the field there.
+     * @returns {() => void} unregisters the shortcut again
      */
-    register(id, keys, handler, closeDialogs = false, isActive = null) {
+    register(
+        id,
+        keys,
+        handler,
+        closeDialogs = false,
+        { isActive = null, whileTyping = false } = {},
+    ) {
         // Normalize to an array of key-combinations
         if (registry[id]) {
             console.warn(
@@ -47,6 +57,7 @@ export const shortcutStore = {
             handler,
             closeDialogs,
             isActive,
+            whileTyping,
         };
         return () => this.unregister(id);
     },
@@ -60,21 +71,30 @@ export const shortcutStore = {
      * Returns true if a handler was executed
      *
      * Of several shortcuts for the same keys, the one registered last wins: it belongs to the
-     * part of the page that opened most recently.
+     * part of the page that opened most recently. While typing, the keys go to the text field
+     * unless a shortcut for them works while typing; if the shortcut that wins does not, nothing
+     * happens, not even the browser's own action.
+     *
+     * @param {KeyboardEvent} event
+     * @param {{typing?: boolean}} [options] whether the focus is in a text field
+     * @returns {boolean}
      */
-    handleEvent(event) {
+    handleEvent(event, { typing = false } = {}) {
         const normalized = normalizeEvent(event);
         const matching = Object.values(registry)
             .filter(({ combos }) => combos.includes(normalized))
             .reverse();
-        if (matching.length === 0) {
+        if (
+            matching.length === 0 ||
+            (typing && !matching.some(({ whileTyping }) => whileTyping))
+        ) {
             return false;
         }
         event.preventDefault();
         const shortcut = matching.find(
             ({ isActive }) => !isActive || isActive(),
         );
-        if (!shortcut) {
+        if (!shortcut || (typing && !shortcut.whileTyping)) {
             return false;
         }
         const { handler, closeDialogs } = shortcut;

@@ -18,7 +18,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
 
-function press(key, { ctrl = false, shift = false } = {}) {
+function press(key, { ctrl = false, shift = false, typing = false } = {}) {
     const event = new KeyboardEvent("keydown", {
         key,
         code: `Key${key.toUpperCase()}`,
@@ -26,7 +26,7 @@ function press(key, { ctrl = false, shift = false } = {}) {
         shiftKey: shift,
         cancelable: true,
     });
-    return { handled: shortcutStore.handleEvent(event), event };
+    return { handled: shortcutStore.handleEvent(event, { typing }), event };
 }
 
 describe("shortcutStore", () => {
@@ -40,7 +40,7 @@ describe("shortcutStore", () => {
         registered.splice(0).forEach(unregister => unregister());
     });
 
-    test("runs the shortcut registered for the keys", () => {
+    test("handleEvent_registeredKeys_runsTheShortcut", () => {
         const save = vi.fn();
         register("save", ["ctrl", "s"], save);
 
@@ -51,7 +51,7 @@ describe("shortcutStore", () => {
         expect(save).toHaveBeenCalledTimes(1);
     });
 
-    test("prefers the shortcut registered last for the same keys", () => {
+    test("handleEvent_twoShortcutsForTheKeys_runsTheOneRegisteredLast", () => {
         const global = vi.fn();
         const editor = vi.fn();
         register("saveWorkspace", ["ctrl", "s"], global);
@@ -63,12 +63,14 @@ describe("shortcutStore", () => {
         expect(global).not.toHaveBeenCalled();
     });
 
-    test("leaves the keys to the next shortcut while one does not apply", () => {
+    test("handleEvent_shortcutNotActive_leavesTheKeysToTheNextOne", () => {
         const global = vi.fn();
         const editor = vi.fn();
         let classChanged = false;
         register("saveWorkspace", ["ctrl", "s"], global);
-        register("saveClass", ["ctrl", "s"], editor, false, () => classChanged);
+        register("saveClass", ["ctrl", "s"], editor, false, {
+            isActive: () => classChanged,
+        });
 
         press("s", { ctrl: true });
         expect(global).toHaveBeenCalledTimes(1);
@@ -80,8 +82,10 @@ describe("shortcutStore", () => {
         expect(global).toHaveBeenCalledTimes(1);
     });
 
-    test("keeps the browser's own action from running for claimed keys nobody takes", () => {
-        register("saveClass", ["ctrl", "s"], vi.fn(), false, () => false);
+    test("handleEvent_claimedKeysNobodyTakes_keepsTheBrowserActionFromRunning", () => {
+        register("saveClass", ["ctrl", "s"], vi.fn(), false, {
+            isActive: () => false,
+        });
 
         const { handled, event } = press("s", { ctrl: true });
 
@@ -89,14 +93,14 @@ describe("shortcutStore", () => {
         expect(event.defaultPrevented).toBe(true);
     });
 
-    test("leaves keys nobody claimed to the browser", () => {
+    test("handleEvent_unclaimedKeys_leavesThemToTheBrowser", () => {
         const { handled, event } = press("s", { ctrl: true });
 
         expect(handled).toBe(false);
         expect(event.defaultPrevented).toBe(false);
     });
 
-    test("counts a registration made again as the latest", () => {
+    test("register_again_countsAsTheLatest", () => {
         const first = vi.fn();
         const second = vi.fn();
         register("a", ["ctrl", "s"], first);
@@ -107,5 +111,45 @@ describe("shortcutStore", () => {
 
         expect(first).toHaveBeenCalledTimes(1);
         expect(second).not.toHaveBeenCalled();
+    });
+
+    test("handleEvent_typingAndShortcutWorksWhileTyping_runsItInsteadOfTheBrowserAction", () => {
+        const save = vi.fn();
+        register("saveWorkspace", ["ctrl", "s"], save, false, {
+            whileTyping: true,
+        });
+
+        const { handled, event } = press("s", { ctrl: true, typing: true });
+
+        expect(handled).toBe(true);
+        expect(event.defaultPrevented).toBe(true);
+        expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    test("handleEvent_typingAndNoShortcutWorksWhileTyping_leavesTheKeysToTheField", () => {
+        const copy = vi.fn();
+        register("copy", ["ctrl", "c"], copy);
+
+        const { handled, event } = press("c", { ctrl: true, typing: true });
+
+        expect(handled).toBe(false);
+        expect(event.defaultPrevented).toBe(false);
+        expect(copy).not.toHaveBeenCalled();
+    });
+
+    test("handleEvent_typingAndTheWinnerDoesNotWorkWhileTyping_runsNothing", () => {
+        const saveWorkspace = vi.fn();
+        const saveClass = vi.fn();
+        register("saveWorkspace", ["ctrl", "s"], saveWorkspace, false, {
+            whileTyping: true,
+        });
+        register("saveClass", ["ctrl", "s"], saveClass);
+
+        const { handled, event } = press("s", { ctrl: true, typing: true });
+
+        expect(handled).toBe(false);
+        expect(event.defaultPrevented).toBe(true);
+        expect(saveWorkspace).not.toHaveBeenCalled();
+        expect(saveClass).not.toHaveBeenCalled();
     });
 });

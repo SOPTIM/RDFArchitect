@@ -271,8 +271,7 @@
             }
         }
 
-        if (inputFocused) return;
-        shortcutStore.handleEvent(event);
+        shortcutStore.handleEvent(event, { typing: inputFocused });
     }
 
     /**

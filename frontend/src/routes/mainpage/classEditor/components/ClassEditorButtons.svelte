@@ -88,9 +88,11 @@
                 ["ctrl", "s"],
                 () => saveFromShortcut(),
                 false,
-                () =>
-                    !readonly &&
-                    !!(reactiveClass?.isValid && reactiveClass?.isModified),
+                {
+                    isActive: () =>
+                        !readonly &&
+                        !!(reactiveClass?.isValid && reactiveClass?.isModified),
+                },
             ),
         );
     });

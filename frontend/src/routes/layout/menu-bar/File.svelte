@@ -122,7 +122,8 @@
                 true,
             ),
         );
-        if (PUBLIC_SHARE_SNAPSHOT_ENABLED) {
+        // The desktop app has no snapshots, and gives their keys to Save As.
+        if (PUBLIC_SHARE_SNAPSHOT_ENABLED && !PUBLIC_DESKTOP) {
             shortcutsUnregister.push(
                 shortcutStore.register(
                     "snapshot",
@@ -139,14 +140,21 @@
                     ["ctrl", "o"],
                     () => (showWorkspaceImportDialog = true),
                     true,
+                    { whileTyping: true },
                 ),
-                shortcutStore.register("saveWorkspace", ["ctrl", "s"], () =>
-                    saveSelectedWorkspace(false),
+                shortcutStore.register(
+                    "saveWorkspace",
+                    ["ctrl", "s"],
+                    event => saveFromShortcut(event, false),
+                    false,
+                    { whileTyping: true },
                 ),
                 shortcutStore.register(
                     "saveWorkspaceAs",
                     ["ctrl", "shift", "s"],
-                    () => saveSelectedWorkspace(true),
+                    event => saveFromShortcut(event, true),
+                    false,
+                    { whileTyping: true },
                 ),
             );
         }
@@ -155,6 +163,13 @@
     onDestroy(() => {
         shortcutsUnregister.forEach(unregister => unregister());
     });
+
+    function saveFromShortcut(event, saveAs) {
+        // A held key repeats; one press saves once.
+        if (!event.repeat) {
+            saveSelectedWorkspace(saveAs);
+        }
+    }
 
     function saveSelectedWorkspace(saveAs) {
         if (hasWorkspaceSelected) {
@@ -308,7 +323,7 @@
             <Menubar.Item.Button
                 onSelect={() => (showSnapshotDialog = true)}
                 faIcon={faShare}
-                altText="Ctrl+Shift+S"
+                altText={PUBLIC_DESKTOP ? undefined : "Ctrl+Shift+S"}
             >
                 Share Snapshot
             </Menubar.Item.Button>
