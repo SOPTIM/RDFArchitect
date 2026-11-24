@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.desktop;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
@@ -35,10 +36,14 @@ import java.util.Optional;
  * instead of starting another one, once the app has proved to hold the token (see {@link
  * LocalPorts#provenVersion}): the file may be left over from a run that ended without removing it.
  *
+ * <p>The app that wrote the file may be of another version, so fields this one does not know are
+ * ignored.
+ *
  * @param port the port it listens on
  * @param token its access token
  * @param version its version
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 record RunningInstance(int port, String token, String version) {
 
     static final String FILE_NAME = "instance.json";
@@ -89,8 +94,8 @@ record RunningInstance(int port, String token, String version) {
     }
 
     /**
-     * Deletes the file in the directory, unless it describes another instance by now: a newer
-     * version may have started meanwhile, on another port.
+     * Deletes the file in the directory, unless it describes another instance by now: one may have
+     * started meanwhile, on another port, because this one did not answer it.
      *
      * @param runDirectory the directory
      */

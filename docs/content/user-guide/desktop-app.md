@@ -26,7 +26,7 @@ The first start may ask once:
 
 The editor opens in a window without tabs or address bar, using Chrome, Edge, Brave or Chromium if one is installed. Edge is part of every Windows 10 and 11. Without any of them, the editor opens in a tab of your default browser instead. The browser keeps the app's window position, settings and storage in a profile of its own, apart from your normal browsing.
 
-Starting RDFArchitect again while it runs opens another window of the same app, with the same workspaces.
+Starting RDFArchitect again while it runs opens another window of the same app, with the same workspaces. This also applies to a newer version: it starts once the last window of the running one is closed.
 
 ## Saving and opening workspaces
 

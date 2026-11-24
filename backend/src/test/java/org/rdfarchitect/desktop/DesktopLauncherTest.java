@@ -20,6 +20,7 @@ package org.rdfarchitect.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.context.ApplicationContextException;
 
@@ -45,6 +46,26 @@ class DesktopLauncherTest {
     void startPath_openRequests_opensTheEditorWithThem() {
         assertThat(DesktopLauncher.startPath(List.of())).isEqualTo("/mainpage");
         assertThat(DesktopLauncher.startPath(List.of("a", "b"))).isEqualTo("/mainpage?open=a,b");
+    }
+
+    @Test
+    void findRunning_appOfAnotherVersion_returnsIt(@TempDir Path runDirectory) throws Exception {
+        var token = DesktopAccessToken.generate();
+        try (var app = new DesktopAppStub(token)) {
+            var other = new RunningInstance(app.port(), token.value(), "0.1.0");
+            other.write(runDirectory);
+
+            assertThat(DesktopLauncher.findRunning(runDirectory)).contains(other);
+        }
+    }
+
+    @Test
+    void findRunning_noAppAnswers_returnsNothing(@TempDir Path runDirectory) throws Exception {
+        assertThat(DesktopLauncher.findRunning(runDirectory)).isEmpty();
+
+        new RunningInstance(LocalPorts.anyFreePort(), "secret", "1.9.0").write(runDirectory);
+
+        assertThat(DesktopLauncher.findRunning(runDirectory)).isEmpty();
     }
 
     @Test

@@ -47,9 +47,9 @@ import javax.swing.JOptionPane;
  * machine, serving the user interface, which then opens in a window of its own (see {@link
  * AppWindow}). The main class of the desktop build, see the {@code desktop} Maven profile.
  *
- * <p>Only one app runs per data directory and version: if the same version already runs, a second
- * start just opens another window of it. Only the user who started the app can use it, see {@link
- * DesktopAccessToken}.
+ * <p>Only one app runs per data directory: if one already runs, a second start just opens another
+ * window of it, also when the two are of different versions. Only the user who started the app can
+ * use it, see {@link DesktopAccessToken}.
  */
 public final class DesktopLauncher {
 
@@ -132,21 +132,15 @@ public final class DesktopLauncher {
         var version = new AppVersionResolver(configuredVersion()).resolveVersion();
         var browserProfile = DesktopPaths.browserProfile(dataDirectory);
         var runDirectory = PrivateFiles.createDirectory(DesktopPaths.runDirectory(dataDirectory));
-        var running = RunningInstance.read(runDirectory);
+        var running = findRunning(runDirectory);
         if (running.isPresent()) {
-            var runningVersion =
-                    LocalPorts.provenVersion(running.get().port(), running.get().accessToken());
-            if (runningVersion.isPresent() && runningVersion.get().equals(version)) {
-                logger.info("RDFArchitect {} is running already, opening a window.", version);
-                handOver(running.get(), options, runDirectory, browserProfile, logger);
-                return false;
-            }
-            runningVersion.ifPresent(
-                    other ->
-                            logger.info(
-                                    "RDFArchitect {} is running already, starting {} as well.",
-                                    other,
-                                    version));
+            logger.info(
+                    "RDFArchitect {} is running already, opening a window of it instead of"
+                            + " starting {}.",
+                    running.get().version(),
+                    version);
+            handOver(running.get(), options, runDirectory, browserProfile, logger);
+            return false;
         }
         var port = options.port();
         if (port != 0 && !LocalPorts.isFree(port)) {
@@ -169,11 +163,13 @@ public final class DesktopLauncher {
                 throw new IllegalStateException(rootMessage(e), e);
             }
             // Started twice in quick succession: both found the port free, the other one got it.
-            var other = awaitDesktopApp(runDirectory, version);
+            var other = awaitDesktopApp(runDirectory);
             if (other.isEmpty()) {
                 throw new IllegalStateException("Port " + port + " is in use.", e);
             }
-            logger.info("RDFArchitect {} started meanwhile, opening a window.", version);
+            logger.info(
+                    "RDFArchitect {} started meanwhile, opening a window of it.",
+                    other.get().version());
             handOver(other.get(), options, runDirectory, browserProfile, logger);
             return false;
         }
@@ -280,18 +276,20 @@ public final class DesktopLauncher {
         return false;
     }
 
+    /** Returns the app running for the data directory, of whatever version, if one answers. */
+    static Optional<RunningInstance> findRunning(Path runDirectory) {
+        return RunningInstance.read(runDirectory)
+                .filter(
+                        instance ->
+                                LocalPorts.provenVersion(instance.port(), instance.accessToken())
+                                        .isPresent());
+    }
+
     /** Waits for the app another start is starting for the data directory. */
-    private static Optional<RunningInstance> awaitDesktopApp(Path runDirectory, String version) {
+    private static Optional<RunningInstance> awaitDesktopApp(Path runDirectory) {
         var deadline = Instant.now().plus(STARTUP_OF_ANOTHER_INSTANCE);
         while (Instant.now().isBefore(deadline)) {
-            var running =
-                    RunningInstance.read(runDirectory)
-                            .filter(
-                                    instance ->
-                                            LocalPorts.provenVersion(
-                                                            instance.port(), instance.accessToken())
-                                                    .filter(version::equals)
-                                                    .isPresent());
+            var running = findRunning(runDirectory);
             if (running.isPresent()) {
                 return running;
             }

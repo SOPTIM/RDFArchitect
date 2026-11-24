@@ -17,7 +17,9 @@
 
 package org.rdfarchitect.desktop;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import org.rdfarchitect.api.dto.desktop.DesktopInfoDTO;
 import org.rdfarchitect.api.dto.desktop.OpenRequestDTO;
@@ -39,6 +41,10 @@ final class LocalPorts {
     static final String LOOPBACK = "127.0.0.1";
 
     private static final Duration TIMEOUT = Duration.ofSeconds(2);
+
+    /** The app that answers may be of another version, with fields this one does not know. */
+    private static final ObjectMapper MAPPER =
+            JsonMapper.builder().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
 
     private LocalPorts() {}
 
@@ -73,9 +79,8 @@ final class LocalPorts {
     static Optional<String> requestOpen(int port, DesktopAccessToken token, Path file) {
         var client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
         try {
-            var mapper = new ObjectMapper();
             var body =
-                    mapper.writeValueAsString(
+                    MAPPER.writeValueAsString(
                             new OpenRequestDTO(null, null, file.toAbsolutePath().toString()));
             var request =
                     HttpRequest.newBuilder(URI.create(baseUrl(port) + "/api/desktop/open-requests"))
@@ -89,7 +94,7 @@ final class LocalPorts {
                 return Optional.empty();
             }
             return Optional.ofNullable(
-                    mapper.readValue(response.body(), OpenRequestDTO.class).getId());
+                    MAPPER.readValue(response.body(), OpenRequestDTO.class).getId());
         } catch (IOException | RuntimeException _) {
             return Optional.empty();
         } catch (InterruptedException _) {
@@ -132,7 +137,7 @@ final class LocalPorts {
             if (response.statusCode() != 200) {
                 return Optional.empty();
             }
-            var info = new ObjectMapper().readValue(response.body(), DesktopInfoDTO.class);
+            var info = MAPPER.readValue(response.body(), DesktopInfoDTO.class);
             return DesktopInfoDTO.APPLICATION.equals(info.getApplication())
                     ? Optional.ofNullable(info.getVersion())
                     : Optional.empty();

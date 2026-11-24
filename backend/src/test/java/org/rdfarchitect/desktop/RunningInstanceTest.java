@@ -68,6 +68,15 @@ class RunningInstanceTest {
     }
 
     @Test
+    void read_fileOfAnotherVersionWithMoreFields_returnsTheInstance() throws Exception {
+        Files.writeString(
+                directory.resolve("instance.json"),
+                "{\"port\":17407,\"token\":\"secret\",\"version\":\"1.9.0\",\"pid\":42}");
+
+        assertThat(RunningInstance.read(directory)).contains(instance);
+    }
+
+    @Test
     void deleteFrom_ownFile_deletesIt() throws Exception {
         instance.write(directory);
 
