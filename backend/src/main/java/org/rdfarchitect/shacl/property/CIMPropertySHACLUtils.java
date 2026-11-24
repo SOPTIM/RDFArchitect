@@ -19,54 +19,56 @@ package org.rdfarchitect.shacl.property;
 
 import lombok.experimental.UtilityClass;
 
-import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Locale;
 
 @UtilityClass
 public class CIMPropertySHACLUtils {
 
     /**
-     * fetches the shacl order of a specified property
+     * The {@code sh:order} of a property's shapes: its position among the used properties of its
+     * class, sorted case-insensitively and counted from 1. The properties of {@code
+     * IdentifiedObject} come first, at 0.1.
+     *
+     * <p>Read from the graph rather than by a query: the generator asks this for every shape of
+     * every property, and parsing and running a query each time took most of the time of generating
+     * a large profile.
      *
      * @param ontology the ontology
      * @param propertyUri the property to get the order for
      * @return the order
      */
     public double getOrder(Model ontology, String propertyUri) {
-        var query =
-                """
-                PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-
-                SELECT ?property ?class
-                WHERE {
-                    <PROPERTY_URI> rdfs:domain ?class.
-                    ?property   a rdf:Property;
-                                rdfs:domain ?class.
-                    FILTER NOT EXISTS {
-                        ?property cims:AssociationUsed "No".
-                    }
-                }ORDER BY LCASE(STR(?property))
-                """
-                        .replace("PROPERTY_URI", propertyUri);
-        var propertyList = new ArrayList<String>();
-        try (var quexec = QueryExecutionFactory.create(query, ontology)) {
-            var resultSet = quexec.execSelect();
-            while (resultSet.hasNext()) {
-                var result = resultSet.next();
-                var resultUri = result.getResource("property").getURI();
-                var resultClass = result.getResource("class").getURI();
-                if (resultUri.equals(propertyUri)
-                        && new URI(resultClass).getSuffix().equals("IdentifiedObject")) {
-                    return 0.1; // special for identified Object class
-                }
-                propertyList.add(resultUri);
+        var property = ontology.createResource(propertyUri);
+        var siblings = new ArrayList<String>();
+        for (var domain : ontology.listObjectsOfProperty(property, RDFS.domain).toList()) {
+            if (!domain.isURIResource()) {
+                continue;
             }
-            return propertyList.indexOf(propertyUri) + 1.0;
+            if (new URI(domain.asResource().getURI()).getSuffix().equals("IdentifiedObject")
+                    && isUsed(property)) {
+                return 0.1;
+            }
+            ontology.listSubjectsWithProperty(RDFS.domain, domain)
+                    .filterKeep(Resource::isURIResource)
+                    .filterKeep(CIMPropertySHACLUtils::isUsed)
+                    .forEach(sibling -> siblings.add(sibling.getURI()));
         }
+        siblings.sort(Comparator.comparing(uri -> uri.toLowerCase(Locale.ROOT)));
+        return siblings.indexOf(propertyUri) + 1.0;
+    }
+
+    /** A property, and not an association end marked as unused. */
+    private boolean isUsed(Resource property) {
+        return property.hasProperty(RDF.type, RDF.Property)
+                && !property.hasProperty(CIMS.associationUsed, "No");
     }
 }
