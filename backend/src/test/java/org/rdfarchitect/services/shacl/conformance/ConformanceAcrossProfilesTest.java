@@ -171,8 +171,8 @@ class ConformanceAcrossProfilesTest {
         }
         var report = compareOfficial("AssessedElement");
 
-        // Every association used to read as DIFFERENT: the generated (p rdf:type) sh:in list was
-        // not read at all, so the schema side stated no value type.
+        // The generated (p rdf:type) sh:in list is the schema's value type, and it agrees with
+        // sh:class on the range.
         assertThat(report.getFindings())
                 .filteredOn(finding -> finding.getKind() == ConformanceFinding.Kind.DIFFERENT)
                 .allSatisfy(finding -> assertThat(finding.getSchemaSays()).contains("of class"));

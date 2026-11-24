@@ -56,9 +56,9 @@ export const CONFORMANCE_KIND = {
 /**
  * How a report reads at a glance: `ok`, `gaps` or `drift`.
  *
- * Coverage and agreement are separate questions, and conflating them is what made a 55-line
- * cross-profile constraints file report "0 of 49 property constraints agree". A file that says
- * nothing about a property does not disagree with the schema about it.
+ * Coverage and agreement are separate questions. A file that says nothing about a property does
+ * not disagree with the schema about it, as the cross-profile files of a profile, with one rule
+ * each, say nothing about most of it.
  */
 export function conformanceVerdict(report) {
     if (!report) {
@@ -84,10 +84,11 @@ export function conformanceKind(kind) {
 /**
  * Folds findings that say the same thing about the same property into one, naming every class.
  *
- * Official files state an inherited property again on every concrete subclass, so one rule the
- * schema puts on `AsynchronousMachineDynamics` came back as 22 identical findings, one per subclass,
- * burying the other findings under a single question. They are kept apart by kind, property,
- * both readings and the documents stating them: only findings that would read alike are merged.
+ * Official files state an inherited property again on every concrete subclass, and a rule on a
+ * class applies to every class deriving from it, so one rule on `AsynchronousMachineDynamics`
+ * reads as one finding per subclass and would bury the others under a single question. They are
+ * kept apart by kind, property, both readings and the documents stating them: only findings that
+ * would read alike are merged.
  *
  * @returns {Array<object>} findings in their first-seen order, each with `targetClasses`
  */

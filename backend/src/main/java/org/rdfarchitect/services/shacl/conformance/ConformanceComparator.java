@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
  * <p>Coverage is a third thing again, and not a disagreement. Constraints the documents say nothing
  * about are reported so a gap is visible, but they are not scored against agreement: official
  * releases split their rules over several files, some of which carry one cross-profile rule, and
- * counting silence as disagreement made such a file read as "0 of 49 agree".
+ * counting silence as disagreement would make such a file disagree with everything it leaves out.
  */
 final class ConformanceComparator {
 

@@ -61,15 +61,15 @@ import java.util.stream.Collectors;
  *
  * <p>The right-hand side is the <em>enabled</em> documents applying to the schema, together. A
  * schema's constraints are their conjunction, and official releases split their rules across files
- * on purpose — reading one alone reported its neighbours' coverage as missing.
+ * on purpose, so one file read alone would report its neighbours' rules as missing.
  *
  * <p>The left-hand side is the <em>workspace's</em> schemas, scoped to this schema. Profiles build
  * on each other — an NC profile adds properties to classes the Equipment profile declares, and
  * inherits everything else from it — so generating from one schema alone would leave NC documents
- * with hundreds of constraints "the schema does not have", with Equipment loaded right next to it.
- * What the schema is asked to cover is still only its own properties; what the documents are
- * compared against is everything the workspace says about the classes they target. Where two
- * schemas declare the same property, the schema being compared speaks for it.
+ * with constraints "the schema does not have", with Equipment loaded right next to it. What the
+ * schema is asked to cover is still only its own properties; what the documents are compared
+ * against is everything the workspace says about the classes they target. Where two schemas declare
+ * the same property, the schema being compared speaks for it.
  *
  * <p>Inverse cardinality is left out. RDFArchitect states it as {@code sh:path [ sh:inversePath …
  * ]}, a path expression rather than a property, and there is nothing on the other side to line it
@@ -85,10 +85,9 @@ public class ConformanceService implements ConformanceUseCase {
     /**
      * What the schema implies, per workspace content.
      *
-     * <p>Generating shapes takes seconds on a large profile (about ten for CGMES Dynamics), and the
-     * report is asked for again every time the panel opens. The key holds every schema's version,
-     * because the scope is the whole workspace; and the session, because the in-memory database is
-     * per session.
+     * <p>Generating shapes is most of the work of a comparison, and the report is asked for again
+     * every time the panel opens. The key holds every schema's version, because the scope is the
+     * whole workspace; and the session, because the in-memory database is per session.
      */
     private final Map<CacheKey, Implied> cache = new LeastRecentlyUsed<>(MAX_CACHED);
 
@@ -203,9 +202,8 @@ public class ConformanceService implements ConformanceUseCase {
         var contradicted = count(findings, ConformanceFinding.Kind.CONTRADICTED);
         var different = count(findings, ConformanceFinding.Kind.DIFFERENT);
         var notInSchema = count(findings, ConformanceFinding.Kind.NOT_IN_SCHEMA);
-        // Only what both sides state is a question of agreement. Counting the schema's whole
-        // surface here scored silence as disagreement, which is how a 55-line cross-profile file
-        // came to read as "0 of 49 agree".
+        // Only what both sides state is a question of agreement: counting the schema's whole
+        // surface would score a document's silence as disagreement.
         var compared = overlap(implied.keySet(), stated);
 
         return ConformanceReport.builder()

@@ -24,8 +24,8 @@
      * profile doing its job and narrowing what the schema allows.
      *
      * Coverage is shown apart from agreement, and the headline only turns red for a contradiction.
-     * Scoring the two together was how a 55-line cross-profile file — one rule, and no quarrel with
-     * anything — came to announce "0 of 49 property constraints agree".
+     * Scored together, a cross-profile file with one rule and no quarrel with anything would
+     * disagree with every constraint it leaves out.
      */
 
     import {

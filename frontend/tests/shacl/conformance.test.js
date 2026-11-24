@@ -420,7 +420,7 @@ describe("ConformanceReportView", () => {
 
     test("a document that covers nothing is not called a disagreement", () => {
         // What the CGMES 3.0 DiagramLayout cross-profile files do: one rule each, against a schema
-        // implying 49 constraints. The old report announced "0 of 49 property constraints agree".
+        // implying 49 constraints.
         const view = render({
             conformance: conformance({
                 report: {

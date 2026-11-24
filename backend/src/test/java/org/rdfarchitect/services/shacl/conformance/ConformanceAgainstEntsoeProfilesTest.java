@@ -110,8 +110,8 @@ class ConformanceAgainstEntsoeProfilesTest {
     void theGeneratedAndTheOfficialConstraintsAgreeCompletely() {
         var report = service.compare(GRAPH);
 
-        // Season.startDate/endDate used to disagree here: the CIM primitive "MonthDay" was mapped
-        // to a made-up xsd:MonthDay where the official file uses xsd:gMonthDay.
+        // Season.startDate/endDate included: the CIM primitive "MonthDay" is xsd:gMonthDay, as in
+        // the official file.
         assertThat(report.getFindings()).isEmpty();
         assertThat(report.isConforms()).isTrue();
     }

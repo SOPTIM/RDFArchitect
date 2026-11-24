@@ -47,11 +47,9 @@ import java.util.UUID;
 /**
  * Coverage is not disagreement, and a schema's constraints are its enabled documents together.
  *
- * <p>Both were wrong at once, and the CGMES 3.0 DiagramLayout profile is what showed it: importing
- * one of its constraints files reported "0 of 49 property constraints agree". The profile implies
- * 49 property constraints; the file in question is 55 lines long and carries a single cross-profile
- * rule. It disagreed with nothing — it simply talked about almost nothing, and the report scored
- * silence as disagreement while ignoring whatever the schema's other documents said.
+ * <p>The CGMES 3.0 DiagramLayout profile shows both: the profile implies 49 property constraints,
+ * and one of its constraints files carries a single cross-profile rule. That file disagrees with
+ * nothing, it says almost nothing, and what it leaves out the profile's other documents state.
  */
 class ConformanceAcrossDocumentsTest {
 
@@ -99,7 +97,7 @@ class ConformanceAcrossDocumentsTest {
     }
 
     // -------------------------------------------------------------------------
-    // What the user reported
+    // A document saying almost nothing
     // -------------------------------------------------------------------------
 
     @Test
@@ -108,7 +106,7 @@ class ConformanceAcrossDocumentsTest {
 
         var report = service.compare(GRAPH);
 
-        // Nothing to compare, so nothing can disagree. The old report said "0 of 49 agree".
+        // Nothing to compare, so nothing can disagree.
         assertThat(report.getImpliedBySchema()).isEqualTo(IMPLIED);
         assertThat(report.getCompared()).isZero();
         assertThat(report.getContradictedCount()).isZero();
