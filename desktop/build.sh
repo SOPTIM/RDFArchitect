@@ -224,6 +224,10 @@ if [[ -z "$installer_from" ]]; then
   mkdir -p "$WORK/input"
   cp "$JAR" "$WORK/input/rdfarchitect-desktop.jar"
   cp "$DESKTOP/icons/splash.png" "$WORK/input/splash.png"
+  mkdir "$WORK/input/licenses"
+  cp "$ROOT/LICENSE" "$WORK/input/licenses/LICENSE"
+  cp "$ROOT/backend/LICENSES-THIRD-PARTY.md" "$WORK/input/licenses/LICENSES-THIRD-PARTY-backend.md"
+  cp "$ROOT/frontend/LICENSES-THIRD-PARTY.md" "$WORK/input/licenses/LICENSES-THIRD-PARTY-frontend.md"
 
   log "Java runtime"
   "$JAVA_BIN/jlink" \

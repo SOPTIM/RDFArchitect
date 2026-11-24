@@ -86,3 +86,5 @@ The app keeps its log files, the window's browser profile and the copies of unsa
 - Linux: `~/.local/share/rdfarchitect` (or `$XDG_DATA_HOME/rdfarchitect`)
 
 The log is `logs/rdfarchitect.log` there, the copies of unsaved workspaces are in `recovery/`. `run/` holds the key that lets the windows of the running app in; on macOS and Linux only you can read the directory. Deleting the directory resets the window's size and browser settings and drops those copies; your own workspace files are not in it.
+
+The license of RDFArchitect and the lists of the third-party libraries in it are in the `licenses` directory of the app: `app\licenses` in the program directory on Windows, `RDFArchitect.app/Contents/app/licenses` on macOS, `lib/app/licenses` on Linux. Those of the Java runtime are in its `legal` directory.
