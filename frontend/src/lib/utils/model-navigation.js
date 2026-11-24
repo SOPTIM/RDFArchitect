@@ -29,23 +29,23 @@ import {
  * With `propertyUUID`, the class editor additionally reveals that attribute, association or enum
  * entry — how a search hit or a deep link on a property lands on the row the user asked for.
  *
- * @param {{datasetName: string, graphUri: string, packageUUID: string | null | undefined, classUUID: string, propertyUUID?: string | null}} target
+ * @param {{workspaceName: string, schemaName: string, packageUUID: string | null | undefined, classUUID: string, propertyUUID?: string | null}} target
  */
 export function navigateToClass({
-    datasetName,
-    graphUri,
+    workspaceName,
+    schemaName,
     packageUUID,
     classUUID,
     propertyUUID = null,
 }) {
-    editorState.selectedWorkspace.updateValue(datasetName);
-    editorState.selectedGraph.updateValue(graphUri);
+    editorState.selectedWorkspace.updateValue(workspaceName);
+    editorState.selectedGraph.updateValue(schemaName);
     editorState.selectedDiagram.updateValue({
         type: DiagramType.PACKAGE,
         id: packageUUID ?? "default",
     });
-    editorState.selectedClassWorkspace.updateValue(datasetName);
-    editorState.selectedClassGraph.updateValue(graphUri);
+    editorState.selectedClassWorkspace.updateValue(workspaceName);
+    editorState.selectedClassGraph.updateValue(schemaName);
     editorState.selectedClass.updateValue({
         type: ClassType.SINGLE_CLASS,
         id: classUUID,
@@ -58,11 +58,11 @@ export function navigateToClass({
 /**
  * Opens a package diagram without selecting a class.
  *
- * @param {{datasetName: string, graphUri: string, packageUUID: string | null | undefined}} target
+ * @param {{workspaceName: string, schemaName: string, packageUUID: string | null | undefined}} target
  */
-export function navigateToPackage({ datasetName, graphUri, packageUUID }) {
-    editorState.selectedWorkspace.updateValue(datasetName);
-    editorState.selectedGraph.updateValue(graphUri);
+export function navigateToPackage({ workspaceName, schemaName, packageUUID }) {
+    editorState.selectedWorkspace.updateValue(workspaceName);
+    editorState.selectedGraph.updateValue(schemaName);
     editorState.selectedClass.updateValue({ type: null, id: null });
     editorState.focusedClassUUID.updateValue(null);
     editorState.focusedPropertyUUID.updateValue(null);

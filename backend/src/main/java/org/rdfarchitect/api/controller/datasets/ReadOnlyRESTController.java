@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/readonly")
+@RequestMapping("api/workspaces/{workspaceName}/readonly")
 @RequiredArgsConstructor
 public class ReadOnlyRESTController {
 
@@ -63,17 +63,17 @@ public class ReadOnlyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/readonly\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var isReadOnly = isReadOnlyUseCase.isReadOnly(datasetName);
+        var isReadOnly = isReadOnlyUseCase.isReadOnly(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/readonly\" to \"{}\".",
+                workspaceName,
                 originURL);
         return isReadOnly;
     }
@@ -92,17 +92,17 @@ public class ReadOnlyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/readonly\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        enableEditingUseCase.enableEditing(datasetName);
+        enableEditingUseCase.enableEditing(workspaceName);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/readonly\" to \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -121,17 +121,17 @@ public class ReadOnlyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/readonly\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        disableEditingUseCase.disableEditing(datasetName);
+        disableEditingUseCase.disableEditing(workspaceName);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/readonly\" to \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }

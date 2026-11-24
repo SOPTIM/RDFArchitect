@@ -34,8 +34,8 @@ import {
 } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 const GRAPH_TARGET = {
-    datasetName: "ds",
-    graphURI: "http://example.com/graph",
+    workspaceName: "ds",
+    schemaName: "http://example.com/graph",
     diagramUUID: "diagram",
 };
 
@@ -225,8 +225,8 @@ describe("EdgeLayoutPersistence", () => {
 
     test("saves a diagram across the dataset over the dataset route", async () => {
         const datasetTarget = {
-            datasetName: "ds",
-            graphURI: null,
+            workspaceName: "ds",
+            schemaName: null,
             diagramUUID: "d",
         };
         const shown = edge("e");
@@ -237,7 +237,7 @@ describe("EdgeLayoutPersistence", () => {
 
         expect(updateEdgeLayouts).not.toHaveBeenCalled();
         expect(updateDatasetEdgeLayouts.mock.calls[0][0].path).toEqual({
-            datasetName: "ds",
+            workspaceName: "ds",
             diagramUUID: "d",
         });
     });

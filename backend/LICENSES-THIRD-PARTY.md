@@ -1,8 +1,14 @@
 # Third-Party Licenses
 
+### Apache Commons IO
+- **Package:** commons-io
+- **Version:** 2.22.0
+- **License:** Apache License 2.0
+- **URL:** [https://commons.apache.org/proper/commons-io/](https://commons.apache.org/proper/commons-io/)
+
 ### Apache Commons Lang
 - **Package:** org.apache.commons
-- **Version:** 3.21.0
+- **Version:** 3.22.0
 - **License:** Apache License 2.0
 - **URL:** [https://commons.apache.org/proper/commons-lang/](https://commons.apache.org/proper/commons-lang/)
 
@@ -50,7 +56,7 @@
 
 ### OpenCGMES - IEC61970-552 CIMXML
 - **Package:** de.soptim.opencgmes
-- **Version:** 1.3.0
+- **Version:** 1.4.0
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/SOPTIM/OpenCGMES](https://github.com/SOPTIM/OpenCGMES)
 
@@ -92,7 +98,7 @@
 
 ### springdoc-openapi-starter-webmvc-ui
 - **Package:** org.springdoc
-- **Version:** 3.1.1
+- **Version:** 3.2.0
 - **License:** Apache License 2.0
 - **URL:** [https://springdoc.org/springdoc-openapi-starter-webmvc-ui/](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
 

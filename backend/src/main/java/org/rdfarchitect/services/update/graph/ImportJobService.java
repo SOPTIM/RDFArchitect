@@ -26,20 +26,23 @@ import org.apache.jena.irix.IRIx;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.context.UserSettings;
 import org.rdfarchitect.context.UserSettingsContext;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
-import org.rdfarchitect.exception.graph.InvalidGraphUriException;
 import org.rdfarchitect.exception.graph.InvalidNamespaceException;
 import org.rdfarchitect.exception.graph.InvalidSelectionException;
-import org.rdfarchitect.rdf.RDFUtils;
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase;
+import org.rdfarchitect.services.archive.importing.InvalidWorkspaceArchiveException;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
+import org.rdfarchitect.services.update.graph.ImportOutcome.WorkspaceImported;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -71,22 +74,34 @@ public class ImportJobService implements ImportJobUseCase {
 
     private final ImportGraphsUseCase importGraphsUseCase;
     private final ImportXmiUseCase importXmiUseCase;
+    private final ImportWorkspaceUseCase importWorkspaceUseCase;
     private final Map<UUID, ImportJob> jobs = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Override
-    public UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+    public UUID startImport(
+            String workspaceName, List<MultipartFile> files, List<String> schemaNames) {
         return start(
-                datasetName,
+                workspaceName,
                 files,
                 true,
                 ImportKind.GRAPH_IMPORT,
-                (job, owned) -> importGraphs(job, owned, graphUris));
+                (job, owned) -> importGraphs(job, owned, schemaNames));
     }
 
     @Override
-    public UUID startXmiScan(String datasetName, List<MultipartFile> files) {
-        var jobId = start(datasetName, files, true, ImportKind.EXPORT_SCAN, this::readExports);
+    public UUID startWorkspaceImport(String workspaceName, MultipartFile archive) {
+        return start(
+                workspaceName,
+                List.of(archive),
+                true,
+                ImportKind.WORKSPACE_IMPORT,
+                (job, owned) -> importWorkspace(job, owned.getFirst()));
+    }
+
+    @Override
+    public UUID startXmiScan(String workspaceName, List<MultipartFile> files) {
+        var jobId = start(workspaceName, files, true, ImportKind.EXPORT_SCAN, this::readExports);
         // Only the newest read of a session is chosen from, so the exports an earlier one kept are
         // of no more use.
         var sessionId = SessionContext.getSessionId();
@@ -98,12 +113,12 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public Optional<UUID> startPackageImport(
-            String datasetName,
+            String workspaceName,
             UUID readJobId,
             List<SelectedPackageDTO> selection,
             List<String> diagramIds) {
         dropExpiredJobs();
-        var readJob = findJob(datasetName, readJobId).orElse(null);
+        var readJob = findJob(workspaceName, readJobId).orElse(null);
         if (readJob == null) {
             return Optional.empty();
         }
@@ -117,7 +132,7 @@ public class ImportJobService implements ImportJobUseCase {
                 selected -> {
                     assertUsableNamespace(selected.modelNamespace());
                     assertUsableNamespace(selected.extensionNamespace());
-                    assertUsableGraphUri(selected.graphUri());
+                    assertUsableSchemaName(selected.schemaName());
                 });
         if (!readJob.isFinished()) {
             throw new ResourceConflictException("The read has not finished yet.");
@@ -131,7 +146,7 @@ public class ImportJobService implements ImportJobUseCase {
         try {
             var importJobId =
                     start(
-                            datasetName,
+                            workspaceName,
                             exports,
                             false,
                             ImportKind.PACKAGE_IMPORT,
@@ -155,7 +170,7 @@ public class ImportJobService implements ImportJobUseCase {
      * @param work what the job does once it is running
      */
     private UUID start(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             boolean takeOverUpload,
             ImportKind kind,
@@ -167,7 +182,7 @@ public class ImportJobService implements ImportJobUseCase {
                 job -> job.getSessionId().equals(sessionId) && job.isAwaitingPrefixResolution(),
                 "superseded by a new import of the same session");
 
-        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName, kind, Instant.now());
+        var job = new ImportJob(UUID.randomUUID(), sessionId, workspaceName, kind, Instant.now());
         // Claiming the session and registering the job has to be one step, otherwise two parallel
         // starts both pass the guard and import into the same store with their own reservations.
         synchronized (jobs) {
@@ -199,9 +214,9 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     @Override
-    public Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId) {
+    public Optional<ImportJobStatus> getStatus(String workspaceName, UUID jobId) {
         dropExpiredJobs();
-        return findJob(datasetName, jobId)
+        return findJob(workspaceName, jobId)
                 .map(
                         job -> {
                             job.markPolled(Instant.now());
@@ -211,8 +226,8 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions) {
-        var job = findJob(datasetName, jobId).orElse(null);
+            String workspaceName, UUID jobId, List<PrefixResolutionDTO> resolutions) {
+        var job = findJob(workspaceName, jobId).orElse(null);
         if (job == null) {
             return false;
         }
@@ -229,8 +244,8 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     @Override
-    public boolean cancel(String datasetName, UUID jobId) {
-        var job = findJob(datasetName, jobId);
+    public boolean cancel(String workspaceName, UUID jobId) {
+        var job = findJob(workspaceName, jobId);
         job.ifPresent(
                 cancelledJob -> {
                     cancelledJob.requestCancel();
@@ -244,7 +259,7 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     /**
-     * Runs the import on its own thread. Every throwable ends the job: one left unfinished is never
+     * Runs a job on its own thread. Every throwable ends the job: one left unfinished is never
      * reaped and holds the session's only import slot for as long as the session lives.
      */
     private void runJob(
@@ -270,6 +285,10 @@ public class ImportJobService implements ImportJobUseCase {
             }
             job.complete(outcome);
             logger.info("Import job {} finished: {}.", job.getId(), describe(outcome));
+        } catch (InvalidWorkspaceArchiveException e) {
+            logger.info(
+                    "Import job {} rejected the workspace file: {}", job.getId(), e.getProblems());
+            job.reject(e.getProblems());
         } catch (Throwable throwable) {
             logger.error("Import job {} failed.", job.getId(), throwable);
             job.fail(throwable.getMessage());
@@ -294,10 +313,11 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     private GraphsImported importGraphs(
-            ImportJob job, List<MultipartFile> files, List<String> graphUris) {
-        var result = importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
+            ImportJob job, List<MultipartFile> files, List<String> schemaNames) {
+        var result =
+                importGraphsUseCase.importGraphs(job.getWorkspaceName(), files, schemaNames, job);
         return new GraphsImported(
-                result.importedGraphUris(), result.failedFileNames(), result.warnings());
+                result.importedSchemaNames(), result.failedFileNames(), result.warnings());
     }
 
     /** Builds the chosen packages out of the exports the read that found them kept. */
@@ -308,9 +328,20 @@ public class ImportJobService implements ImportJobUseCase {
             List<String> diagramIds) {
         var result =
                 importXmiUseCase.importPackages(
-                        job.getDatasetName(), files, selection, diagramIds, job);
+                        job.getWorkspaceName(), files, selection, diagramIds, job);
         return new GraphsImported(
-                result.importedGraphUris(), result.failedFileNames(), result.warnings());
+                result.importedSchemaNames(), result.failedFileNames(), result.warnings());
+    }
+
+    private WorkspaceImported importWorkspace(ImportJob job, MultipartFile archive) {
+        try (var content = archive.getInputStream()) {
+            var result =
+                    importWorkspaceUseCase.importWorkspace(job.getWorkspaceName(), content, job);
+            return new WorkspaceImported(
+                    result.importedSchemaNames(), result.notices(), result.cancelled());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -323,7 +354,10 @@ public class ImportJobService implements ImportJobUseCase {
             case GraphsImported imported ->
                     "%d graph(s) imported, %d file(s) failed"
                             .formatted(
-                                    imported.graphUris().size(), imported.failedFileNames().size());
+                                    imported.schemaNames().size(),
+                                    imported.failedFileNames().size());
+            case WorkspaceImported imported ->
+                    imported.schemaNames().size() + " graph(s) imported from a workspace file";
         };
     }
 
@@ -336,11 +370,11 @@ public class ImportJobService implements ImportJobUseCase {
     /**
      * A job is only reachable through the session that started it and the dataset it imports into.
      */
-    private Optional<ImportJob> findJob(String datasetName, UUID jobId) {
+    private Optional<ImportJob> findJob(String workspaceName, UUID jobId) {
         var job = jobs.get(jobId);
         if (job == null
                 || !job.getSessionId().equals(SessionContext.getSessionId())
-                || !job.getDatasetName().equals(datasetName)) {
+                || !job.getWorkspaceName().equals(workspaceName)) {
             return Optional.empty();
         }
         return Optional.of(job);
@@ -422,14 +456,10 @@ public class ImportJobService implements ImportJobUseCase {
         }
     }
 
-    /** Refuses a requested graph uri the store would not take, by the rule the store applies. */
-    private static void assertUsableGraphUri(String graphUri) {
-        if (graphUri == null || graphUri.isBlank()) {
-            return;
-        }
-        var normalized = GraphUris.normalize(graphUri, null);
-        if (!RDFUtils.isURL(normalized)) {
-            throw InvalidGraphUriException.notUsable(graphUri.strip());
+    /** Refuses a requested schema name the store would not take, by the rule the store applies. */
+    private static void assertUsableSchemaName(String schemaName) {
+        if (schemaName != null && !schemaName.isBlank()) {
+            SchemaNames.validate(schemaName);
         }
     }
 

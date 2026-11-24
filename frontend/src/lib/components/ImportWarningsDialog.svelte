@@ -31,7 +31,7 @@
         /**
          * What the import could not carry over as stated.
          *
-         * @type {{fileName: string, graphUri: string,
+         * @type {{fileName: string, schemaName: string,
          *     items: {resource: string, reason: string}[]}[]}
          */
         warnings = [],

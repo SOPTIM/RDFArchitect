@@ -45,15 +45,15 @@ class XmiImportWarnings {
     /** Adds one warning per kind of loss, and none for a profile that lost nothing. */
     void reportOn(
             String profileName,
-            String graphUri,
+            String schemaName,
             WrittenProfile written,
             List<ImportWarning> warnings) {
-        add(warnings, profileName, graphUri, unresolvedTypes(profileName, written));
-        add(warnings, profileName, graphUri, duplicateClasses(profileName, written));
-        add(warnings, profileName, graphUri, droppedMembers(profileName, written));
-        add(warnings, profileName, graphUri, unnameableMembers(profileName, written));
-        add(warnings, profileName, graphUri, unmappedOntologyFields(written));
-        add(warnings, profileName, graphUri, omittedElements(profileName, written));
+        add(warnings, profileName, schemaName, unresolvedTypes(profileName, written));
+        add(warnings, profileName, schemaName, duplicateClasses(profileName, written));
+        add(warnings, profileName, schemaName, droppedMembers(profileName, written));
+        add(warnings, profileName, schemaName, unnameableMembers(profileName, written));
+        add(warnings, profileName, schemaName, unmappedOntologyFields(written));
+        add(warnings, profileName, schemaName, omittedElements(profileName, written));
     }
 
     /**
@@ -76,10 +76,10 @@ class XmiImportWarnings {
     private void add(
             List<ImportWarning> warnings,
             String profileName,
-            String graphUri,
+            String schemaName,
             List<UncarriedItem> described) {
         if (!described.isEmpty()) {
-            warnings.add(new ImportWarning(profileName, graphUri, described));
+            warnings.add(new ImportWarning(profileName, schemaName, described));
         }
     }
 

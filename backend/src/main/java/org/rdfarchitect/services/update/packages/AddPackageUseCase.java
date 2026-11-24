@@ -28,7 +28,7 @@ public interface AddPackageUseCase {
      * Constructs a new package and adds it to the specified graph. Optional attribute
      * CIMSBelongsToCategory is set to null, the other attributes are supplied by this use case.
      *
-     * @param graphIdentifier The graph URI and database name of the graph to add the class to.
+     * @param graphIdentifier The schema name and database name of the graph to add the class to.
      * @param packageDTO The DTO containing the package data.
      */
     UUID addPackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO);

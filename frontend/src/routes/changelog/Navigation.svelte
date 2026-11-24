@@ -27,13 +27,14 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphLabeller } from "$lib/utils/graph-label.js";
+    import {
+        graphLabeller,
+        schemaName as schemaNameOf,
+    } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
-    import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
-
-    const { graphUri = null, onSelectGraph } = $props();
+    const { schemaName = null, onSelectGraph } = $props();
 
     let workspaceList = $state([]);
 
@@ -76,8 +77,8 @@
             .map(graph => ({ graph, name: nameOf(graph) }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, uri: getUri(a.graph) },
-                    { label: b.name, uri: getUri(b.graph) },
+                    { label: a.name, name: schemaNameOf(a.graph) },
+                    { label: b.name, name: schemaNameOf(b.graph) },
                 ),
             );
     }
@@ -96,7 +97,7 @@
                             hasChildren={workspace.graphs.length > 0}
                             expanded={workspace.showContents}
                             isSelected={workspace.label ===
-                                selectedWorkspaceName && !graphUri}
+                                selectedWorkspaceName && !schemaName}
                             title="{workspace.label} — every change in the workspace"
                             onclick={() => {
                                 workspaceState.activate(workspace.label);
@@ -109,21 +110,20 @@
                             }}
                         />
                         {#if workspace.showContents}
-                            {#each workspace.graphs as { graph, name } (getUri(graph))}
+                            {#each workspace.graphs as { graph, name } (schemaNameOf(graph))}
                                 <NavigationEntry
                                     level={2}
                                     label={name}
-                                    secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
                                     isSelected={selectedWorkspaceName ===
                                         workspace.label &&
-                                        getUri(graph) === graphUri}
-                                    title={getUri(graph)}
+                                        schemaNameOf(graph) === schemaName}
+                                    title={schemaNameOf(graph)}
                                     onclick={() => {
                                         workspaceState.activate(
                                             workspace.label,
                                         );
-                                        onSelectGraph(getUri(graph));
+                                        onSelectGraph(schemaNameOf(graph));
                                     }}
                                 />
                             {/each}

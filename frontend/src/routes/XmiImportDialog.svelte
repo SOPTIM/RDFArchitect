@@ -27,8 +27,8 @@
     import { graphStore } from "$lib/stores/graphStore";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { importChoiceOf } from "$lib/utils/importChoice.js";
+    import { openImportedWorkspace } from "$lib/utils/importJob.svelte.js";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
-    import { applyImportResult } from "$lib/utils/importResult.js";
     import { ImportStatusPoller } from "$lib/utils/importStatusPoller.js";
     import {
         namespaceViolations,
@@ -320,11 +320,11 @@
 
     function closeAfterRead() {
         // Read before closing, which lets go of the progress the two are taken from.
-        const imported = progress?.importedGraphUris ?? [];
+        const imported = progress?.importedSchemaNames ?? [];
         const workspaceName = scanWorkspaceName;
         close();
         if (imported.length > 0) {
-            applyImportResult(imported, workspaceName);
+            openImportedWorkspace(workspaceName, imported);
         }
     }
 </script>

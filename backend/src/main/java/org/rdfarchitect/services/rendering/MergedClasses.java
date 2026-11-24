@@ -44,7 +44,7 @@ public final class MergedClasses {
     public static Set<String> renderedClassUris(
             List<CIMProfileModel> profiles, List<ClassInDiagram> classesInDiagram) {
         return new LinkedHashSet<>(
-                classUriByUuid(classesInDiagram, modelsByGraphUri(profiles)).values());
+                classUriByUuid(classesInDiagram, modelsBySchemaName(profiles)).values());
     }
 
     /**
@@ -52,13 +52,14 @@ public final class MergedClasses {
      * their graph. Only the classes of the diagram are read, not those of the whole graph.
      */
     public static Map<UUID, String> classUriByUuid(
-            List<ClassInDiagram> classesInDiagram, Map<String, ICIMModelReader> modelsByGraphUri) {
+            List<ClassInDiagram> classesInDiagram,
+            Map<String, ICIMModelReader> modelsBySchemaName) {
         var classUriByUuid = new LinkedHashMap<UUID, String>();
         for (var classInDiagram : classesInDiagram) {
-            if (classInDiagram.getGraphUri() == null || classInDiagram.getUuid() == null) {
+            if (classInDiagram.getSchemaName() == null || classInDiagram.getUuid() == null) {
                 continue;
             }
-            var model = modelsByGraphUri.get(classInDiagram.getGraphUri().toString());
+            var model = modelsBySchemaName.get(classInDiagram.getSchemaName());
             if (model == null) {
                 continue;
             }
@@ -70,11 +71,11 @@ public final class MergedClasses {
         return classUriByUuid;
     }
 
-    private static Map<String, ICIMModelReader> modelsByGraphUri(List<CIMProfileModel> profiles) {
-        var modelsByGraphUri = new HashMap<String, ICIMModelReader>();
+    private static Map<String, ICIMModelReader> modelsBySchemaName(List<CIMProfileModel> profiles) {
+        var modelsBySchemaName = new HashMap<String, ICIMModelReader>();
         for (var profile : profiles) {
-            modelsByGraphUri.putIfAbsent(profile.graphUri(), profile.model());
+            modelsBySchemaName.putIfAbsent(profile.schemaName(), profile.model());
         }
-        return modelsByGraphUri;
+        return modelsBySchemaName;
     }
 }

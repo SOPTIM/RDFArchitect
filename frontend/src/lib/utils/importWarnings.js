@@ -36,7 +36,7 @@
  * found in each</em>, and an import warning is about one file and carries no value: given one
  * anyway, the table would offer to open a row that has nothing to show.
  *
- * @param {{fileName: string, graphUri: string, items: {resource: string, reason: string}[]}[]}
+ * @param {{fileName: string, schemaName: string, items: {resource: string, reason: string}[]}[]}
  *     warnings as the import reported them
  * @returns {{issues: object[]}} a result the validation report can be given
  */
@@ -46,7 +46,7 @@ export function asValidationResult(warnings) {
             id: `${warningIndex}:${itemIndex}`,
             severity: "WARNING",
             ruleLabel: warning.fileName,
-            ruleId: warning.graphUri,
+            ruleId: warning.schemaName,
             resourceUri: item.resource,
             message: item.reason,
         })),

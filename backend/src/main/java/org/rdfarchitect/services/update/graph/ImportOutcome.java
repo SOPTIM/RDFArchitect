@@ -39,19 +39,20 @@ import java.util.List;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = ImportOutcome.GraphsImported.class, name = "GraphsImported"),
-    @JsonSubTypes.Type(value = ImportOutcome.PackagesScanned.class, name = "PackagesScanned")
+    @JsonSubTypes.Type(value = ImportOutcome.PackagesScanned.class, name = "PackagesScanned"),
+    @JsonSubTypes.Type(value = ImportOutcome.WorkspaceImported.class, name = "WorkspaceImported")
 })
 public sealed interface ImportOutcome {
 
     /**
      * What importing RDF files wrote.
      *
-     * @param graphUris the uris of the graphs that were imported
+     * @param schemaNames the names of the schemas that were imported
      * @param failedFileNames the original filenames of the files that could not be imported
      * @param warnings non-fatal warnings about content that was imported but cannot be displayed
      */
     record GraphsImported(
-            List<String> graphUris, List<String> failedFileNames, List<ImportWarning> warnings)
+            List<String> schemaNames, List<String> failedFileNames, List<ImportWarning> warnings)
             implements ImportOutcome {
 
         /** What a graph import that never ran produced. */
@@ -86,6 +87,23 @@ public sealed interface ImportOutcome {
         /** What a read that never ran produced. */
         static PackagesScanned nothing() {
             return new PackagesScanned(List.of(), List.of(), List.of(), List.of(), List.of());
+        }
+    }
+
+    /**
+     * What importing a workspace file wrote. The import keeps everything or nothing.
+     *
+     * @param schemaNames the names of the schemas that were imported, empty if nothing was kept
+     * @param notices what to know about the imported workspace file
+     * @param cancelled whether the import was stopped before anything was kept. A cancellation that
+     *     comes after the workspace was stored leaves it stored, and this {@code false}
+     */
+    record WorkspaceImported(List<String> schemaNames, List<String> notices, boolean cancelled)
+            implements ImportOutcome {
+
+        /** What a workspace import that never ran produced. */
+        static WorkspaceImported nothing() {
+            return new WorkspaceImported(List.of(), List.of(), false);
         }
     }
 }

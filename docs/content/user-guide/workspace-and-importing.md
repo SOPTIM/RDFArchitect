@@ -42,7 +42,7 @@ There are four ways content lands in the editor.
 
 ### Import a schema (File → Import → Schema (RDFS))
 
-This is the standard entry point for CGMES profiles and ENTSO-E Network Code Profiles. Pick a workspace (existing or a new name), drop in an `.rdf`, `.ttl`, or `.nt` file, and the contents become a graph inside that workspace. The graph name defaults to a sanitised version of the filename but can be overridden. If the target workspace has been set to read-only, the import is blocked until editing is re-enabled.
+This is the standard entry point for CGMES profiles and ENTSO-E Network Code Profiles. Pick a workspace (existing or a new name), drop in an `.rdf`, `.ttl`, or `.nt` file, and the contents become a graph inside that workspace. The schema is named after the file, without its extension and otherwise unchanged (`my-profile.ttl` becomes `my-profile`), and the name can be overridden. A schema name may hold any character a file name may hold on Windows and Linux, except `;`, and may be up to 200 characters long — the dialog says so when it does not. Leading and trailing spaces are dropped. If the workspace already has a schema of that name, the import appends a number (`my-profile-2`). If the target workspace has been set to read-only, the import is blocked until editing is re-enabled.
 
 Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Triples (.nt)**. CGMES releases are typically shipped as RDF/XML and can be imported directly. You can select several files at once, or a `.zip` archive, in which case every schema at the root of the archive is imported as its own graph.
 
@@ -65,7 +65,8 @@ Every package can become a schema, and a schema is the package you pick plus eve
 need, which is what the two numbers per row mean: `26 classes + 7 dependencies`. A package marked
 `profile` declares a namespace of its own and is taken whole, the way a release ships it. The
 export's class diagrams sit in the tree under their package; one drawing a class you did not pick
-is greyed out.
+is greyed out. Each schema is named after its package, following the same rules as a schema
+imported from a file.
 
 Two namespaces decide what the resources are called, **Model** and **Extension**, and both can be
 changed in the last step: an export carries the namespaces of the generation it was made in, which
@@ -80,6 +81,12 @@ dangling reference, so importing the package that declares the type completes it
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
+
+### Import a workspace file (File → Import → Workspace (.rdfa))
+
+**File → Export → Workspace (.rdfa)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours and read-only state. The undo history is not included. Importing the file creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole file is valid; otherwise the dialog lists every problem, with the entry inside the file it concerns.
+
+The workspace file is a zip; rename it to `.zip` to look inside. Its top level holds the workspace, each schema sits in `schemas/<schema name>/schema.ttl` and can be used on its own, and `manifest.json` lists the schemas. The manifest's `formatVersion` (`MAJOR.MINOR`) says which RDFArchitect versions read it: any file of the same major version imports, and one with a newer minor version imports with a notice that the parts this version does not know were left out.
 
 ### Create an empty schema (Edit → New → Schema)
 

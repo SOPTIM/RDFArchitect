@@ -302,7 +302,7 @@ export function selectionOf(packages, selectedIds, namespaces = {}) {
         packageId: row.node.id,
         name: row.node.name,
         scope: row.scope,
-        graphUri: null,
+        schemaName: null,
         modelNamespace: supplied("model"),
         extensionNamespace: supplied("extension"),
     }));

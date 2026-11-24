@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.graph.RenameGraphUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,13 +37,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/rename")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/rename")
 @RequiredArgsConstructor
 public class GraphRenameRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphRenameRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final RenameGraphUseCase renameGraphUseCase;
 
     @Operation(
@@ -54,7 +52,9 @@ public class GraphRenameRESTController {
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
-                @ApiResponse(responseCode = "409", description = "Graph URI already exists")
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "A schema of that name already exists")
             })
     @PostMapping
     public String renameGraph(
@@ -65,27 +65,23 @@ public class GraphRenameRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(description = "The url encoded uri of the graph.") @PathVariable
-                    String graphURI,
-            @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
-                    String newGraphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
+            @Parameter(description = "The name to rename the schema to.") @RequestParam
+                    String newSchemaName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedNewGraphURI = expandURIUseCase.expandUri(datasetName, newGraphURI);
-
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI), extendedNewGraphURI);
+                new GraphIdentifier(workspaceName, schemaName), newSchemaName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

@@ -279,7 +279,7 @@ describe("selectionOf", () => {
     it("leaves the schema to be named after its package", () => {
         const [entry] = selectionOf(PACKAGES, new Set(["topology"]));
 
-        expect(entry.graphUri).toBeNull();
+        expect(entry.schemaName).toBeNull();
         expect(entry.name).toBe("TopologyProfile");
     });
 

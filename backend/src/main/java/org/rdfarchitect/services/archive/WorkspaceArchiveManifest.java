@@ -15,19 +15,17 @@
  *
  */
 
-package org.rdfarchitect.exception.graph;
+package org.rdfarchitect.services.archive;
 
-import org.springframework.http.HttpStatus;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 
-/** Exception is thrown when a graph URI requested for an import cannot be stored. */
-public class InvalidGraphUriException extends GraphException {
+import java.util.List;
 
-    private InvalidGraphUriException(String message) {
-        super(HttpStatus.BAD_REQUEST, message);
-    }
-
-    /** The graph cannot be stored under this URI. */
-    public static InvalidGraphUriException notUsable(String graphUri) {
-        return new InvalidGraphUriException("'" + graphUri + "' is not a usable graph URI.");
-    }
-}
+public record WorkspaceArchiveManifest(
+        String formatVersion,
+        @JsonSetter(nulls = Nulls.SET) String appVersion,
+        @JsonSetter(nulls = Nulls.SET) String exportedAt,
+        @JsonSetter(nulls = Nulls.SET) String name,
+        boolean readOnly,
+        List<String> schemas) {}

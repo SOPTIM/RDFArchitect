@@ -25,6 +25,7 @@ import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportJobStatus;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
+import org.rdfarchitect.services.update.graph.ImportOutcome.WorkspaceImported;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -47,13 +48,14 @@ class ImportJob implements GraphImportListener {
 
     @Getter private final UUID id;
     @Getter private final String sessionId;
-    @Getter private final String datasetName;
+    @Getter private final String workspaceName;
     private final ImportKind kind;
 
     private JobState state = JobState.RUNNING;
     private final List<FileProgress> files = new ArrayList<>();
     private ImportOutcome outcome;
     private String errorMessage;
+    private List<String> problems = List.of();
     private boolean cancelRequested;
     private boolean startedAFile;
     private Instant finishedAt;
@@ -62,10 +64,10 @@ class ImportJob implements GraphImportListener {
     private Instant lastPolledAt;
     private List<MultipartFile> retainedFiles = List.of();
 
-    ImportJob(UUID id, String sessionId, String datasetName, ImportKind kind, Instant startedAt) {
+    ImportJob(UUID id, String sessionId, String workspaceName, ImportKind kind, Instant startedAt) {
         this.id = id;
         this.sessionId = sessionId;
-        this.datasetName = datasetName;
+        this.workspaceName = workspaceName;
         this.kind = kind;
         this.lastPolledAt = startedAt;
     }
@@ -122,7 +124,7 @@ class ImportJob implements GraphImportListener {
     }
 
     @Override
-    public synchronized void finished(int index, Outcome outcome, String graphUri) {
+    public synchronized void finished(int index, Outcome outcome, String schemaName) {
         var file = fileAt(index);
         file.state =
                 switch (outcome) {
@@ -131,7 +133,7 @@ class ImportJob implements GraphImportListener {
                     case FAILED -> FileState.FAILED;
                     case SKIPPED -> FileState.SKIPPED;
                 };
-        file.graphUri = graphUri;
+        file.schemaName = schemaName;
         file.reason = null;
     }
 
@@ -237,10 +239,23 @@ class ImportJob implements GraphImportListener {
         return prefixComparison;
     }
 
+    /**
+     * Ends the job with what it produced. A workspace import keeps everything or nothing, so a
+     * cancellation that came too late to stop it leaves a completed import.
+     */
     synchronized void complete(ImportOutcome producedOutcome) {
         outcome = producedOutcome;
-        state = cancelRequested ? JobState.CANCELLED : JobState.COMPLETED;
+        var stopped =
+                producedOutcome instanceof WorkspaceImported imported
+                        ? imported.cancelled()
+                        : cancelRequested;
+        state = stopped ? JobState.CANCELLED : JobState.COMPLETED;
         finishedAt = Instant.now();
+    }
+
+    synchronized void reject(List<String> problems) {
+        this.problems = List.copyOf(problems);
+        fail("The workspace file cannot be imported.");
     }
 
     synchronized void fail(String message) {
@@ -252,16 +267,16 @@ class ImportJob implements GraphImportListener {
                 file.state = FileState.FAILED;
             } else if (file.state == FileState.PENDING) {
                 file.state = FileState.SKIPPED;
-            } else if (kind == ImportKind.PACKAGE_IMPORT && file.state == FileState.IMPORTED) {
-                // Built, not stored: a package import stores everything in one transaction at the
-                // end, so a job that fails has stored nothing.
+            } else if (storesAtTheEnd() && file.state == FileState.IMPORTED) {
+                // Built, not stored: a package or workspace import stores everything in one
+                // transaction at the end, so a job that fails has stored nothing.
                 file.state = FileState.FAILED;
-                file.graphUri = null;
+                file.schemaName = null;
             }
         }
         // The outcome died with the exception, but every file that made it through reported how it
         // ended, so what a graph import did manage to do is still recoverable from the progress. A
-        // package import or a scan recovers nothing, having stored nothing.
+        // package import, a workspace import or a scan recovers nothing, having stored nothing.
         outcome =
                 switch (kind) {
                     case GRAPH_IMPORT ->
@@ -269,8 +284,8 @@ class ImportJob implements GraphImportListener {
                                     fileNamesWhere(
                                             file ->
                                                     file.state == FileState.IMPORTED
-                                                            && file.graphUri != null,
-                                            file -> file.graphUri),
+                                                            && file.schemaName != null,
+                                            file -> file.schemaName),
                                     fileNamesWhere(
                                             file -> file.state == FileState.FAILED,
                                             file -> file.plannedImport.fileName()),
@@ -280,13 +295,14 @@ class ImportJob implements GraphImportListener {
                                     fileNamesWhere(
                                             file ->
                                                     file.state == FileState.IMPORTED
-                                                            && file.graphUri != null,
-                                            file -> file.graphUri),
+                                                            && file.schemaName != null,
+                                            file -> file.schemaName),
                                     fileNamesWhere(
                                             file -> file.state == FileState.FAILED,
                                             file -> file.plannedImport.fileName()),
                                     List.of());
                     case EXPORT_SCAN -> PackagesScanned.nothing();
+                    case WORKSPACE_IMPORT -> WorkspaceImported.nothing();
                 };
         errorMessage = message;
         state = JobState.FAILED;
@@ -296,12 +312,17 @@ class ImportJob implements GraphImportListener {
     synchronized ImportJobStatus status() {
         return new ImportJobStatus(
                 id,
-                datasetName,
+                workspaceName,
                 state,
                 files.stream().map(FileProgress::toStatus).toList(),
                 prefixComparison,
                 outcome,
-                errorMessage);
+                errorMessage,
+                problems);
+    }
+
+    private boolean storesAtTheEnd() {
+        return kind == ImportKind.PACKAGE_IMPORT || kind == ImportKind.WORKSPACE_IMPORT;
     }
 
     private List<String> fileNamesWhere(
@@ -321,7 +342,7 @@ class ImportJob implements GraphImportListener {
 
         private final PlannedImport plannedImport;
         private FileState state = FileState.PENDING;
-        private String graphUri;
+        private String schemaName;
         private String reason;
         private long done;
         private long total;
@@ -336,7 +357,7 @@ class ImportJob implements GraphImportListener {
                     plannedImport.fileName(),
                     plannedImport.sizeBytes(),
                     state,
-                    graphUri,
+                    schemaName,
                     done,
                     total,
                     reason);

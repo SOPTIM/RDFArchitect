@@ -27,7 +27,7 @@ const inA = {
     changeId: "in-a",
     message: "edited A",
     affectedKinds: ["rdf"],
-    restorableGraphUris: [GRAPH_A],
+    restorableSchemaNames: [GRAPH_A],
 };
 
 /** A change in schema B, which a restore held to A leaves alone. */
@@ -35,7 +35,7 @@ const inB = {
     changeId: "in-b",
     message: "edited B",
     affectedKinds: ["rdf"],
-    restorableGraphUris: [GRAPH_B],
+    restorableSchemaNames: [GRAPH_B],
 };
 
 let mounted = null;
@@ -71,12 +71,12 @@ async function render(given) {
     return props;
 }
 
-function requestTo(restoreTargetGraphUris) {
+function requestTo(restoreTargetSchemaNames) {
     return {
         change: {
             changeId: "target",
             message: "the target",
-            restoreTargetGraphUris,
+            restoreTargetSchemaNames,
         },
         takenBack: [inB, inA],
         undoneAhead: 0,
@@ -94,7 +94,7 @@ describe("RestoreConfirmDialog", () => {
     test("held to the schema, lists only what it takes back there", async () => {
         const props = await render({
             request: requestTo([GRAPH_A]),
-            graphUri: GRAPH_A,
+            schemaName: GRAPH_A,
         });
 
         expect(listed()).toEqual(["edited A (Schema)"]);
@@ -106,7 +106,7 @@ describe("RestoreConfirmDialog", () => {
     test("cleared, restores the whole workspace and lists every change", async () => {
         const props = await render({
             request: requestTo([GRAPH_A]),
-            graphUri: GRAPH_A,
+            schemaName: GRAPH_A,
         });
 
         dialog().querySelector("input[type='checkbox']").click();
@@ -122,7 +122,7 @@ describe("RestoreConfirmDialog", () => {
         // state at that version to go back to.
         const props = await render({
             request: requestTo([GRAPH_B]),
-            graphUri: GRAPH_A,
+            schemaName: GRAPH_A,
         });
 
         expect(dialog().querySelector("input[type='checkbox']")).toBeNull();
@@ -137,7 +137,7 @@ describe("RestoreConfirmDialog", () => {
     test("warns that a schema restore drops what could be redone", async () => {
         await render({
             request: { ...requestTo([GRAPH_A]), undoneAhead: 2 },
-            graphUri: GRAPH_A,
+            schemaName: GRAPH_A,
         });
 
         expect(text()).toContain(

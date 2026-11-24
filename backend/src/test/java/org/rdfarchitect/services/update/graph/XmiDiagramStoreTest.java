@@ -154,9 +154,9 @@ class XmiDiagramStoreTest {
         return new ImportedDiagram(UUID.randomUUID(), "EAID_D", "D", List.of(classes));
     }
 
-    private static PlacedClass placed(String name, String graphUri) {
+    private static PlacedClass placed(String name, String schemaName) {
         return new PlacedClass(
-                new ClassLocation(UUID.randomUUID(), "http://example.com#" + name, graphUri),
+                new ClassLocation(UUID.randomUUID(), "http://example.com#" + name, schemaName),
                 name,
                 1,
                 2);
@@ -171,9 +171,9 @@ class XmiDiagramStoreTest {
         }
     }
 
-    private List<CustomDiagram> diagramsOfGraph(String graphUri) {
+    private List<CustomDiagram> diagramsOfGraph(String schemaName) {
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
-            return List.copyOf(transaction.graph(graphUri).getCustomDiagrams().values());
+            return List.copyOf(transaction.graph(schemaName).getCustomDiagrams().values());
         }
     }
 

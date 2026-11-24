@@ -21,6 +21,7 @@ import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -67,14 +68,16 @@ public class CIMBaseQueryBuilder {
     }
 
     /**
-     * Sets the graph the query should be executed on.
+     * Sets the graph the query should be executed on, i.e. the named graph {@link
+     * org.rdfarchitect.database.inmemory.SessionDataStore#wrapGraphInDataset} puts a graph of that
+     * name into.
      *
-     * @param graphURI the GraphUri or "default"/null
+     * @param schemaName the graph name, or null for the default graph
      * @return {@link CIMBaseQueryBuilder this}
      */
-    public CIMBaseQueryBuilder setGraph(String graphURI) {
-        if (graphURI != null && !graphURI.equals("default")) {
-            baseQuery.from(graphURI);
+    public CIMBaseQueryBuilder setGraph(String schemaName) {
+        if (schemaName != null) {
+            baseQuery.from(SchemaIri.of(schemaName));
         }
         return this;
     }

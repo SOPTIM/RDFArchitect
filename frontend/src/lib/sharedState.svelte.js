@@ -112,12 +112,15 @@ export const editorState = {
     mergedViewOriginGraph: new StateValuePair(),
     // The schema the class editor shows for one class. Carries the class it was
     // picked for, so that it is ignored once another class is opened.
-    classEditorSchema: new StateObjectPair({ classUuid: null, graphUri: null }),
+    classEditorSchema: new StateObjectPair({
+        classUuid: null,
+        schemaName: null,
+    }),
     // The class the class editor has open, with the uuid it carries in every
     // schema that defines it. Lets the navigation highlight all of them.
     openClassOccurrences: new StateObjectPair({
         workspaceName: null,
-        activeGraphUri: null,
+        activeSchemaName: null,
         occurrences: [],
     }),
 
@@ -139,13 +142,16 @@ export const editorState = {
     },
 
     clearClassEditorSchema() {
-        this.classEditorSchema.updateValue({ classUuid: null, graphUri: null });
+        this.classEditorSchema.updateValue({
+            classUuid: null,
+            schemaName: null,
+        });
     },
 
     clearOpenClassOccurrences() {
         this.openClassOccurrences.updateValue({
             workspaceName: null,
-            activeGraphUri: null,
+            activeSchemaName: null,
             occurrences: [],
         });
     },
@@ -198,18 +204,18 @@ export const editorState = {
     },
 
     /** Moves the selection onto a graph that was renamed. */
-    renameGraph(workspaceName, oldGraphUri, newGraphUri) {
+    renameGraph(workspaceName, oldSchemaName, newSchemaName) {
         if (
             this.selectedWorkspace.getValue() === workspaceName &&
-            this.selectedGraph.getValue() === oldGraphUri
+            this.selectedGraph.getValue() === oldSchemaName
         ) {
-            this.selectedGraph.updateValue(newGraphUri);
+            this.selectedGraph.updateValue(newSchemaName);
         }
         if (
             this.selectedClassWorkspace.getValue() === workspaceName &&
-            this.selectedClassGraph.getValue() === oldGraphUri
+            this.selectedClassGraph.getValue() === oldSchemaName
         ) {
-            this.selectedClassGraph.updateValue(newGraphUri);
+            this.selectedClassGraph.updateValue(newSchemaName);
         }
     },
 
@@ -224,25 +230,25 @@ export const editorState = {
         this.selectedWorkspace.updateValue(workspaceName);
     },
 
-    selectGraph(workspaceName, graphUri) {
+    selectGraph(workspaceName, schemaName) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
         const graphChanged =
             this.selectedWorkspace.getValue() !== workspaceName ||
-            this.selectedGraph.getValue() !== graphUri;
+            this.selectedGraph.getValue() !== schemaName;
         this.selectedWorkspace.updateValue(workspaceName);
-        this.selectedGraph.updateValue(graphUri);
+        this.selectedGraph.updateValue(schemaName);
         if (graphChanged) {
             this.selectedDiagram.updateValue({ type: null, id: null });
         }
     },
 
     /** Selects a class of a graph and opens it in the class editor. */
-    editClass(workspaceName, graphUri, classUuid) {
-        this.selectGraph(workspaceName, graphUri);
-        this.classEditorSchema.updateValue({ classUuid, graphUri });
+    editClass(workspaceName, schemaName, classUuid) {
+        this.selectGraph(workspaceName, schemaName);
+        this.classEditorSchema.updateValue({ classUuid, schemaName });
         this.selectedClassWorkspace.updateValue(workspaceName);
-        this.selectedClassGraph.updateValue(graphUri);
+        this.selectedClassGraph.updateValue(schemaName);
         this.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,
             id: classUuid,
@@ -250,22 +256,22 @@ export const editorState = {
         this.focusedClassUUID.updateValue(classUuid);
     },
 
-    selectPackage(workspaceName, graphUri, packageId) {
+    selectPackage(workspaceName, schemaName, packageId) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
         this.selectedWorkspace.updateValue(workspaceName);
-        this.selectedGraph.updateValue(graphUri);
+        this.selectedGraph.updateValue(schemaName);
         this.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: packageId,
         });
     },
 
-    selectCustomDiagram(workspaceName, graphUri, diagramId, diagramType) {
+    selectCustomDiagram(workspaceName, schemaName, diagramId, diagramType) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.DIAGRAM);
         this.selectedWorkspace.updateValue(workspaceName);
-        this.selectedGraph.updateValue(graphUri ?? null);
+        this.selectedGraph.updateValue(schemaName ?? null);
         this.selectedDiagram.updateValue({ type: diagramType, id: diagramId });
     },
 
@@ -297,9 +303,9 @@ export const compareState = {
 
 /**
  * Stores the classes that were copied and are available for paste.
- * Each entry is `{ classUUID, graphURI, workspaceName }`. Supports copying multiple
+ * Each entry is `{ classUUID, schemaName, workspaceName }`. Supports copying multiple
  * classes at once (multiselect).
- * @type {{ entries: StateValuePair<Array<{classUUID: string, graphURI: string, workspaceName: string}>> }}
+ * @type {{ entries: StateValuePair<Array<{classUUID: string, schemaName: string, workspaceName: string}>> }}
  */
 export const copyState = {
     entries: new StateValuePair([]),
@@ -316,12 +322,12 @@ export const copyState = {
         this.entries.updateValue([...entries]);
     },
 
-    remove(workspaceName, graphURI, classUUID) {
+    remove(workspaceName, schemaName, classUUID) {
         this.entries.updateValue(
             this.getEntries().filter(
                 e =>
                     e.classUUID !== classUUID ||
-                    e.graphURI !== graphURI ||
+                    e.schemaName !== schemaName ||
                     e.workspaceName !== workspaceName,
             ),
         );
@@ -366,8 +372,8 @@ export const multiSelectState = new MultiSelectState();
 export const migrationState = writable({
     compareMode: null,
     workspaceA: null,
-    graphA: null,
-    graphB: null,
+    schemaA: null,
+    schemaB: null,
     workspaceB: null,
     fileA: null,
     fileB: null,

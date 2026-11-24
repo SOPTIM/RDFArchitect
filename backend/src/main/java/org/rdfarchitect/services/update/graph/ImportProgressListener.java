@@ -71,7 +71,7 @@ public interface ImportProgressListener {
      */
     default void progressed(int index, long done, long total) {}
 
-    default void finished(int index, Outcome outcome, String graphUri) {}
+    default void finished(int index, Outcome outcome, String schemaName) {}
 
     /**
      * The step failed, for a reason that can be shown to whoever started the import.

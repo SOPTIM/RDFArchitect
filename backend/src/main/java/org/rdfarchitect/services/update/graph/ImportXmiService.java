@@ -249,7 +249,7 @@ public class ImportXmiService implements ImportXmiUseCase {
      */
     @Override
     public ImportResult importPackages(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             List<SelectedPackageDTO> selection,
             List<String> diagramIds,
@@ -259,16 +259,16 @@ public class ImportXmiService implements ImportXmiUseCase {
         listener.planned(work.stream().flatMap(export -> export.plannedSteps().stream()).toList());
 
         var result = new ImportResult();
-        var reservedGraphUris = loadExistingGraphUris(datasetName);
+        var reservedSchemaNames = loadExistingSchemaNames(workspaceName);
         var built = new BuiltImport(new ArrayList<>(), new ArrayList<>());
         for (var export : work) {
-            importFrom(export, reservedGraphUris, chosenDiagrams, listener, result, built);
+            importFrom(export, reservedSchemaNames, chosenDiagrams, listener, result, built);
         }
         if (listener.isCancelled()) {
             takeBack(result, built, listener);
             return result;
         }
-        store(datasetName, built, listener, result);
+        store(workspaceName, built, listener, result);
         return result;
     }
 
@@ -280,22 +280,22 @@ public class ImportXmiService implements ImportXmiUseCase {
      * it into being: one that was already there holds schemas this import has no say over.
      */
     private void store(
-            String datasetName,
+            String workspaceName,
             BuiltImport built,
             ImportProgressListener listener,
             ImportResult result) {
         if (built.schemas().isEmpty()) {
             return;
         }
-        var workspaceExisted = workspaceExists(datasetName);
+        var workspaceExisted = workspaceExists(workspaceName);
         // Created at the first write rather than up front, the way importing rdf files does it: an
         // import that writes nothing leaves no workspace behind.
-        databasePort.createWorkspaceIfAbsent(datasetName);
+        databasePort.createWorkspaceIfAbsent(workspaceName);
         var committed = false;
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             for (var schema : built.schemas()) {
-                transaction.deleteGraph(schema.graphUri());
-                transaction.createGraph(schema.graphUri(), schema.graph());
+                transaction.deleteGraph(schema.schemaName());
+                transaction.createGraph(schema.schemaName(), schema.graph());
             }
             for (var diagrams : built.diagrams()) {
                 storeDiagrams(transaction, diagrams, listener);
@@ -317,7 +317,7 @@ public class ImportXmiService implements ImportXmiUseCase {
         if (!committed) {
             takeBack(result, built, listener);
             if (!workspaceExisted) {
-                deleteWorkspace(datasetName);
+                deleteWorkspace(workspaceName);
             }
         }
     }
@@ -328,8 +328,8 @@ public class ImportXmiService implements ImportXmiUseCase {
      */
     private void takeBack(ImportResult result, BuiltImport built, ImportProgressListener listener) {
         logger.info(
-                "Import not stored: took back {} schema(s).", result.importedGraphUris().size());
-        result.importedGraphUris().clear();
+                "Import not stored: took back {} schema(s).", result.importedSchemaNames().size());
+        result.importedSchemaNames().clear();
         result.warnings().clear();
         if (listener.isCancelled()) {
             built.schemas()
@@ -340,13 +340,13 @@ public class ImportXmiService implements ImportXmiUseCase {
         }
     }
 
-    private void deleteWorkspace(String datasetName) {
+    private void deleteWorkspace(String workspaceName) {
         try {
-            databasePort.deleteDataset(datasetName);
+            databasePort.deleteDataset(workspaceName);
         } catch (RuntimeException exception) {
             logger.warn(
                     "Unable to take back the workspace \"{}\": {}",
-                    datasetName,
+                    workspaceName,
                     exception.getMessage());
         }
     }
@@ -356,13 +356,13 @@ public class ImportXmiService implements ImportXmiUseCase {
                 ? ChangeDescriptions.actionOn(
                         "Imported",
                         "schema",
-                        ChangeDescriptions.localName(schemas.getFirst().graphUri()))
+                        ChangeDescriptions.localName(schemas.getFirst().schemaName()))
                 : "Imported %d schemas".formatted(schemas.size());
     }
 
-    private boolean workspaceExists(String datasetName) {
+    private boolean workspaceExists(String workspaceName) {
         try {
-            return databasePort.listDatasets().contains(datasetName);
+            return databasePort.listDatasets().contains(workspaceName);
         } catch (RuntimeException _) {
             return false;
         }
@@ -375,7 +375,7 @@ public class ImportXmiService implements ImportXmiUseCase {
      */
     private void importFrom(
             ExportWork export,
-            Set<String> reservedGraphUris,
+            Set<String> reservedSchemaNames,
             Set<String> chosenDiagrams,
             ImportProgressListener listener,
             ImportResult result,
@@ -412,7 +412,7 @@ public class ImportXmiService implements ImportXmiUseCase {
         var locations = new HashMap<String, ClassLocation>();
         for (var plannedProfile : export.packages()) {
             writePackage(
-                    index, plannedProfile, reservedGraphUris, listener, result, locations, built);
+                    index, plannedProfile, reservedSchemaNames, listener, result, locations, built);
         }
         collectDiagrams(export, index, locations, chosenDiagrams, listener, built);
     }
@@ -420,7 +420,7 @@ public class ImportXmiService implements ImportXmiUseCase {
     private void writePackage(
             XmiIndex index,
             PlannedProfile plannedProfile,
-            Set<String> reservedGraphUris,
+            Set<String> reservedSchemaNames,
             ImportProgressListener listener,
             ImportResult result,
             Map<String, ClassLocation> locations,
@@ -432,14 +432,14 @@ public class ImportXmiService implements ImportXmiUseCase {
         listener.started(plannedProfile.index());
         try {
             var profile = index.schemaOf(plannedProfile.selected().packageId());
-            var graphUri =
-                    GraphUris.ensureUnique(
-                            GraphUris.normalize(
-                                    plannedProfile.selected().graphUri(), profile.name()),
-                            reservedGraphUris);
+            var schemaName =
+                    ImportedSchemaNames.ensureUnique(
+                            ImportedSchemaNames.normalize(
+                                    plannedProfile.selected().schemaName(), profile.name()),
+                            reservedSchemaNames);
 
             var model = ModelFactory.createDefaultModel();
-            var writer = new CIMModelWriter(graphUri, model);
+            var writer = new CIMModelWriter(schemaName, model);
             var written =
                     XmiProfileMapper.write(
                             index,
@@ -457,7 +457,7 @@ public class ImportXmiService implements ImportXmiUseCase {
                                             new ClassLocation(
                                                     writtenClass.uuid(),
                                                     writtenClass.uri(),
-                                                    graphUri)));
+                                                    schemaName)));
             // A declaration left out as a duplicate is still in the schema, under the class that
             // was written for it. Without this a diagram drawing it would count as drawing a class
             // that was not imported, and be dropped whole. Put rather than kept: a class written
@@ -471,23 +471,23 @@ public class ImportXmiService implements ImportXmiUseCase {
                                             new ClassLocation(
                                                     writtenClass.uuid(),
                                                     writtenClass.uri(),
-                                                    graphUri)));
+                                                    schemaName)));
             XmiImportWarnings.reportOn(
-                    plannedProfile.profileName(), graphUri, written, result.warnings());
+                    plannedProfile.profileName(), schemaName, written, result.warnings());
 
             built.schemas()
                     .add(
                             new BuiltSchema(
                                     plannedProfile.index(),
                                     plannedProfile.profileName(),
-                                    graphUri,
+                                    schemaName,
                                     writer.graph()));
-            result.importedGraphUris().add(graphUri);
-            listener.finished(plannedProfile.index(), Outcome.IMPORTED, graphUri);
+            result.importedSchemaNames().add(schemaName);
+            listener.finished(plannedProfile.index(), Outcome.IMPORTED, schemaName);
             logger.info(
                     "Imported profile '{}' as \"{}\" with {} class(es).",
                     profile.name(),
-                    graphUri,
+                    schemaName,
                     written.classes().size());
         } catch (RuntimeException exception) {
             logger.warn(
@@ -570,9 +570,9 @@ public class ImportXmiService implements ImportXmiUseCase {
         }
     }
 
-    private Set<String> loadExistingGraphUris(String datasetName) {
+    private Set<String> loadExistingSchemaNames(String workspaceName) {
         try {
-            return new HashSet<>(databasePort.listGraphUris(datasetName));
+            return new HashSet<>(databasePort.listSchemaNames(workspaceName));
         } catch (RuntimeException _) {
             return new HashSet<>();
         }
@@ -629,7 +629,7 @@ public class ImportXmiService implements ImportXmiUseCase {
     private record BuiltImport(List<BuiltSchema> schemas, List<BuiltDiagrams> diagrams) {}
 
     /** A schema that has been built but not yet written into the workspace. */
-    private record BuiltSchema(int index, String profileName, String graphUri, Graph graph) {}
+    private record BuiltSchema(int index, String profileName, String schemaName, Graph graph) {}
 
     /**
      * The diagrams chosen from one export.

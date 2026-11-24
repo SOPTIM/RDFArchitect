@@ -15,23 +15,23 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rdf.resources;
+package org.rdfarchitect.models.changelog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/**
- * The names the frontend builds graph URIs from too.
- *
- * <p>No contract carries them: the frontend names an imported schema before the backend ever sees
- * it, so the literal is written out on both sides. Pinned here and in {@code graphUri.test.js} so
- * that changing one side alone fails rather than producing schemas nothing can find.
- */
-class RDFATest {
+class RevertScopeTest {
 
     @Test
-    void graphUri_isTheNamespaceTheFrontendNamesImportedSchemasUnder() {
-        assertThat(RDFA.GRAPH_URI).isEqualTo("http://graph#");
+    void describe_everything_namesTheWorkspace() {
+        assertThat(RevertScope.everything().describe()).isEqualTo("the workspace");
+    }
+
+    @Test
+    void describe_schemaNamesWithHash_keepsTheWholeNames() {
+        assertThat(RevertScope.ofGraphs("a#b").describe()).isEqualTo("schema \"a#b\"");
+        assertThat(RevertScope.ofGraphs("SSH", "EQ#2").describe())
+                .isEqualTo("schemas \"EQ#2\", \"SSH\"");
     }
 }

@@ -29,5 +29,7 @@ enum ImportKind {
      */
     EXPORT_SCAN,
     /** Builds schemas from the packages chosen out of the exports an {@link #EXPORT_SCAN} read. */
-    PACKAGE_IMPORT
+    PACKAGE_IMPORT,
+    /** Imports a workspace file as a new workspace, keeping everything or nothing. */
+    WORKSPACE_IMPORT
 }

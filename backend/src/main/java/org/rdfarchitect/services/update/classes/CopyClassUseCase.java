@@ -34,7 +34,7 @@ public interface CopyClassUseCase {
      * @param pasteRequest The paste request containing the source classes (with their origin
      *     dataset and graph) and the shared copy options, e.g. the target package and whether
      *     attributes and associations should be copied as well.
-     * @param targetGraphIdentifier The graph URI and database name of the graph the new classes
+     * @param targetGraphIdentifier The schema name and database name of the graph the new classes
      *     will be added in.
      * @return One response per source (in input order) containing the UUID and label of each newly
      *     created class.

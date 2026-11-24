@@ -139,7 +139,7 @@ public interface ImportXmiUseCase {
      * read reported for it. An export is read in full once here, however many of its packages were
      * chosen.
      *
-     * @param datasetName the workspace the schemas go into, created if it does not exist
+     * @param workspaceName the workspace the schemas go into, created if it does not exist
      * @param files the exports the selection refers to, in the order they were read in
      * @param selection the packages to build, in the order they are to be built
      * @param diagramIds the diagrams to keep, by {@code xmi:id}; one whose classes did not all make
@@ -149,7 +149,7 @@ public interface ImportXmiUseCase {
      *     be built
      */
     ImportResult importPackages(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             List<SelectedPackageDTO> selection,
             List<String> diagramIds,

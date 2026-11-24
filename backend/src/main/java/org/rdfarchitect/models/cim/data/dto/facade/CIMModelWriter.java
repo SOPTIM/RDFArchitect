@@ -68,7 +68,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CIMModelWriter implements ICIMModelWriter {
 
-    private final String graphUri;
+    private final String schemaName;
 
     private final Model model;
 
@@ -159,8 +159,8 @@ public class CIMModelWriter implements ICIMModelWriter {
     }
 
     /** The graph this writer fills, as the caller named it. */
-    public String getGraphUri() {
-        return graphUri;
+    public String getSchemaName() {
+        return schemaName;
     }
 
     // -------------------------------------------------------------------------

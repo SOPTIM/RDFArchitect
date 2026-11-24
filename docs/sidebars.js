@@ -11,6 +11,7 @@ const sidebars = {
       items: [
         'reference/features',
         'reference/cim-mapping',
+        'reference/diagram-layout',
         'reference/faq',
         'reference/bachelor-theses',
         'reference/changelog',
@@ -47,6 +48,7 @@ const sidebars = {
     'developer-guide/rdf-shacl-sparql',
     'developer-guide/cim-evaluation',
     'developer-guide/xmi-import-mapping',
+    'developer-guide/diagram-layout-triples',
     'developer-guide/ci-and-releases',
     'developer-guide/contribution-scenarios',
   ],

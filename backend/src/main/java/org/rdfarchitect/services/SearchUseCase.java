@@ -23,7 +23,7 @@ import org.rdfarchitect.models.search.data.SearchResults;
 /**
  * SearchUseCase interface defines the contract for searching RDF data. It provides a method to
  * search for results based on a query-string and filter. The filter can specify the dataset name,
- * graph URI and package uuid to narrow down the search.
+ * schema name and package uuid to narrow down the search.
  */
 public interface SearchUseCase {
 

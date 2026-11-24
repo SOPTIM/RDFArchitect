@@ -155,7 +155,7 @@ class ImportJobTest {
         job.fail("the store went away");
 
         var written = outcomeOf(job, GraphsImported.class);
-        assertThat(written.graphUris()).containsExactly("http://graph#first");
+        assertThat(written.schemaNames()).containsExactly("http://graph#first");
         assertThat(written.failedFileNames()).containsExactly("second.ttl");
     }
 

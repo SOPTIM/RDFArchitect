@@ -39,14 +39,14 @@ public interface DatabaseAdminProtocol {
     /**
      * Creates an empty dataset in a database.
      *
-     * @param datasetName Name of the dataset to be created
+     * @param workspaceName Name of the dataset to be created
      */
-    void createDataset(String datasetName);
+    void createDataset(String workspaceName);
 
     /**
      * Deletes a dataset in a database.
      *
-     * @param datasetName Name of the dataset to be deleted
+     * @param workspaceName Name of the dataset to be deleted
      */
-    void deleteDataset(String datasetName);
+    void deleteDataset(String workspaceName);
 }

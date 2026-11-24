@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/undo/preview")
+@RequestMapping("api/workspaces/{workspaceName}/undo/preview")
 @RequiredArgsConstructor
 public class UndoPreviewRESTController {
 
@@ -69,17 +69,17 @@ public class UndoPreviewRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/undo/preview\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/undo/preview\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var preview = changelogUseCase.undoPreview(datasetName);
+        var preview = changelogUseCase.undoPreview(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/undo/preview\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/undo/preview\" to \"{}\".",
+                workspaceName,
                 originURL);
         return preview;
     }

@@ -77,13 +77,13 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     private static final Comparator<AttributeDTO> MERGED_ATTRIBUTE_ORDER =
             Comparator.comparing(
-                            AttributeDTO::getGraphUri,
+                            AttributeDTO::getSchemaName,
                             Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(attribute -> attribute.getLabel().toLowerCase(Locale.ROOT));
 
     private static final Comparator<EnumEntryDTO> MERGED_ENUM_ENTRY_ORDER =
             Comparator.comparing(
-                            EnumEntryDTO::getGraphUri,
+                            EnumEntryDTO::getSchemaName,
                             Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(entry -> entry.getLabel().toLowerCase(Locale.ROOT));
 
@@ -109,7 +109,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         selection.outsidePackageUris(),
                         filter,
                         layoutData,
-                        cimModel.getGraphUri(),
+                        cimModel.getSchemaName(),
                         primaryColor,
                         primaryKeyword,
                         buildProfileLookups(filter, otherProfiles));
@@ -133,7 +133,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             }
             lookups.add(
                     new ProfileLookup(
-                            profile.graphUri(), profile.keyword(), profile.color(), classByUri));
+                            profile.schemaName(), profile.keyword(), profile.color(), classByUri));
         }
         return lookups;
     }
@@ -193,7 +193,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 entry.sources()
                         .add(
                                 new MergedSource(
-                                        profile.graphUri(),
+                                        profile.schemaName(),
                                         profile.keyword(),
                                         profile.color(),
                                         cimClass));
@@ -214,7 +214,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
-                        .graphUri(merged.sources().getFirst().graphUri())
+                        .schemaName(merged.sources().getFirst().schemaName())
                         .label(merged.label())
                         .belongsToCategory(null)
                         .stereotypes(mergedStereotypes(merged))
@@ -249,7 +249,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             addAttributeDTOs(
                     attributes,
                     source.cimClass(),
-                    source.graphUri(),
+                    source.schemaName(),
                     source.keyword(),
                     source.color());
         }
@@ -263,7 +263,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             addEnumEntryDTOs(
                     enumEntries,
                     source.cimClass(),
-                    source.graphUri(),
+                    source.schemaName(),
                     source.keyword(),
                     source.color());
         }
@@ -411,7 +411,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                                     association.getAssociationUsed()))
                                     .useFromAssociation(
                                             getAssociationUsedValue(inverse.getAssociationUsed()))
-                                    .graphUri(source.graphUri())
+                                    .schemaName(source.schemaName())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
                                     .edgePoints(
@@ -462,7 +462,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
-                        .graphUri(cimClass.getGraphUri())
+                        .schemaName(cimClass.getSchemaName())
                         .label(cimClass.getLabel().getValue())
                         .external(cimClass.isExternal())
                         .outsidePackage(
@@ -503,7 +503,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         collector.collect(
                 properties,
                 cimClass,
-                renderContext.primaryGraphUri(),
+                renderContext.primarySchemaName(),
                 renderContext.primaryKeyword(),
                 renderContext.primaryColor());
 
@@ -513,7 +513,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 continue;
             }
             collector.collect(
-                    properties, match, profile.graphUri(), profile.keyword(), profile.color());
+                    properties, match, profile.schemaName(), profile.keyword(), profile.color());
         }
         return properties;
     }
@@ -528,7 +528,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private void addAttributeDTOs(
             List<AttributeDTO> target,
             ICIMClass cimClass,
-            String graphUri,
+            String schemaName,
             String keyword,
             String color) {
         for (var cimAttribute : cimClass.getAttributes()) {
@@ -541,7 +541,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             .label(cimAttribute.getLabel().getValue())
                             .type(cimAttribute.getDataType().getLabel().getValue())
                             .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                            .graphUri(graphUri)
+                            .schemaName(schemaName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());
@@ -561,7 +561,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private void addAssociationDTOs(
             List<AssociationDTO> target,
             ICIMClass cimClass,
-            String graphUri,
+            String schemaName,
             String keyword,
             String color) {
         for (var cimAssociation : cimClass.getAssociations()) {
@@ -576,7 +576,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             .rangeLabel(cimAssociation.getRange().getLabel().getValue())
                             .multiplicity(
                                     extractMultiplicityString(cimAssociation.getMultiplicity()))
-                            .graphUri(graphUri)
+                            .schemaName(schemaName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());
@@ -621,7 +621,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private void addEnumEntryDTOs(
             List<EnumEntryDTO> target,
             ICIMClass cimClass,
-            String graphUri,
+            String schemaName,
             String keyword,
             String color) {
         for (var cimEnumEntry : cimClass.getEnumEntries()) {
@@ -629,7 +629,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     EnumEntryDTO.builder()
                             .uuid(cimEnumEntry.getUuid())
                             .label(cimEnumEntry.getLabel().getValue())
-                            .graphUri(graphUri)
+                            .schemaName(schemaName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());
@@ -818,7 +818,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private interface PropertyCollector<T> {
 
         void collect(
-                List<T> target, ICIMClass cimClass, String graphUri, String keyword, String color);
+                List<T> target,
+                ICIMClass cimClass,
+                String schemaName,
+                String keyword,
+                String color);
     }
 
     private record RenderContext(
@@ -827,19 +831,19 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             Set<String> outsidePackageUris,
             GraphFilter filter,
             RenderingLayoutData layoutingData,
-            String primaryGraphUri,
+            String primarySchemaName,
             String primaryColor,
             String primaryKeyword,
             List<ProfileLookup> otherProfiles) {}
 
     private record ProfileLookup(
-            String graphUri, String keyword, String color, Map<String, ICIMClass> classByUri) {}
+            String schemaName, String keyword, String color, Map<String, ICIMClass> classByUri) {}
 
     private record MergedFacadeClass(
             String uri, String label, UUID uuid, List<MergedSource> sources) {}
 
     private record MergedSource(
-            String graphUri, String keyword, String color, ICIMClass cimClass) {}
+            String schemaName, String keyword, String color, ICIMClass cimClass) {}
 
     private record SuperClassRef(String uri, String label) {}
 }

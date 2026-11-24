@@ -22,20 +22,25 @@
     import SelectedFileRow from "$lib/components/SelectedFileRow.svelte";
     import SkippedFilesNotice from "$lib/components/SkippedFilesNotice.svelte";
     import {
+        isInvalidSchemaName,
+        schemaNameFromFileName,
+    } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import {
         isSupportedGraphFile,
         isZipFile,
         supportedRDFMediaTypes,
         xmiFileExtensions,
     } from "$lib/utils/fileUtils";
-    import { graphUriFrom } from "$lib/utils/graphUri.js";
 
     let {
         /**
          * The files to import and what to call each one's schema.
          *
-         * @type {{file: File, graphUri: string, isZip: boolean}[]}
+         * @type {{file: File, schemaName: string, isZip: boolean}[]}
          */
         files = $bindable([]),
+        /** Whether every file can be imported under the name it was given. */
+        isValid = $bindable(true),
         /** Files dropped on the way in, taken as if they had been chosen here. */
         droppedItems = null,
     } = $props();
@@ -44,6 +49,7 @@
         type => type.fileExtension,
     );
     const allowedFileExtensions = supportedFileExtensions.join(", ");
+    const DEFAULT_SCHEMA_NAME = "graph";
 
     let rejectedFiles = $state([]);
 
@@ -54,6 +60,16 @@
             ),
         ),
     );
+
+    const fileNameViolations = $derived(
+        files.map((_, index) => schemaNameViolations(index)),
+    );
+
+    $effect(() => {
+        isValid = fileNameViolations.every(
+            violations => violations.length === 0,
+        );
+    });
 
     onMount(() => {
         if (droppedItems) {
@@ -71,9 +87,9 @@
                 }
                 return {
                     file,
-                    graphUri: isZipFile(file.name)
+                    schemaName: isZipFile(file.name)
                         ? ""
-                        : graphUriFrom(file.name),
+                        : buildSchemaName(file.name),
                     isZip: isZipFile(file.name),
                 };
             })
@@ -88,13 +104,46 @@
         files = files.filter((_, at) => at !== index);
     }
 
-    function updateGraphUri(index, graphUri) {
+    function updateSchemaName(index, schemaName) {
         if (files[index]?.isZip) {
             return;
         }
         files = files.map((entry, at) =>
-            at === index ? { ...entry, graphUri } : entry,
+            at === index ? { ...entry, schemaName } : entry,
         );
+    }
+
+    /**
+     * The file name without its extension, made a valid schema name, which is how the backend names
+     * the entries of a zip as well.
+     */
+    function buildSchemaName(fileName) {
+        if (!fileName) {
+            return DEFAULT_SCHEMA_NAME;
+        }
+        const normalized = fileName.split(/[\\/]/).pop() ?? fileName;
+        const lastDotIndex = normalized.lastIndexOf(".");
+        const baseName =
+            lastDotIndex === -1
+                ? normalized
+                : normalized.substring(0, lastDotIndex);
+        return schemaNameFromFileName(baseName, DEFAULT_SCHEMA_NAME);
+    }
+
+    /**
+     * What is wrong with the name a file is to be imported under. Two files of the upload may not
+     * share a name, but one may take the name of an existing schema: the backend then imports it
+     * under that name with a number appended.
+     */
+    function schemaNameViolations(index) {
+        const entry = files[index];
+        if (entry.isZip) {
+            return [];
+        }
+        const otherNames = files
+            .filter((other, at) => at !== index && !other.isZip)
+            .map(other => other.schemaName.trim());
+        return isInvalidSchemaName(entry.schemaName, otherNames);
     }
 </script>
 
@@ -136,12 +185,13 @@
                 <SelectedFileRow
                     value={fileEntry.isZip
                         ? fileEntry.file.name
-                        : fileEntry.graphUri}
+                        : fileEntry.schemaName}
                     disabled={fileEntry.isZip}
                     label={fileEntry.isZip
                         ? "Selected archive"
-                        : `Schema URI for ${fileEntry.file.name}`}
-                    onValueChange={value => updateGraphUri(index, value)}
+                        : `Schema name for ${fileEntry.file.name}`}
+                    violations={fileNameViolations[index] ?? []}
+                    onValueChange={value => updateSchemaName(index, value)}
                     onRemove={() => removeFile(index)}
                 />
             {/each}

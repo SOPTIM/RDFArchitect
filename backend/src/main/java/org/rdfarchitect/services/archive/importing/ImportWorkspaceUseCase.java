@@ -15,18 +15,21 @@
  *
  */
 
-import adapter from "@sveltejs/adapter-static";
-import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+package org.rdfarchitect.services.archive.importing;
 
-/** @type {import("@sveltejs/kit").Config} */
-const config = {
-    kit: {
-        adapter: adapter({
-            pages: "build",
-            assets: "build",
-            fallback: "index.html",
-        }),
-    },
-    preprocess: vitePreprocess(),
-};
-export default config;
+import org.rdfarchitect.services.update.graph.ImportProgressListener;
+
+import java.io.InputStream;
+import java.util.List;
+
+public interface ImportWorkspaceUseCase {
+
+    /**
+     * @param cancelled whether the import was cancelled before it was committed
+     */
+    record WorkspaceImportResult(
+            List<String> importedSchemaNames, List<String> notices, boolean cancelled) {}
+
+    WorkspaceImportResult importWorkspace(
+            String workspaceName, InputStream archive, ImportProgressListener listener);
+}

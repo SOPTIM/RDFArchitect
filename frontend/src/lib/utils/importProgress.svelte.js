@@ -52,6 +52,7 @@ export const JobState = {
 export const OutcomeKind = {
     GRAPHS_IMPORTED: "GraphsImported",
     PACKAGES_SCANNED: "PackagesScanned",
+    WORKSPACE_IMPORTED: "WorkspaceImported",
 };
 
 /** Which phase a job state puts the import in; everything else has it finished. */
@@ -78,16 +79,19 @@ const FINISHED_STATES = [
  * The schemas a job has written so far, read from a status the backend reported. The outcome names
  * them once the job has ended; until then, the files that made it through do.
  *
- * @param {{outcome?: {kind: string, graphUris?: string[]}, files?: {state: string, graphUri?: string}[]}|null|undefined} status
- * @returns {string[]} the URIs of the imported schemas
+ * @param {{outcome?: {kind: string, schemaNames?: string[]}, files?: {state: string, schemaName?: string}[]}|null|undefined} status
+ * @returns {string[]} the names of the imported schemas
  */
-export function importedGraphUrisOf(status) {
-    if (status?.outcome?.kind === OutcomeKind.GRAPHS_IMPORTED) {
-        return status.outcome.graphUris ?? [];
+export function importedSchemaNamesOf(status) {
+    if (
+        status?.outcome?.kind === OutcomeKind.GRAPHS_IMPORTED ||
+        status?.outcome?.kind === OutcomeKind.WORKSPACE_IMPORTED
+    ) {
+        return status.outcome.schemaNames ?? [];
     }
     return (status?.files ?? [])
-        .filter(file => file.state === FileState.IMPORTED && file.graphUri)
-        .map(file => file.graphUri);
+        .filter(file => file.state === FileState.IMPORTED && file.schemaName)
+        .map(file => file.schemaName);
 }
 
 function clampPercent(value) {
@@ -124,16 +128,16 @@ export class ImportProgress {
     unit;
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null, done: number, total: number, reason: string|null}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, schemaName: string|null, done: number, total: number, reason: string|null}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
-    importedGraphUris = $state([]);
+    importedSchemaNames = $state([]);
     failedImports = $state([]);
     /**
      * What the import could not carry over as the file states it, by the file or profile it was
      * found in; empty where everything came over.
      *
-     * @type {{fileName: string, graphUri: string, items: {resource: string, reason: string}[]}[]}
+     * @type {{fileName: string, schemaName: string, items: {resource: string, reason: string}[]}[]}
      */
     warnings = $state([]);
     /**
@@ -185,6 +189,8 @@ export class ImportProgress {
     prefixes = $state([]);
     /** Set when the import could not be started or ended unexpectedly. */
     errorMessage = $state(null);
+    problems = $state([]);
+    notices = $state([]);
     cancelling = $state(false);
 
     #controller = new AbortController();
@@ -273,13 +279,14 @@ export class ImportProgress {
             fileName: file.fileName ?? "",
             sizeBytes: file.sizeBytes ?? -1,
             state: file.state ?? FileState.PENDING,
-            graphUri: file.graphUri ?? null,
+            schemaName: file.schemaName ?? null,
             done: file.done ?? 0,
             total: file.total ?? 0,
             reason: file.reason ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
         this.#applyOutcome(status.outcome);
+        this.problems = status.problems ?? [];
         const reportedComparison = status.prefixComparison ?? [];
         if (
             reportedComparison.length === 0 ||
@@ -301,9 +308,10 @@ export class ImportProgress {
      * @param {{kind: string}|null|undefined} outcome what the job reported
      */
     #applyOutcome(outcome) {
-        this.importedGraphUris =
-            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
-                ? (outcome.graphUris ?? [])
+        this.importedSchemaNames =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED ||
+            outcome?.kind === OutcomeKind.WORKSPACE_IMPORTED
+                ? (outcome.schemaNames ?? [])
                 : [];
         this.failedImports =
             outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
@@ -320,6 +328,10 @@ export class ImportProgress {
         this.supplierGroups = read ? (outcome.supplierGroups ?? []) : [];
         this.classNames = read ? (outcome.classNames ?? []) : [];
         this.prefixes = read ? (outcome.prefixes ?? []) : [];
+        this.notices =
+            outcome?.kind === OutcomeKind.WORKSPACE_IMPORTED
+                ? (outcome.notices ?? [])
+                : [];
     }
 
     uploadProgress(percent) {
@@ -386,7 +398,7 @@ export class ImportProgress {
         if (this.scanned) {
             return "No packages found";
         }
-        const imported = this.importedGraphUris.length;
+        const imported = this.importedSchemaNames.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
         if (this.jobState === JobState.FAILED) {
             return imported === 0

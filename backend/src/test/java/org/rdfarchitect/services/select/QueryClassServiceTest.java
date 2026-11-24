@@ -51,7 +51,8 @@ class QueryClassServiceTest {
 
     private QueryClassService queryClassService;
     private DatabasePort databasePort;
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     @Autowired private ClassUMLAdaptedMapper umlAdaptedClassMapper;
     @Autowired private ClassMapper classMapper;
@@ -72,7 +73,7 @@ class QueryClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
@@ -135,10 +136,10 @@ class QueryClassServiceTest {
     /** The uuid the graph minted for the resource named {@code label} under {@link #PREFIX}. */
     private UUID uuidOf(String label) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var model =
                     ModelFactory.createModelForGraph(
-                            transaction.graph(graphIdentifier.graphUri()).getRdfGraph());
+                            transaction.graph(graphIdentifier.schemaName()).getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
         }
@@ -147,8 +148,8 @@ class QueryClassServiceTest {
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(PREFIX + "class.associatedClass"),
@@ -157,8 +158,8 @@ class QueryClassServiceTest {
             transaction.commit("referenced only resource");
         }
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());

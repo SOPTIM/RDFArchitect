@@ -88,7 +88,7 @@ class LazyDiagramLayoutTest {
                 new GetRenderingDataService(
                         databasePort,
                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                        datasetName -> List.of(),
+                        workspaceName -> List.of(),
                         new QueryDiagramLayoutService(databasePort));
         classLayoutService =
                 new UpdateClassLayoutService(databasePort, Mappers.getMapper(PackageMapper.class));
@@ -103,7 +103,7 @@ class LazyDiagramLayoutTest {
                 new ImportGraphsService(databasePort)
                         .importGraphs("ds", List.of(file), null, GraphImportListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
-        graphIdentifier = new GraphIdentifier("ds", result.importedGraphUris().getFirst());
+        graphIdentifier = new GraphIdentifier("ds", result.importedSchemaNames().getFirst());
     }
 
     @Test
@@ -174,11 +174,11 @@ class LazyDiagramLayoutTest {
     void firstLayoutOfADiagram_isNotSomethingTheUserCanUndo() {
         var packageUUID = onlyPackageUUID();
         var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
-        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+        var entriesBefore = databasePort.listChanges(graphIdentifier.workspaceName()).size();
 
         sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
 
-        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+        assertThat(databasePort.listChanges(graphIdentifier.workspaceName()))
                 .as("the layout the editor computes on opening a diagram")
                 .hasSize(entriesBefore);
         assertThat(diagramExists(packageUUID)).isTrue();
@@ -189,11 +189,11 @@ class LazyDiagramLayoutTest {
         var packageUUID = onlyPackageUUID();
         var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
         sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
-        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+        var entriesBefore = databasePort.listChanges(graphIdentifier.workspaceName()).size();
 
         sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
 
-        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+        assertThat(databasePort.listChanges(graphIdentifier.workspaceName()))
                 .hasSize(entriesBefore + 1);
     }
 
@@ -205,7 +205,7 @@ class LazyDiagramLayoutTest {
 
         sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
 
-        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+        assertThat(databasePort.listChanges(graphIdentifier.workspaceName()).getFirst().message())
                 .doesNotContain(packageUUID.toString())
                 .isEqualTo("Moved classes in package \"gadgets\"");
     }
@@ -225,11 +225,11 @@ class LazyDiagramLayoutTest {
 
     private Model layoutModelOf(GraphIdentifier identifier) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(identifier.graphUri())
+                                    .graph(identifier.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }

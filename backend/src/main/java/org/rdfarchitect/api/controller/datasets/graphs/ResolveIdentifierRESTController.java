@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/resolve")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/resolve")
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
@@ -60,33 +60,28 @@ public class ResolveIdentifierRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The url encoded iri identifier of the cim resource.")
                     @PathVariable
                     String iriIdentifier) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 iriIdentifier,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedResourceIRI = expandURIUseCase.expandUri(datasetName, iriIdentifier);
-
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(datasetName, extendedGraphURI), extendedResourceIRI);
+                        new GraphIdentifier(workspaceName, schemaName),
+                        // the resource is an IRI and may be given prefixed; the schema name is not
+                        expandURIUseCase.expandUri(workspaceName, iriIdentifier));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 iriIdentifier,
                 originURL);
         return uuid.toString();

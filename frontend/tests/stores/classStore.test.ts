@@ -164,7 +164,7 @@ describe("ClassStore", () => {
             expect(api.getClassList).not.toHaveBeenCalled();
         });
 
-        test("returns null when graphURI is empty", async () => {
+        test("returns null when schemaName is empty", async () => {
             expect(await store.getClasses(WORKSPACE, "")).toBeNull();
             expect(api.getClassList).not.toHaveBeenCalled();
         });

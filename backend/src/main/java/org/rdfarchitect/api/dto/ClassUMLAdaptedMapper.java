@@ -53,7 +53,7 @@ public interface ClassUMLAdaptedMapper {
     List<ClassUMLAdaptedDTO> toDTOList(List<CIMClassUMLAdapted> cimClassList);
 
     @Mapping(target = "uri", source = ".")
-    @Mapping(target = "graphUri", ignore = true)
+    @Mapping(target = "schemaName", ignore = true)
     @Mapping(target = "superClasses", source = "superClass")
     CIMClassUMLAdapted toCIMObject(ClassUMLAdaptedDTO dto);
 

@@ -73,7 +73,8 @@ public interface ImportJobUseCase {
      * Progress of a single file.
      *
      * @param sizeBytes size of the file, or {@code -1} when a zip archive does not declare it
-     * @param graphUri the uri the file was imported as, {@code null} until it was imported
+     * @param schemaName the name of the schema the file was imported as, {@code null} until it was
+     *     imported
      * @param done how much of this step is behind it, {@code 0} for a step that cannot say
      * @param total how much there is in all, {@code 0} for a step that cannot say. Only one long
      *     pass over a file can; everything else is known by being finished or not
@@ -85,7 +86,7 @@ public interface ImportJobUseCase {
             String fileName,
             long sizeBytes,
             FileState state,
-            String graphUri,
+            String schemaName,
             long done,
             long total,
             String reason) {}
@@ -99,22 +100,27 @@ public interface ImportJobUseCase {
      * @param outcome what the job produced, {@code null} while it is still running. Which kind it
      *     is says what the job was started to do
      * @param errorMessage why the job failed, {@code null} unless its state is {@code FAILED}
+     * @param problems why a workspace archive was rejected
      */
     record ImportJobStatus(
             UUID jobId,
-            String datasetName,
+            String workspaceName,
             JobState state,
             List<ImportFileStatus> files,
             List<PrefixComparison> prefixComparison,
             ImportOutcome outcome,
-            String errorMessage) {}
+            String errorMessage,
+            List<String> problems) {}
 
     /**
      * Starts an import and returns immediately.
      *
      * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
      */
-    UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
+    UUID startImport(String workspaceName, List<MultipartFile> files, List<String> schemaNames);
+
+    /** Starts importing a workspace file as a new workspace; all or nothing. */
+    UUID startWorkspaceImport(String workspaceName, MultipartFile archive);
 
     /**
      * Starts reading Enterprise Architect exports and returns immediately. The job reports the
@@ -123,7 +129,7 @@ public interface ImportJobUseCase {
      *
      * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
      */
-    UUID startXmiScan(String datasetName, List<MultipartFile> files);
+    UUID startXmiScan(String workspaceName, List<MultipartFile> files);
 
     /**
      * Starts building schemas from the packages chosen out of the exports a previous {@link
@@ -134,18 +140,18 @@ public interface ImportJobUseCase {
      * @param readJobId the job that read the exports
      * @param selection the packages to build, in the order they are to be built
      * @param diagramIds the class diagrams to keep, by {@code xmi:id}
-     * @return the id of the started job, or empty if the session has no such read for the dataset
+     * @return the id of the started job, or empty if the session has no such read for the workspace
      * @throws org.rdfarchitect.exception.database.ResourceConflictException if the exports of that
      *     read are no longer available
      */
     Optional<UUID> startPackageImport(
-            String datasetName,
+            String workspaceName,
             UUID readJobId,
             List<SelectedPackageDTO> selection,
             List<String> diagramIds);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
-    Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);
+    Optional<ImportJobStatus> getStatus(String workspaceName, UUID jobId);
 
     /**
      * Hands the job the decisions it is waiting for and lets it go on importing.
@@ -157,7 +163,7 @@ public interface ImportJobUseCase {
      *     waiting for a decision
      */
     boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions);
+            String workspaceName, UUID jobId, List<PrefixResolutionDTO> resolutions);
 
     /**
      * Asks the job to stop after the file it is currently importing. A job waiting for prefix
@@ -165,5 +171,5 @@ public interface ImportJobUseCase {
      *
      * @return {@code false} if the session has no such job for the dataset
      */
-    boolean cancel(String datasetName, UUID jobId);
+    boolean cancel(String workspaceName, UUID jobId);
 }

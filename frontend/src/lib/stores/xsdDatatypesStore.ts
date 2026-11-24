@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-import { describeError } from "./storeLogging";
 import { getPrimitiveDatatypes, type Uri } from "../api/generated";
+import { describeError } from "./storeLogging";
 
 const LOG_PREFIX = "[xsdPrimitivesStore]";
 

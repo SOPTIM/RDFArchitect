@@ -25,14 +25,13 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.archive.ArchiveFiles;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -42,8 +41,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 /** Covers what the import reports about its progress, and how it reacts to being cancelled. */
 class ImportProgressReportingTest {
@@ -83,7 +80,7 @@ class ImportProgressReportingTest {
                 .containsExactlyInAnyOrder("first.ttl", "second.ttl");
         assertThat(listener.planned).extracting(PlannedImport::index).containsExactly(0, 1);
         assertThat(listener.outcomes.values()).containsOnly(Outcome.IMPORTED);
-        assertThat(result.importedGraphUris()).hasSize(2);
+        assertThat(result.importedSchemaNames()).hasSize(2);
         assertThat(result.failedFileNames()).isEmpty();
     }
 
@@ -103,7 +100,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(0, Outcome.IMPORTED, 1, Outcome.SKIPPED));
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(result.importedSchemaNames()).containsExactly("first");
         assertThat(result.failedFileNames()).isEmpty();
     }
 
@@ -123,7 +120,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactly(Map.entry(0, Outcome.FAILED), Map.entry(1, Outcome.IMPORTED));
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "good");
+        assertThat(result.importedSchemaNames()).containsExactly("good");
     }
 
     @Test
@@ -145,7 +142,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactly(Map.entry(0, Outcome.FAILED), Map.entry(1, Outcome.IMPORTED));
         assertThat(result.failedFileNames()).containsExactly("broken.zip");
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "good");
+        assertThat(result.importedSchemaNames()).containsExactly("good");
     }
 
     @Test
@@ -161,7 +158,7 @@ class ImportProgressReportingTest {
         // Whatever the archive still managed to give up, no planned entry may be left without an
         // outcome: the progress would wait for it forever and the result would not mention it.
         assertThat(listener.outcomes).hasSameSizeAs(listener.planned);
-        assertThat(result.importedGraphUris().size() + result.failedFileNames().size())
+        assertThat(result.importedSchemaNames().size() + result.failedFileNames().size())
                 .isEqualTo(listener.planned.size());
     }
 
@@ -176,7 +173,7 @@ class ImportProgressReportingTest {
 
         assertThat(listener.planned).hasSize(3);
         assertThat(listener.outcomes.values()).containsOnly(Outcome.FAILED);
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(result.failedFileNames()).containsExactlyInAnyOrder("a.ttl", "b.ttl", "c.ttl");
     }
 
@@ -186,7 +183,7 @@ class ImportProgressReportingTest {
                 importGraphsUseCase.importGraphs(
                         "ds", List.of(graphFile("first.ttl")), null, GraphImportListener.NOOP);
 
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(result.importedSchemaNames()).containsExactly("first");
     }
 
     private MultipartFile graphFile(String fileName) {
@@ -232,17 +229,9 @@ class ImportProgressReportingTest {
         };
     }
 
-    private MultipartFile zip(Map<String, String> entries) throws IOException {
-        var bytes = new ByteArrayOutputStream();
-        try (var zipOutputStream = new ZipOutputStream(bytes)) {
-            for (var entry : entries.entrySet()) {
-                zipOutputStream.putNextEntry(new ZipEntry(entry.getKey()));
-                zipOutputStream.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
-                zipOutputStream.closeEntry();
-            }
-        }
+    private MultipartFile zip(Map<String, String> entries) {
         return new MockMultipartFile(
-                "files", "archive.zip", "application/zip", bytes.toByteArray());
+                "files", "archive.zip", "application/zip", ArchiveFiles.zip(entries));
     }
 
     /** Collects everything the import reports, and can cancel it once a file has been picked up. */
@@ -266,7 +255,7 @@ class ImportProgressReportingTest {
         }
 
         @Override
-        public void finished(int index, Outcome outcome, String graphUri) {
+        public void finished(int index, Outcome outcome, String schemaName) {
             outcomes.put(index, outcome);
         }
 

@@ -20,12 +20,15 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
 
     let {
         value,
         /** What the field holds, as a screen reader announces it. */
         label = "Selected file",
         disabled = false,
+        /** What is wrong with the value, shown below the field. */
+        violations = [],
         onValueChange = () => {},
         onRemove,
         /**
@@ -51,6 +54,7 @@
             title={disabled ? "This name cannot be changed" : undefined}
             oninput={event => onValueChange(event.target.value)}
         />
+        <ViolationMessages {violations} />
     </div>
     <div class="flex size-10 items-center justify-center p-0">
         <ButtonControl height={10} callOnClick={onRemove} title="Remove file">

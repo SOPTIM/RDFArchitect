@@ -123,17 +123,17 @@ class EdgeLayoutConsistencyTest {
         syncDiagramLayoutService = new SyncDiagramLayoutService(databasePort);
         customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
         renderingDataService =
                 new GetRenderingDataService(
-                        databasePort, renderer, datasetName -> List.of(), layoutQueries);
+                        databasePort, renderer, workspaceName -> List.of(), layoutQueries);
         mergedRenderingService =
                 new RenderMergedDiagramSvelteFlowService(
                         databasePort,
                         customDiagramService,
                         layoutQueries,
                         renderer,
-                        datasetName -> List.of());
+                        workspaceName -> List.of());
         classLayoutService = new UpdateClassLayoutService(databasePort, packageMapper);
         classService =
                 new UpdateClassService(
@@ -281,7 +281,7 @@ class EdgeLayoutConsistencyTest {
                 new ImportGraphsService(databasePort)
                         .importGraphs(DATASET, List.of(file), null, GraphImportListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
-        return new GraphIdentifier(DATASET, result.importedGraphUris().getFirst());
+        return new GraphIdentifier(DATASET, result.importedSchemaNames().getFirst());
     }
 
     private void layoutAllPackages() {
@@ -380,11 +380,11 @@ class EdgeLayoutConsistencyTest {
 
     private Map<UUID, Set<UUID>> associationEndpointsOfEquipment() {
         try (var transaction =
-                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(equipment.graphUri());
+                databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(equipment.schemaName());
             var model =
                     new CIMModelFacade(
-                            equipment.graphUri(),
+                            equipment.schemaName(),
                             ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             var endpoints = new HashMap<UUID, Set<UUID>>();
             for (var cimClass : model.getCIMClasses()) {
@@ -471,7 +471,7 @@ class EdgeLayoutConsistencyTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(equipment.graphUri())
+                                    .graph(equipment.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }
@@ -495,11 +495,11 @@ class EdgeLayoutConsistencyTest {
 
     private SchemaClass classOf(String label) {
         try (var transaction =
-                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(equipment.graphUri());
+                databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(equipment.schemaName());
             var model =
                     new CIMModelFacade(
-                            equipment.graphUri(),
+                            equipment.schemaName(),
                             ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             var cimClass =
                     model.getCIMClasses().stream()
@@ -524,8 +524,8 @@ class EdgeLayoutConsistencyTest {
 
     private void editSchema(Consumer<Model> edit) {
         try (var transaction =
-                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(equipment.graphUri());
+                databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(equipment.schemaName());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             transaction.commit("edit schema");
         }

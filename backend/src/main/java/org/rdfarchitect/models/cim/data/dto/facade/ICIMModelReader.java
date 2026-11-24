@@ -35,7 +35,7 @@ import java.util.UUID;
  */
 public interface ICIMModelReader {
 
-    String getGraphUri();
+    String getSchemaName();
 
     List<ICIMClass> getCIMClasses();
 

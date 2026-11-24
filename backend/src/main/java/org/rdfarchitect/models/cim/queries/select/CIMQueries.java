@@ -40,18 +40,18 @@ public class CIMQueries {
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUIDs The possible UUIDs of the classes to retrieve, set to null to retrieve all
      *     classes.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public SelectBuilder getSpecifiedClassesQuery(
-            PrefixMapping prefixMapping, String graphURI, List<String> classUUIDs) {
+            PrefixMapping prefixMapping, String schemaName, List<String> classUUIDs) {
 
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
                         .setOrder()
                         .setType(RDFS.Class)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .build();
 
         var builder = new CIMQueryBuilder(baseQuery, classUUIDs);
@@ -67,17 +67,17 @@ public class CIMQueries {
      * Get a {@link SelectBuilder} for a query that retrieves a list of classes.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
-    public SelectBuilder getClassesQuery(PrefixMapping prefixMapping, String graphURI) {
+    public SelectBuilder getClassesQuery(PrefixMapping prefixMapping, String schemaName) {
 
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
                         .setOrder()
                         .setType(RDFS.Class)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .build();
 
         var builder = new CIMQueryBuilder(baseQuery);
@@ -94,18 +94,18 @@ public class CIMQueries {
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUID The UUID of the class to retrieve, set to null to retrieve all classes.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public SelectBuilder getClassQuery(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+            PrefixMapping prefixMapping, String schemaName, String classUUID) {
 
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
                         .setOrder()
                         .setType(RDFS.Class)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .build();
 
         var builder = new CIMQueryBuilder(baseQuery, classUUID);
@@ -122,15 +122,15 @@ public class CIMQueries {
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUID The UUID of the class to retrieve the attributes of.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public SelectBuilder getAttributesQuery(
-            PrefixMapping prefixMapping, String classUUID, String graphURI) {
+            PrefixMapping prefixMapping, String classUUID, String schemaName) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .setOrder()
                         .setType(RDF.Property)
                         .setDomain(classUUID)
@@ -156,14 +156,14 @@ public class CIMQueries {
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUID The UUID of the class to retrieve the associations of.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public SelectBuilder getAssociationPairsQuery(
-            PrefixMapping prefixMapping, String classUUID, String graphURI) {
+            PrefixMapping prefixMapping, String classUUID, String schemaName) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .addPrefixes(prefixMapping)
                         .setOrder()
                         .setType(RDF.Property)
@@ -195,15 +195,15 @@ public class CIMQueries {
      * Get a {@link SelectBuilder} for a query that retrieves the associations of a class.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @param classUUID The UUID of the class to retrieve the associations of.
      * @return A {@link SelectBuilder} for the query.
      */
     public SelectBuilder getAssociationsQuery(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+            PrefixMapping prefixMapping, String schemaName, String classUUID) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .addPrefixes(prefixMapping)
                         .setOrder()
                         .setType(RDF.Property)
@@ -230,16 +230,16 @@ public class CIMQueries {
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUID The UUID of the class to retrieve the stereotypes of.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public static SelectBuilder getStereotypesQuery(
-            PrefixMapping prefixMapping, String classUUID, String graphURI) {
+            PrefixMapping prefixMapping, String classUUID, String schemaName) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .setOrder()
                         .addPrefixes(prefixMapping)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .buildWithoutUriVar();
 
         var builder = new CIMQueryBuilder(baseQuery, classUUID);
@@ -256,15 +256,15 @@ public class CIMQueries {
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param subjectUUIDs The UUIDs of the subjects to retrieve the stereotypes of. Must not be
      *     empty, as an empty list would match every subject of the graph.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @return A {@link SelectBuilder} for the query.
      */
     public static SelectBuilder getStereotypesForUUIDsQuery(
-            PrefixMapping prefixMapping, List<String> subjectUUIDs, String graphURI) {
+            PrefixMapping prefixMapping, List<String> subjectUUIDs, String schemaName) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .buildWithoutUriVar();
 
         var builder = new CIMQueryBuilder(baseQuery, subjectUUIDs);
@@ -309,13 +309,13 @@ public class CIMQueries {
      * Get a {@link SelectBuilder} for a query that retrieves the enum classes of a graph.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @param enumUUID The UUID of the enum class to retrieve
      * @return A {@link SelectBuilder} for the query.
      */
     public static SelectBuilder getEnumClassesQuery(
-            PrefixMapping prefixMapping, String graphURI, String enumUUID) {
-        var baseQuery = getBaseEnumQuery(prefixMapping, graphURI);
+            PrefixMapping prefixMapping, String schemaName, String enumUUID) {
+        var baseQuery = getBaseEnumQuery(prefixMapping, schemaName);
         var builder = new CIMQueryBuilder(baseQuery, enumUUID);
 
         return builder.appendUUIDQuery(REQUIRED)
@@ -329,13 +329,13 @@ public class CIMQueries {
      * Get a {@link SelectBuilder} for a query that retrieves the specified enum classes of a graph.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
-     * @param graphURI The URI of the graph to query.
+     * @param schemaName The URI of the graph to query.
      * @param enumUUIDs The UUIDs of the enum classes to retrieve
      * @return A {@link SelectBuilder} for the query.
      */
     public static SelectBuilder getSpecifiedEnumClassesQuery(
-            PrefixMapping prefixMapping, String graphURI, List<String> enumUUIDs) {
-        var baseQuery = getBaseEnumQuery(prefixMapping, graphURI);
+            PrefixMapping prefixMapping, String schemaName, List<String> enumUUIDs) {
+        var baseQuery = getBaseEnumQuery(prefixMapping, schemaName);
         var builder = new CIMQueryBuilder(baseQuery, enumUUIDs);
 
         return builder.appendUUIDQuery(REQUIRED)
@@ -345,10 +345,10 @@ public class CIMQueries {
                 .buildSelectBuilder();
     }
 
-    private static SelectBuilder getBaseEnumQuery(PrefixMapping prefixMapping, String graphURI) {
+    private static SelectBuilder getBaseEnumQuery(PrefixMapping prefixMapping, String schemaName) {
         return new CIMBaseQueryBuilder()
                 .addPrefixes(prefixMapping)
-                .setGraph(graphURI)
+                .setGraph(schemaName)
                 .setOrder()
                 .setType(RDFS.Class)
                 .filterStereotypes(CIMStereotypes.enumeration.getURI())
@@ -356,9 +356,12 @@ public class CIMQueries {
     }
 
     public static SelectBuilder getEnumEntriesQuery(
-            PrefixMapping prefixMapping, String graphURI, String enumUUID) {
+            PrefixMapping prefixMapping, String schemaName, String enumUUID) {
         var baseQuery =
-                new CIMBaseQueryBuilder().addPrefixes(prefixMapping).setGraph(graphURI).setOrder();
+                new CIMBaseQueryBuilder()
+                        .addPrefixes(prefixMapping)
+                        .setGraph(schemaName)
+                        .setOrder();
         if (enumUUID != null) {
             baseQuery.setEnumType(enumUUID);
         }
@@ -373,11 +376,11 @@ public class CIMQueries {
     }
 
     public static SelectBuilder getEnumEntryQuery(
-            PrefixMapping prefixMapping, String graphURI, String enumEntryUUID) {
+            PrefixMapping prefixMapping, String schemaName, String enumEntryUUID) {
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(prefixMapping)
-                        .setGraph(graphURI)
+                        .setGraph(schemaName)
                         .setOrder()
                         .build();
         var builder = new CIMQueryBuilder(baseQuery, enumEntryUUID);

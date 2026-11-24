@@ -26,9 +26,9 @@
         xmiFileExtensions,
     } from "$lib/utils/fileUtils";
 
-    import { acceptNewWorkspaceDrop, acceptSchemaDrop } from "./schemaDrop.js";
     import ImportDialog from "../ImportDialog.svelte";
     import XmiImportDialog from "../XmiImportDialog.svelte";
+    import { acceptNewWorkspaceDrop, acceptSchemaDrop } from "./schemaDrop.js";
 
     let {
         workspaceName = null,

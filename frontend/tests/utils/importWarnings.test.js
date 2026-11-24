@@ -31,7 +31,7 @@ import {
 const WARNINGS = [
     {
         fileName: "TopologyProfile",
-        graphUri: "http://graph#TopologyProfile",
+        schemaName: "TopologyProfile",
         items: [
             { resource: "license", reason: "no ontology field of that name" },
             { resource: "Terminal", reason: "declared more than once" },
@@ -39,7 +39,7 @@ const WARNINGS = [
     },
     {
         fileName: "CoreEquipmentProfile",
-        graphUri: "http://graph#CoreEquipmentProfile",
+        schemaName: "CoreEquipmentProfile",
         items: [
             { resource: "shortName", reason: "no ontology field of that name" },
         ],
@@ -68,7 +68,7 @@ describe("asValidationResult", () => {
         const [first] = asValidationResult(WARNINGS).issues;
 
         expect(first.ruleLabel).toBe("TopologyProfile");
-        expect(first.ruleId).toBe("http://graph#TopologyProfile");
+        expect(first.ruleId).toBe("TopologyProfile");
     });
 
     it("reports no occurrences, an import warning having no value to show per schema", () => {
@@ -82,7 +82,7 @@ describe("asValidationResult", () => {
         // A class declared three times in one file is reported twice, for the same reason.
         const duplicate = {
             fileName: "TopologyProfile",
-            graphUri: "http://graph#TopologyProfile",
+            schemaName: "TopologyProfile",
             items: [
                 { resource: "Terminal", reason: "declared more than once" },
                 { resource: "Terminal", reason: "declared more than once" },

@@ -38,36 +38,36 @@ public interface GetCustomDiagramsUseCase {
     /**
      * Lists the custom diagrams belonging to a single dataset.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return The custom diagrams for the dataset.
      */
-    List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName);
+    List<CustomDiagramDTO> getCustomDiagramsForDataset(String workspaceName);
 
     /**
      * Returns the id of the dataset's cross profile diagram.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return The id of the cross profile diagram.
      */
-    UUID getCrossProfileDiagramId(String datasetName);
+    UUID getCrossProfileDiagramId(String workspaceName);
 
     /**
      * Returns the cross profile diagram for the dataset.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return The cross profile diagram for the dataset.
      */
-    CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout);
+    CrossProfileDiagramDTO getCrossProfileDiagram(String workspaceName, boolean doLayout);
 
     /**
      * Returns the cross profile diagram for the dataset, reusing already loaded profile models
      * instead of reading every graph again.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @param doLayout Whether the diagram layout should be created/updated.
      * @param profiles The profile models of the dataset.
      * @return The cross profile diagram for the dataset.
      */
     CrossProfileDiagramDTO getCrossProfileDiagram(
-            String datasetName, boolean doLayout, List<CIMProfileModel> profiles);
+            String workspaceName, boolean doLayout, List<CIMProfileModel> profiles);
 }

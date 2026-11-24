@@ -75,9 +75,9 @@ public class XmiDiagrams {
      *
      * @param uuid the uuid it was written under
      * @param classUri what it is called in its schema
-     * @param graphUri the schema it was written into
+     * @param schemaName the schema it was written into
      */
-    public record ClassLocation(UUID uuid, String classUri, String graphUri) {}
+    public record ClassLocation(UUID uuid, String classUri, String schemaName) {}
 
     /**
      * One class as a diagram places it.
@@ -100,7 +100,7 @@ public class XmiDiagrams {
         public String schemaUri() {
             var schemas =
                     classes.stream()
-                            .map(placed -> placed.location().graphUri())
+                            .map(placed -> placed.location().schemaName())
                             .distinct()
                             .toList();
             return schemas.size() == 1 ? schemas.getFirst() : null;

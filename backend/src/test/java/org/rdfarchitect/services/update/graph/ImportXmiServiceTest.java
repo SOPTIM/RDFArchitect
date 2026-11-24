@@ -31,7 +31,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.UncarriedItem;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -86,16 +85,16 @@ class ImportXmiServiceTest {
     void importPackages_writesTheChosenProfileAsASchema() throws IOException {
         var result = importTopology(null);
 
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "Topology");
+        assertThat(result.importedSchemaNames()).containsExactly("Topology");
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(databasePort.listGraphUris(DATASET)).contains(RDFA.GRAPH_URI + "Topology");
+        assertThat(databasePort.listSchemaNames(DATASET)).contains("Topology");
     }
 
     @Test
     void importPackages_writesTheResourcesOfTheProfile() throws IOException {
         importTopology(null);
 
-        assertThat(graphOf(RDFA.GRAPH_URI + "Topology"))
+        assertThat(graphOf("Topology"))
                 .anyMatch(
                         statement ->
                                 statement.getSubject().getURI().equals(MODEL_NS + "Terminal")
@@ -104,10 +103,9 @@ class ImportXmiServiceTest {
 
     @Test
     void importPackages_namesTheSchemaAsAsked() throws IOException {
-        var result = importTopology("http://example.com/graphs/topology");
+        var result = importTopology("Topology (custom)");
 
-        assertThat(result.importedGraphUris())
-                .containsExactly("http://example.com/graphs/topology");
+        assertThat(result.importedSchemaNames()).containsExactly("Topology (custom)");
     }
 
     @Test
@@ -125,7 +123,7 @@ class ImportXmiServiceTest {
                         ALL_DIAGRAMS,
                         listener);
 
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(result.failedFileNames()).containsExactly("Topology");
         assertThat(listener.reasons).singleElement().asString().contains("extension namespace");
         // Not even the workspace: it is created at the first write, and there was none.
@@ -155,9 +153,9 @@ class ImportXmiServiceTest {
                                 new SelectedPackageDTO(
                                         7, TOPOLOGY, "Topology", null, null, null, EXTENSION_NS)),
                         ALL_DIAGRAMS,
-                        ImportProgressListener.NOOP);
+                        GraphImportListener.NOOP);
 
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(result.failedFileNames()).isEmpty();
     }
 
@@ -190,7 +188,7 @@ class ImportXmiServiceTest {
         // it halfway must not leave a workspace nobody asked for.
         var result = importTopology(null, ALL_DIAGRAMS, CANCELLED);
 
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
         assertThat(databasePort.listDatasets()).doesNotContain(DATASET);
     }
 
@@ -203,7 +201,7 @@ class ImportXmiServiceTest {
         importTopology(null, ALL_DIAGRAMS, CANCELLED);
 
         assertThat(databasePort.listDatasets()).contains(DATASET);
-        assertThat(databasePort.listGraphUris(DATASET)).isEmpty();
+        assertThat(databasePort.listSchemaNames(DATASET)).isEmpty();
     }
 
     @Test
@@ -228,8 +226,8 @@ class ImportXmiServiceTest {
 
         var result = importTopology(null, ALL_DIAGRAMS, cancelOnceTheDiagramsStart);
 
-        assertThat(result.importedGraphUris()).isEmpty();
-        assertThat(databasePort.listGraphUris(DATASET)).isEmpty();
+        assertThat(result.importedSchemaNames()).isEmpty();
+        assertThat(databasePort.listSchemaNames(DATASET)).isEmpty();
         assertThat(databasePort.listChanges(DATASET))
                 .noneMatch(entry -> entry.message().startsWith("Imported"));
     }
@@ -245,23 +243,22 @@ class ImportXmiServiceTest {
                 .satisfies(
                         entry -> {
                             assertThat(entry.message()).contains("Imported");
-                            assertThat(entry.affectedGraphUris())
-                                    .containsExactly(RDFA.GRAPH_URI + "Topology");
+                            assertThat(entry.affectedSchemaNames()).containsExactly("Topology");
                         });
     }
 
     @Test
     void importPackages_storesOnlyTheDiagramsThatWereChosen() throws IOException {
-        importTopology(null, List.of(), ImportProgressListener.NOOP);
+        importTopology(null, List.of(), GraphImportListener.NOOP);
 
-        assertThat(diagramsOf(RDFA.GRAPH_URI + "Topology")).isEmpty();
+        assertThat(diagramsOf("Topology")).isEmpty();
     }
 
     @Test
     void importPackages_storesADiagramOfTheExportWithTheSchemaItDraws() throws IOException {
         importTopology(null);
 
-        assertThat(diagramsOf(RDFA.GRAPH_URI + "Topology").values())
+        assertThat(diagramsOf("Topology").values())
                 .extracting(CustomDiagram::getName)
                 .containsExactly("Topology overview");
     }
@@ -270,10 +267,10 @@ class ImportXmiServiceTest {
     void importPackages_storesTheClassesADiagramDraws() throws IOException {
         importTopology(null);
 
-        var diagram = diagramsOf(RDFA.GRAPH_URI + "Topology").values().iterator().next();
+        var diagram = diagramsOf("Topology").values().iterator().next();
         assertThat(diagram.getClasses())
-                .extracting(ClassInDiagram::getGraphUri)
-                .allMatch(graphUri -> graphUri.toString().equals(RDFA.GRAPH_URI + "Topology"));
+                .extracting(ClassInDiagram::getSchemaName)
+                .allMatch(schemaName -> schemaName.toString().equals("Topology"));
         assertThat(diagram.getClasses()).hasSize(2);
     }
 
@@ -282,7 +279,7 @@ class ImportXmiServiceTest {
         importTopology(null);
 
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
-            var ctx = transaction.graph(RDFA.GRAPH_URI + "Topology");
+            var ctx = transaction.graph("Topology");
             var diagramId = ctx.getCustomDiagrams().keySet().iterator().next();
             var layout = ctx.getDiagramLayout().getDiagramLayoutModel();
             var positions = DLObjectFetcher.fetchDiagramDOPPerClass(layout, diagramId);
@@ -341,7 +338,7 @@ class ImportXmiServiceTest {
     void importPackages_writesTheAttributeAllTheSameJustWithoutAType() throws IOException {
         importTopology(null);
 
-        assertThat(graphOf(RDFA.GRAPH_URI + "Topology"))
+        assertThat(graphOf("Topology"))
                 .anyMatch(
                         statement ->
                                 statement.getSubject().getURI().endsWith("Reservoir.grossCapacity")
@@ -354,7 +351,7 @@ class ImportXmiServiceTest {
         // and importing the package that declares the type completes it.
         importTopology(null);
 
-        assertThat(graphOf(RDFA.GRAPH_URI + "Topology"))
+        assertThat(graphOf("Topology"))
                 .anyMatch(
                         statement ->
                                 statement.getSubject().getURI().endsWith("Reservoir.grossCapacity")
@@ -369,19 +366,19 @@ class ImportXmiServiceTest {
 
     // -------------------------------------------------------------------------
 
-    private ImportGraphsUseCase.ImportResult importTopology(String graphUri) throws IOException {
-        return importTopology(graphUri, ALL_DIAGRAMS, ImportProgressListener.NOOP);
+    private ImportGraphsUseCase.ImportResult importTopology(String schemaName) throws IOException {
+        return importTopology(schemaName, ALL_DIAGRAMS, GraphImportListener.NOOP);
     }
 
     private ImportGraphsUseCase.ImportResult importTopology(
-            String graphUri, List<String> diagramIds, ImportProgressListener listener)
+            String schemaName, List<String> diagramIds, ImportProgressListener listener)
             throws IOException {
         return service.importPackages(
                 DATASET,
                 List.of(export()),
                 List.of(
                         new SelectedPackageDTO(
-                                0, TOPOLOGY, "Topology", null, graphUri, null, EXTENSION_NS)),
+                                0, TOPOLOGY, "Topology", null, schemaName, null, EXTENSION_NS)),
                 diagramIds,
                 listener);
     }
@@ -391,17 +388,17 @@ class ImportXmiServiceTest {
                 "files", "profiles-export.xml", "text/xml", Files.readAllBytes(EXPORT));
     }
 
-    private List<org.apache.jena.rdf.model.Statement> graphOf(String graphUri) {
+    private List<org.apache.jena.rdf.model.Statement> graphOf(String schemaName) {
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
-            return ModelFactory.createModelForGraph(transaction.graph(graphUri).getRdfGraph())
+            return ModelFactory.createModelForGraph(transaction.graph(schemaName).getRdfGraph())
                     .listStatements()
                     .toList();
         }
     }
 
-    private Map<UUID, CustomDiagram> diagramsOf(String graphUri) {
+    private Map<UUID, CustomDiagram> diagramsOf(String schemaName) {
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
-            return Map.copyOf(transaction.graph(graphUri).getCustomDiagrams());
+            return Map.copyOf(transaction.graph(schemaName).getCustomDiagrams());
         }
     }
 
@@ -418,7 +415,7 @@ class ImportXmiServiceTest {
         }
 
         @Override
-        public void finished(int index, Outcome outcome, String graphUri) {
+        public void finished(int index, Outcome outcome, String schemaName) {
             finished.add(planned.get(index) + "=" + outcome);
         }
 

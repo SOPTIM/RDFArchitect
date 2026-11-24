@@ -22,7 +22,6 @@ import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ImportedDiagram;
@@ -162,8 +161,7 @@ class XmiDiagramStore {
                 .map(
                         placed ->
                                 new ClassInDiagram(
-                                        placed.location().uuid(),
-                                        new URI(placed.location().graphUri())))
+                                        placed.location().uuid(), placed.location().schemaName()))
                 .toList();
     }
 }

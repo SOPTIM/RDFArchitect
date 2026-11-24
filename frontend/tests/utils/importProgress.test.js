@@ -21,7 +21,7 @@ import {
     FileState,
     ImportPhase,
     ImportProgress,
-    importedGraphUrisOf,
+    importedSchemaNamesOf,
     JobState,
     OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
@@ -32,7 +32,7 @@ function file(overrides) {
         fileName: "graph.ttl",
         sizeBytes: 100,
         state: FileState.PENDING,
-        graphUri: null,
+        schemaName: null,
         ...overrides,
     };
 }
@@ -40,7 +40,7 @@ function file(overrides) {
 function running(status) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state: JobState.RUNNING,
         files: [],
         outcome: null,
@@ -50,13 +50,13 @@ function running(status) {
 
 /** The outcome a finished graph import reports. */
 function graphsImported({
-    graphUris = [],
+    schemaNames = [],
     failedFileNames = [],
     warnings = [],
 }) {
     return {
         kind: OutcomeKind.GRAPHS_IMPORTED,
-        graphUris,
+        schemaNames,
         failedFileNames,
         warnings,
     };
@@ -172,7 +172,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
+                outcome: graphsImported({ schemaNames: ["first"] }),
             }),
         );
 
@@ -188,7 +188,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 outcome: graphsImported({
-                    graphUris: ["http://graph#first"],
+                    schemaNames: ["first"],
                     failedFileNames: ["broken.ttl"],
                 }),
             }),
@@ -204,7 +204,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.CANCELLED,
                 outcome: graphsImported({
-                    graphUris: ["http://graph#first", "http://graph#second"],
+                    schemaNames: ["first", "second"],
                 }),
             }),
         );
@@ -219,7 +219,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
+                outcome: graphsImported({ schemaNames: ["first"] }),
             }),
         );
 
@@ -422,7 +422,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
+                outcome: graphsImported({ schemaNames: ["first"] }),
             }),
         );
 
@@ -438,37 +438,82 @@ describe("ImportProgress", () => {
         expect(progress.jobState).toBe(JobState.FAILED);
         expect(progress.errorMessage).toBe("Another import is still running.");
     });
+
+    test("takes over the problems of a rejected workspace file", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.FAILED,
+                errorMessage: "The workspace file cannot be imported.",
+                problems: ["manifest.json is missing."],
+            }),
+        );
+
+        expect(progress.problems).toEqual(["manifest.json is missing."]);
+        expect(progress.errorMessage).toBe(
+            "The workspace file cannot be imported.",
+        );
+    });
+
+    test("takes over the notices and schemas of an imported workspace file", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.WORKSPACE_IMPORTED,
+                    schemaNames: ["core"],
+                    notices: ["Written by a newer version."],
+                    cancelled: false,
+                },
+            }),
+        );
+
+        expect(progress.notices).toEqual(["Written by a newer version."]);
+        expect(progress.importedSchemaNames).toEqual(["core"]);
+    });
+
+    test("has neither problems nor notices for a schema import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(running({ state: JobState.COMPLETED }));
+
+        expect(progress.problems).toEqual([]);
+        expect(progress.notices).toEqual([]);
+    });
 });
 
-describe("importedGraphUrisOf", () => {
+describe("importedSchemaNamesOf", () => {
     test("takes the schemas the outcome names once the job has ended", () => {
         expect(
-            importedGraphUrisOf({
+            importedSchemaNamesOf({
                 state: JobState.CANCELLED,
                 outcome: {
                     kind: OutcomeKind.GRAPHS_IMPORTED,
-                    graphUris: ["http://graph#A"],
+                    schemaNames: ["A"],
                 },
             }),
-        ).toEqual(["http://graph#A"]);
+        ).toEqual(["A"]);
     });
 
     test("takes the files imported so far while a cancelled job has not stopped yet", () => {
         expect(
-            importedGraphUrisOf({
+            importedSchemaNamesOf({
                 state: JobState.RUNNING,
                 files: [
                     file({
                         state: FileState.IMPORTED,
-                        graphUri: "http://graph#A",
+                        schemaName: "A",
                     }),
                     file({ index: 1, state: FileState.RUNNING }),
                 ],
             }),
-        ).toEqual(["http://graph#A"]);
+        ).toEqual(["A"]);
     });
 
     test("finds nothing without a status", () => {
-        expect(importedGraphUrisOf(undefined)).toEqual([]);
+        expect(importedSchemaNamesOf(undefined)).toEqual([]);
     });
 });

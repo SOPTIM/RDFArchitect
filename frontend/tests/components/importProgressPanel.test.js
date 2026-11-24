@@ -54,14 +54,14 @@ function openWarnings(panel) {
 function statusOf(files, state) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state,
         files,
         outcome: {
             kind: OutcomeKind.GRAPHS_IMPORTED,
-            graphUris: files
+            schemaNames: files
                 .filter(file => file.state === FileState.IMPORTED)
-                .map(file => file.graphUri),
+                .map(file => file.schemaName),
             failedFileNames: files
                 .filter(file => file.state === FileState.FAILED)
                 .map(file => file.fileName),
@@ -76,8 +76,7 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        graphUri:
-            state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
+        schemaName: state === FileState.IMPORTED ? fileName : null,
         ...extra,
     };
 }
@@ -185,7 +184,7 @@ describe("ImportProgressPanel", () => {
         status.outcome.warnings = [
             {
                 fileName: "schema.ttl",
-                graphUri: "http://graph#schema",
+                schemaName: "schema",
                 items: [
                     {
                         resource: "color",
@@ -230,12 +229,12 @@ describe("ImportProgressPanel", () => {
         status.outcome.warnings = [
             {
                 fileName: "schema.ttl",
-                graphUri: "http://graph#schema",
+                schemaName: "schema",
                 items: [{ resource: "color", reason: "no stereotype" }],
             },
             {
                 fileName: "schema.ttl",
-                graphUri: "http://graph#schema_1",
+                schemaName: "schema_1",
                 items: [{ resource: "owner", reason: "no stereotype" }],
             },
         ];
@@ -257,5 +256,52 @@ describe("ImportProgressPanel", () => {
 
         expect(panel.textContent).toContain("Import failed");
         expect(panel.textContent).toContain("Another import is still running.");
+    });
+
+    test("lists every problem of a rejected workspace file", () => {
+        const progress = new ImportProgress();
+        progress.apply({
+            ...statusOf([], JobState.FAILED),
+            errorMessage: "The workspace file cannot be imported.",
+            problems: [
+                "graphs/core/shacl.ttl is missing.",
+                'workspace/colors.json: "gone" is not a graph of the workspace file.',
+            ],
+        });
+
+        const panel = render(progress);
+
+        expect(panel.textContent).toContain(
+            "The workspace file cannot be imported.",
+        );
+        const problems = [...panel.querySelectorAll("li")].map(item =>
+            item.textContent.trim(),
+        );
+        expect(problems).toEqual([
+            "graphs/core/shacl.ttl is missing.",
+            'workspace/colors.json: "gone" is not a graph of the workspace file.',
+        ]);
+    });
+
+    test("shows what the user should know about an imported archive", () => {
+        const progress = new ImportProgress();
+        progress.apply({
+            ...statusOf(
+                [fileOf(0, "core", FileState.IMPORTED)],
+                JobState.COMPLETED,
+            ),
+            outcome: {
+                kind: OutcomeKind.WORKSPACE_IMPORTED,
+                schemaNames: ["core"],
+                notices: ["The workspace file was written in format 1.4."],
+                cancelled: false,
+            },
+        });
+
+        const panel = render(progress);
+
+        expect(panel.textContent).toContain(
+            "The workspace file was written in format 1.4.",
+        );
     });
 });

@@ -34,8 +34,8 @@ import org.rdfarchitect.xmi.read.XmiPackageScope;
  *     up so that the progress can name it before its export has been read
  * @param scope whether the schema is the package with its sub-packages or the package alone, {@code
  *     null} counting as the former
- * @param graphUri what the schema is to be called, or {@code null} to name it after the package. A
- *     package declaring a profile commonly offers several candidates and only the caller can say
+ * @param schemaName what the schema is to be called, or {@code null} to name it after the package.
+ *     A package declaring a profile commonly offers several candidates and only the caller can say
  *     which one is meant
  * @param modelNamespace what nearly every resource of the schema is named with, {@code null} to
  *     leave the export its own
@@ -49,7 +49,7 @@ public record SelectedPackageDTO(
         String packageId,
         String name,
         XmiPackageScope scope,
-        String graphUri,
+        String schemaName,
         String modelNamespace,
         String extensionNamespace) {
 

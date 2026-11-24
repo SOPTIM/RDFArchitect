@@ -24,10 +24,10 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
 
-    import Direct from "./Direct.svelte";
-    import Inverse from "./Inverse.svelte";
     import { resolveSaveTarget } from "../../resolve-save-target.js";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
+    import Direct from "./Direct.svelte";
+    import Inverse from "./Inverse.svelte";
 
     let {
         showDialog = $bindable(),
@@ -53,7 +53,7 @@
             if (!existingClassInfo) {
                 const res = await classStore.getClassInfo(
                     ctx.workspaceName,
-                    ctx.graphUri,
+                    ctx.schemaName,
                     targetValue,
                 );
                 if (res) {
@@ -102,7 +102,7 @@
         );
         const result = await saveApiAssociationToBackend(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.schemaName,
             classUuid,
             apiAssociation,
             isNewAssociation,
@@ -121,7 +121,7 @@
         forceReloadTrigger.trigger();
         classStore.invalidateGraph(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.schemaName,
         );
     }
 

@@ -34,18 +34,22 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.graph.InvalidPrefixException;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase;
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase.WorkspaceImportResult;
+import org.rdfarchitect.services.archive.importing.InvalidWorkspaceArchiveException;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportJobStatus;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
+import org.rdfarchitect.services.update.graph.ImportOutcome.WorkspaceImported;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
@@ -116,8 +120,7 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:IMPORTED");
-        assertThat(graphsImported(status).graphUris())
-                .containsExactly(RDFA.GRAPH_URI + "first", RDFA.GRAPH_URI + "second");
+        assertThat(graphsImported(status).schemaNames()).containsExactly("first", "second");
         assertThat(graphsImported(status).failedFileNames()).isEmpty();
     }
 
@@ -130,7 +133,7 @@ class ImportJobServiceTest {
         var observedSettings = new AtomicReference<UserSettings>();
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             observedSession.set(SessionContext.getSessionId());
                             observedSettings.set(UserSettingsContext.get());
                             return new ImportResult();
@@ -149,7 +152,7 @@ class ImportJobServiceTest {
         var content = new AtomicReference<byte[]>();
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             received.set(files.getFirst());
                             content.set(contentOf(files.getFirst()));
                             return new ImportResult();
@@ -167,7 +170,7 @@ class ImportJobServiceTest {
         var received = new AtomicReference<MultipartFile>();
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             received.set(files.getFirst());
                             return new ImportResult();
                         });
@@ -181,9 +184,22 @@ class ImportJobServiceTest {
 
     /** The service under test, wired with the real export reader and a stubbed graph import. */
     private static ImportJobService jobService(ImportGraphsUseCase importGraphs) {
-        var database = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         return new ImportJobService(
-                importGraphs, new ImportXmiService(database, new XmiDiagramStore()));
+                importGraphs,
+                xmiImportService(),
+                (workspaceName, archive, listener) -> {
+                    throw new UnsupportedOperationException();
+                });
+    }
+
+    /** The service under test, wired with a stubbed workspace import. */
+    private ImportJobService workspaceJobService(ImportWorkspaceUseCase importWorkspace) {
+        return new ImportJobService(realImportService(), xmiImportService(), importWorkspace);
+    }
+
+    private static ImportXmiService xmiImportService() {
+        var database = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        return new ImportXmiService(database, new XmiDiagramStore());
     }
 
     /** Reads an uploaded file while the import still owns it. */
@@ -259,12 +275,12 @@ class ImportJobServiceTest {
         var release = new CountDownLatch(1);
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             listener.started(0);
                             running.countDown();
                             awaitLatch(release);
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             return new ImportResult();
                         });
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
@@ -285,7 +301,7 @@ class ImportJobServiceTest {
     void startImport_importDyingOnAnError_settlesTheJobAndFreesTheSession() {
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new StackOverflowError("nesting too deep");
                         });
 
@@ -341,12 +357,12 @@ class ImportJobServiceTest {
     void startImport_importDiesHalfWay_stillReportsWhatItWrote() {
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             throw new IllegalStateException("out of memory");
                         });
 
@@ -359,20 +375,20 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("out of memory");
         // The graph is in the store whether the job survived or not, so the caller has to hear
         // about it; otherwise it stays invisible until the workspace is reloaded by hand.
-        assertThat(graphsImported(status).graphUris()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(graphsImported(status).schemaNames()).containsExactly("first");
     }
 
     @Test
     void startImport_importDiesHalfWay_settlesTheFilesItNeverFinished() {
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1),
                                             new PlannedImport(2, "third.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             listener.started(1);
                             throw new IllegalStateException("out of memory");
                         });
@@ -420,7 +436,7 @@ class ImportJobServiceTest {
     void cancel_runningImport_stopsItAndReportsTheJobAsCancelled() {
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             await().pollInSameThread().atMost(TIMEOUT).until(listener::isCancelled);
                             listener.finished(0, ImportProgressListener.Outcome.SKIPPED, null);
@@ -445,7 +461,7 @@ class ImportJobServiceTest {
     void startImport_importThrowing_reportsTheJobAsFailed() {
         service =
                 jobService(
-                        (datasetName, files, graphUris, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new IllegalStateException("import blew up");
                         });
 
@@ -538,7 +554,7 @@ class ImportJobServiceTest {
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.CANCELLED);
-        assertThat(graphsImported(status).graphUris()).isEmpty();
+        assertThat(graphsImported(status).schemaNames()).isEmpty();
         assertThat(status.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -561,6 +577,12 @@ class ImportJobServiceTest {
     private static GraphsImported graphsImported(ImportJobStatus status) {
         assertThat(status.outcome()).isInstanceOf(GraphsImported.class);
         return (GraphsImported) status.outcome();
+    }
+
+    /** What the workspace import wrote, failing the test when it produced some other outcome. */
+    private static WorkspaceImported workspaceImported(ImportJobStatus status) {
+        assertThat(status.outcome()).isInstanceOf(WorkspaceImported.class);
+        return (WorkspaceImported) status.outcome();
     }
 
     /**
@@ -610,7 +632,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase prefixAskingImportService(
             AtomicReference<ResolvedPrefixes> received, List<PrefixComparison> comparison) {
-        return (datasetName, files, graphUris, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
             listener.scanningPrefixes();
             received.set(listener.awaitResolvedPrefixes(comparison));
@@ -620,10 +642,115 @@ class ImportJobServiceTest {
                 return result;
             }
             listener.started(0);
-            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
-            result.importedGraphUris().add(RDFA.GRAPH_URI + "first");
+            listener.finished(0, Outcome.IMPORTED, "first");
+            result.importedSchemaNames().add("first");
             return result;
         };
+    }
+
+    @Test
+    void startWorkspaceImport_reportsTheImportedGraphsAndTheNotices() {
+        var received = new AtomicReference<String>();
+        service =
+                workspaceJobService(
+                        (workspaceName, archive, listener) -> {
+                            received.set(
+                                    workspaceName
+                                            + ":"
+                                            + new String(readAll(archive), StandardCharsets.UTF_8));
+                            listener.planned(
+                                    List.of(new PlannedImport(0, "http://example.org/core", -1)));
+                            listener.started(0);
+                            listener.finished(0, Outcome.IMPORTED, "http://example.org/core");
+                            return new WorkspaceImportResult(
+                                    List.of("http://example.org/core"),
+                                    List.of("Written by a newer version."),
+                                    false);
+                        });
+
+        var jobId = service.startWorkspaceImport(DATASET, archiveFile("the archive"));
+
+        var status = awaitFinished(jobId);
+        assertThat(received.get()).isEqualTo(DATASET + ":the archive");
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(status.files())
+                .extracting(file -> file.fileName() + ":" + file.state())
+                .containsExactly("http://example.org/core:IMPORTED");
+        assertThat(workspaceImported(status).schemaNames())
+                .containsExactly("http://example.org/core");
+        assertThat(workspaceImported(status).notices())
+                .containsExactly("Written by a newer version.");
+        assertThat(status.problems()).isEmpty();
+    }
+
+    @Test
+    void startWorkspaceImport_cancelledTooLateToStopIt_isCompleted() {
+        service =
+                workspaceJobService(
+                        (workspaceName, archive, listener) -> {
+                            ((ImportJob) listener).requestCancel();
+                            return new WorkspaceImportResult(
+                                    List.of("http://example.org/core"), List.of(), false);
+                        });
+
+        var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("archive")));
+
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(workspaceImported(status).schemaNames())
+                .containsExactly("http://example.org/core");
+    }
+
+    @Test
+    void startWorkspaceImport_invalidArchive_failsListingEveryProblem() {
+        service =
+                workspaceJobService(
+                        (workspaceName, archive, listener) -> {
+                            throw new InvalidWorkspaceArchiveException(
+                                    List.of("manifest.json: first", "colors.json: second"));
+                        });
+
+        var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("broken")));
+
+        assertThat(status.state()).isEqualTo(JobState.FAILED);
+        assertThat(status.errorMessage()).isEqualTo("The workspace file cannot be imported.");
+        assertThat(status.problems())
+                .containsExactly("manifest.json: first", "colors.json: second");
+        assertThat(workspaceImported(status).schemaNames()).isEmpty();
+    }
+
+    @Test
+    void startWorkspaceImport_takesTheSessionsOnlyImportSlot() throws Exception {
+        var running = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        service =
+                workspaceJobService(
+                        (workspaceName, archive, listener) -> {
+                            running.countDown();
+                            await().atMost(TIMEOUT).until(() -> release.getCount() == 0);
+                            return new WorkspaceImportResult(List.of(), List.of(), false);
+                        });
+        var jobId = service.startWorkspaceImport(DATASET, archiveFile("archive"));
+        assertThat(running.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)).isTrue();
+
+        assertThatThrownBy(
+                        () -> service.startImport(DATASET, List.of(graphFile("first.ttl")), null))
+                .isInstanceOf(ResourceConflictException.class);
+
+        release.countDown();
+        awaitFinished(jobId);
+    }
+
+    private static byte[] readAll(InputStream archive) {
+        try {
+            return archive.readAllBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static MultipartFile archiveFile(String content) {
+        return new MockMultipartFile(
+                "file", "ws.rdfa", "application/zip", content.getBytes(StandardCharsets.UTF_8));
     }
 
     private ImportGraphsUseCase realImportService() {
@@ -633,7 +760,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase blockingImportService(
             CountDownLatch running, CountDownLatch release) {
-        return (datasetName, files, graphUris, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             running.countDown();
             awaitLatch(release);
             return new ImportResult();
@@ -678,7 +805,7 @@ class ImportJobServiceTest {
         assertThat(importJobId).isPresent();
         var status = awaitFinished(importJobId.orElseThrow());
         assertThat(status.state()).isEqualTo(JobState.COMPLETED);
-        assertThat(graphsImported(status).graphUris()).containsExactly(RDFA.GRAPH_URI + "Topology");
+        assertThat(graphsImported(status).schemaNames()).containsExactly("Topology");
     }
 
     @Test
