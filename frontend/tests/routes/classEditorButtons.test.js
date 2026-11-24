@@ -17,6 +17,7 @@
 import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
 
@@ -94,6 +95,19 @@ describe("the class editor's Ctrl+S in a text field", () => {
     test("saveClass_typingWithChanges_savesTheClass", () => {
         expect(pressCtrlSWhileTyping()).toBe(true);
 
+        expect(classStore.replaceClass).toHaveBeenCalledTimes(1);
+    });
+
+    test("saveClass_unsavedChangesGuard_savesWithoutOfferingToDiscard", () => {
+        const guard = vi.fn();
+        eventStack.registerActionGuard(guard);
+        try {
+            pressCtrlSWhileTyping();
+        } finally {
+            eventStack.unregisterActionGuard(guard);
+        }
+
+        expect(guard).not.toHaveBeenCalled();
         expect(classStore.replaceClass).toHaveBeenCalledTimes(1);
     });
 

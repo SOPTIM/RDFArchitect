@@ -95,6 +95,7 @@
                         !!(reactiveClass?.isValid && reactiveClass?.isModified),
                     // A dialog on top, such as the attribute editor, holds edits of its own.
                     whileTyping: () => !isDialogOpen(),
+                    keepsEdits: true,
                 },
             ),
         );

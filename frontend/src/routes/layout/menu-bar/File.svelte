@@ -147,14 +147,14 @@
                     ["ctrl", "s"],
                     event => saveFromShortcut(event, false),
                     false,
-                    { whileTyping: true },
+                    { whileTyping: true, keepsEdits: true },
                 ),
                 shortcutStore.register(
                     "saveWorkspaceAs",
                     ["ctrl", "shift", "s"],
                     event => saveFromShortcut(event, true),
                     false,
-                    { whileTyping: true },
+                    { whileTyping: true, keepsEdits: true },
                 ),
             );
         }

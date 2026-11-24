@@ -16,6 +16,7 @@
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
 
 function press(key, { ctrl = false, shift = false, typing = false } = {}) {
@@ -167,5 +168,26 @@ describe("shortcutStore", () => {
         dialogOpen = false;
         expect(press("s", { ctrl: true, typing: true }).handled).toBe(true);
         expect(saveClass).toHaveBeenCalledTimes(1);
+    });
+
+    test("handleEvent_unsavedEdits_asksUnlessTheShortcutKeepsThem", () => {
+        const guard = vi.fn();
+        eventStack.registerActionGuard(guard);
+        try {
+            const save = vi.fn();
+            const open = vi.fn();
+            register("save", ["ctrl", "s"], save, false, { keepsEdits: true });
+            register("open", ["ctrl", "o"], open);
+
+            press("s", { ctrl: true });
+            expect(save).toHaveBeenCalledTimes(1);
+            expect(guard).not.toHaveBeenCalled();
+
+            press("o", { ctrl: true });
+            expect(open).not.toHaveBeenCalled();
+            expect(guard).toHaveBeenCalledTimes(1);
+        } finally {
+            eventStack.unregisterActionGuard(guard);
+        }
     });
 });

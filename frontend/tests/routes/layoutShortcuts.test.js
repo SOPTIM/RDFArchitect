@@ -18,6 +18,7 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { saveWorkspace } from "$lib/desktop/saveWorkspace.js";
+import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 import { editorState } from "$lib/sharedState.svelte.js";
 
 import Layout from "../../src/routes/+layout.svelte";
@@ -138,5 +139,18 @@ describe("Ctrl+S in a text field of the desktop app", () => {
 
         expect(saveWorkspace).toHaveBeenCalledTimes(1);
         expect(repeated.every(event => event.defaultPrevented)).toBe(true);
+    });
+
+    test("handleKeydown_unsavedClassChanges_savesWithoutOfferingToDiscard", () => {
+        const guard = vi.fn();
+        eventStack.registerActionGuard(guard);
+        try {
+            pressCtrlS();
+        } finally {
+            eventStack.unregisterActionGuard(guard);
+        }
+
+        expect(guard).not.toHaveBeenCalled();
+        expect(saveWorkspace).toHaveBeenCalledTimes(1);
     });
 });

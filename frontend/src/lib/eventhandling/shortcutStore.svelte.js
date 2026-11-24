@@ -34,6 +34,8 @@ export const shortcutStore = {
      * @param {boolean | (() => boolean)} [options.whileTyping] whether the shortcut also works while
      *     the focus is in a text field, like Save in a desktop app. Others leave the keys to the
      *     field there.
+     * @param {boolean} [options.keepsEdits] whether the shortcut leaves edits that are not saved yet
+     *     alone, as saving does. Others ask first whether to discard them.
      * @returns {() => void} unregisters the shortcut again
      */
     register(
@@ -41,7 +43,7 @@ export const shortcutStore = {
         keys,
         handler,
         closeDialogs = false,
-        { isActive = null, whileTyping = false } = {},
+        { isActive = null, whileTyping = false, keepsEdits = false } = {},
     ) {
         // Normalize to an array of key-combinations
         if (registry[id]) {
@@ -59,6 +61,7 @@ export const shortcutStore = {
             closeDialogs,
             isActive,
             whileTyping,
+            keepsEdits,
         };
         return () => this.unregister(id);
     },
@@ -98,13 +101,18 @@ export const shortcutStore = {
         if (!shortcut || (typing && !worksWhileTyping(shortcut))) {
             return false;
         }
-        const { handler, closeDialogs } = shortcut;
-        eventStack.guardAction(() => {
+        const { handler, closeDialogs, keepsEdits } = shortcut;
+        const run = () => {
             if (closeDialogs) {
                 eventStack.closeAllExcept([EventType.CLASS_EDITOR]);
             }
             handler(event);
-        });
+        };
+        if (keepsEdits) {
+            run();
+        } else {
+            eventStack.guardAction(run);
+        }
         return true;
     },
 };
