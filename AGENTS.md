@@ -6,10 +6,19 @@ Details on everything below are in `docs/content/developer-guide/` and `.github/
 
 Everything in the repository, as well as commit messages, PR titles and PR descriptions, MUST be in English.
 
+Agents MUST NOT change this file, `CLAUDE.md` or other agent instruction files on their own initiative, for example to record findings. They MAY only be changed when the user explicitly asks for it.
+
 ## Setup
 
 - Toolchain versions are listed under Prerequisites in `README.md`.
 - After a fresh checkout, run `npm run api:generate` in `frontend/`. The generated API client is git-ignored, and frontend tests, lint and build fail without it.
+
+## Remote operations
+
+- Changes to remote state MUST only be made when the user explicitly asks for that specific action. This covers pushes, force-pushes, deleting remote branches or tags, creating or editing pull requests and issues, comments, reviews, approvals, releases and workflow runs.
+- If a task only implies a remote action, the local part SHOULD be done and the remote part asked about first.
+- Reading remote state (`gh pr view`, `gh pr diff`, `gh pr checks`, `git fetch`, CI logs) is always allowed.
+- A review of a branch or pull request means: check it out locally, read the diff, run builds and tests locally, and report the findings in the chat, each with severity and `file:line`.
 
 ## Architecture
 
@@ -98,6 +107,12 @@ These files are generated and MUST NOT be edited by hand. When the trigger appli
   - backend: `void listSchemaNames_emptyCollection_returnsEmptyList()`
   - frontend: `test("listSchemaNames_emptyCollection_returnsEmptyList", ...)`
 
+### Writing tests
+
+- A bug fix MUST come with a regression test that fails without the fix and passes with it.
+- Realistic test input SHOULD come from the public ENTSO-E profiles in `external/entsoe-application-profiles-library/` or be written as small synthetic fixtures.
+- Test data MUST NOT contain internal, customer or otherwise non-public data, even if the user provides such data as an example. Use it to understand the problem and write a generic test instead.
+
 ### Running tests
 
 - While working, only the tests of the changed code SHOULD be run.
@@ -107,12 +122,19 @@ These files are generated and MUST NOT be edited by hand. When the trigger appli
 
 ### Before committing
 
-- In `backend/`: `mvn -B spotless:apply`, then `mvn -B -Plint -DskipTests verify`.
+- In `backend/`: `mvn -B com.mycila:license-maven-plugin:format` and `mvn -B spotless:apply`, then `mvn -B -Plint -DskipTests verify`.
 - In `frontend/`: `npm run format`, then `npm run lint`.
 
 ## Commits
 
 Commits follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) and `.github/CONTRIBUTING.md`.
+
+### Branches
+
+- Branch names MUST use `<type>/<ticket>-<slug>`:
+  - `type` is `feature` or `fix`.
+  - `ticket` is `RDFA-<id>` or `GH-<issue>`.
+  - `slug` is a short kebab-case summary, e.g. `feature/RDFA-123-short-description` or `fix/GH-45-short-description`.
 
 ### Format
 
