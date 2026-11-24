@@ -32,6 +32,7 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseFixtures;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
@@ -590,6 +591,40 @@ class ShapesValidationServiceTest {
                                 assertThat(finding.getSeverity())
                                         .isEqualTo(ShapesValidationFinding.Severity.WARNING));
         assertThat(report.isValid()).isTrue();
+    }
+
+    @Test
+    void aShapeWrittenAsARelativeIriIsPlacedWhereItIsWritten() {
+        var relative =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+
+                <#LineShape>
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment .
+                """;
+        documents.replaceShapesDocumentText(SCHEMA_ID.workspaceName(), custom, relative);
+        documents.createShapesDocument(
+                SCHEMA_ID.workspaceName(),
+                List.of(SCHEMA_ID.schemaName()),
+                "copy.ttl",
+                null,
+                relative,
+                Lang.TURTLE);
+
+        var report = service.validateShapes(SCHEMA_ID.workspaceName(), null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> "DUPLICATE_SHAPE_IRI".equals(finding.getCode()))
+                .hasSize(2)
+                .allSatisfy(
+                        finding -> {
+                            assertThat(finding.getTerm())
+                                    .isEqualTo(ShapesDocument.BASE_IRI + "#LineShape");
+                            assertThat(finding.getLine()).isEqualTo(4);
+                            assertThat(finding.getColumn()).isEqualTo(1);
+                        });
     }
 
     @Test

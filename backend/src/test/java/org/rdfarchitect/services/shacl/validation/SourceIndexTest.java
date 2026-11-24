@@ -27,8 +27,10 @@ import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.database.ShapesDocument;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -84,6 +86,88 @@ class SourceIndexTest {
                         + "@prefix cim: <http://iec.ch/TC57/CIM100#> .\n"
                         + "@prefix ex: <http://ex.org/> .\n"
                         + body);
+    }
+
+    private static final String CIM = "http://iec.ch/TC57/CIM100#";
+
+    private static Node uri(String iri) {
+        return NodeFactory.createURI(iri);
+    }
+
+    /** The index over {@code text}, with the prefixes the parsed graph ends up with. */
+    private static SourceIndex indexOf(String text) {
+        var graph = GraphFactory.createDefaultGraph();
+        RDFParser.fromString(text, Lang.TURTLE).base(ShapesDocument.BASE_IRI).parse(graph);
+        return new SourceIndex(text, graph.getPrefixMapping());
+    }
+
+    @Test
+    void aTermMentionedInAMessageIsFoundWhereItIsUsed() {
+        var text =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex: <http://ex.org/> .
+                ex:s a sh:NodeShape ;
+                    sh:property [ sh:message "use cim:Nope here, or 'cim:Nope'" ;
+                        sh:class cim:Nope ] .
+                """;
+
+        var located = indexOf(text).locate(uri(CIM + "Nope"), uri("http://ex.org/s"));
+
+        assertThat(located).isEqualTo(new SourceIndex.Location(6, 18));
+    }
+
+    @Test
+    void aTermInALongStringIsStillFound() {
+        var text =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex: <http://ex.org/> .
+                ex:s sh:sparql [ sh:select \"""SELECT $this WHERE { $this cim:Nope ?x }\""" ] .
+                """;
+
+        var located = indexOf(text).locate(uri(CIM + "Nope"), null);
+
+        assertThat(located).isEqualTo(new SourceIndex.Location(4, 58));
+    }
+
+    @Test
+    void aPrefixBoundTwiceMeansWhatItIsBoundToWhereItIsUsed() {
+        var text =
+                """
+                @prefix ex: <http://ex.org/> .
+                @prefix p: <http://iec.ch/TC57/CIM100#> .
+                ex:s ex:p p:Nope .
+                @prefix p: <http://ex.org/other#> .
+                ex:t ex:p p:Nope .
+                """;
+        var index = indexOf(text);
+
+        assertThat(index.locate(uri(CIM + "Nope"), null))
+                .isEqualTo(new SourceIndex.Location(3, 11));
+        assertThat(index.locate(uri("http://ex.org/other#Nope"), null))
+                .isEqualTo(new SourceIndex.Location(5, 11));
+    }
+
+    @Test
+    void aRelativeIriIsResolvedAgainstTheBaseInForce() {
+        var text =
+                """
+                @prefix ex: <http://ex.org/> .
+                <#S> ex:p <Here> .
+                @base <http://iec.ch/TC57/> .
+                ex:t ex:p <CIM100#Nope> .
+                """;
+        var index = indexOf(text);
+
+        assertThat(index.locate(uri(ShapesDocument.BASE_IRI + "#S"), null))
+                .isEqualTo(new SourceIndex.Location(2, 1));
+        assertThat(index.locate(uri(ShapesDocument.BASE_IRI + "Here"), null))
+                .isEqualTo(new SourceIndex.Location(2, 11));
+        assertThat(index.locate(uri(CIM + "Nope"), null))
+                .isEqualTo(new SourceIndex.Location(4, 11));
     }
 
     private static void assertSamePositions(String text) {
