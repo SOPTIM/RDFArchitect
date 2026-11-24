@@ -53,7 +53,7 @@
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
     );
-    let classGraphUri = $derived(
+    let classSchemaName = $derived(
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
@@ -81,8 +81,8 @@
         );
         putShacl({
             path: {
-                datasetName: classWorkspaceName,
-                graphURI: classGraphUri,
+                workspaceName: classWorkspaceName,
+                schemaName: classSchemaName,
                 classUUID: editorState.selectedClass.getProperty("id"),
             },
             body: ttlString,

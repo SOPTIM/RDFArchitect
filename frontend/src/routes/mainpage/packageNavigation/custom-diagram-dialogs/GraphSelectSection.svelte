@@ -37,7 +37,7 @@
      * The name of a schema among the others of its workspace, which only the
      * caller can tell apart. On its own a schema is named by itself.
      */
-    const graphName = $derived(label ?? graphLabel(graph));
+    const schemaLabel = $derived(label ?? graphLabel(graph));
 
     let graphIcon = $derived(graph.showContents ? faFolderOpen : faFolder);
     const hasPackages = $derived(packages?.length > 0);
@@ -69,7 +69,7 @@
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
     <NavigationEntry
         level={1}
-        label={graphName}
+        label={schemaLabel}
         icon={graphIcon}
         title={graphTooltip(graph)}
         selected={graph.selected}

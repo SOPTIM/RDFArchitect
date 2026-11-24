@@ -30,21 +30,21 @@
         isMergedDiagramType,
     } from "$lib/sharedState.svelte.js";
 
-    import {
-        getContextMenuTriggerStyle,
-        handleContextMenuOpenChange,
-        syncContextMenuTrigger,
-    } from "./contextMenuUtils.js";
     import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import AddToWorkspaceDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import { startPaste } from "../../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
     import PasteMenuItems from "../../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
     import NewClassDialog from "../../../../../routes/NewClassDialog.svelte";
+    import {
+        getContextMenuTriggerStyle,
+        handleContextMenuOpenChange,
+        syncContextMenuTrigger,
+    } from "./contextMenuUtils.js";
     let {
         request = null,
         disabled = false,
         lockedWorkspaceName = "",
-        lockedGraphUri = "",
+        lockedSchemaName = "",
         lockedPackage = "",
         classes = [],
         onClassCreated = () => {},
@@ -147,7 +147,7 @@
                 </ContextMenu.SubMenu.Root>
                 <ContextMenu.Separator />
             {/if}
-            {#if lockedGraphUri}
+            {#if lockedSchemaName}
                 <ContextMenu.Item.Button
                     onSelect={openAddAllToGraphDiagramDialog}
                     disabled={addAllDisabled}
@@ -170,7 +170,7 @@
 <NewClassDialog
     bind:showDialog={showNewClassDialog}
     {lockedWorkspaceName}
-    {lockedGraphUri}
+    {lockedSchemaName}
     {lockedPackage}
     {classLayoutPosition}
     {onClassCreated}
@@ -180,7 +180,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddAllToGraphDiagramDialog}
         {lockedWorkspaceName}
-        {lockedGraphUri}
+        {lockedSchemaName}
         {classes}
     />
 {/if}
@@ -189,7 +189,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddAllToWorkspaceDiagramDialog}
         {lockedWorkspaceName}
-        {lockedGraphUri}
+        {lockedSchemaName}
         {classes}
     />
 {/if}

@@ -25,10 +25,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphUseCase;
 import org.rdfarchitect.services.update.graph.ReplaceGraphUseCase;
@@ -47,17 +46,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/content")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/content")
 @RequiredArgsConstructor
 public class GraphContentRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphContentRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetSchemaUseCase getSchemaUseCase;
     private final DeleteGraphUseCase deleteGraphUseCase;
     private final ReplaceGraphUseCase replaceGraphUseCase;
@@ -88,44 +85,32 @@ public class GraphContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
-                getSchemaUseCase.getSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
+                getSchemaUseCase.getSchema(new GraphIdentifier(workspaceName, schemaName), format);
 
         // add suggested file name to response
-        var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
-        }
+        var fileName = schemaName;
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         var body =
                 ResponseEntity.ok()
-                        .headers(headers)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                        .headers(DownloadHeaders.attachment(fileName))
                         .body(outStream.toByteArray());
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return body;
     }
@@ -160,24 +145,20 @@ public class GraphContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphURI));
+        deleteGraphUseCase.deleteGraph(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -193,27 +174,23 @@ public class GraphContentRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file containing the graph to be inserted")
                     @RequestParam(value = "file", required = false)
                     MultipartFile file) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphURI), file);
+        replaceGraphUseCase.replaceGraph(new GraphIdentifier(workspaceName, schemaName), file);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return "success";
     }

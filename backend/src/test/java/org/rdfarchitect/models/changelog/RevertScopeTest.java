@@ -15,18 +15,23 @@
  *
  */
 
-import adapter from "@sveltejs/adapter-static";
-import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+package org.rdfarchitect.models.changelog;
 
-/** @type {import("@sveltejs/kit").Config} */
-const config = {
-    kit: {
-        adapter: adapter({
-            pages: "build",
-            assets: "build",
-            fallback: "index.html",
-        }),
-    },
-    preprocess: vitePreprocess(),
-};
-export default config;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+class RevertScopeTest {
+
+    @Test
+    void describe_everything_namesTheWorkspace() {
+        assertThat(RevertScope.everything().describe()).isEqualTo("the workspace");
+    }
+
+    @Test
+    void describe_schemaNamesWithHash_keepsTheWholeNames() {
+        assertThat(RevertScope.ofGraphs("a#b").describe()).isEqualTo("schema \"a#b\"");
+        assertThat(RevertScope.ofGraphs("SSH", "EQ#2").describe())
+                .isEqualTo("schemas \"EQ#2\", \"SSH\"");
+    }
+}

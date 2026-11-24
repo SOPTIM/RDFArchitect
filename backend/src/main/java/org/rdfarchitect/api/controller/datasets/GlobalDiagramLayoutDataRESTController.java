@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/layout/{diagramUUID}")
+@RequestMapping("api/workspaces/{workspaceName}/layout/{diagramUUID}")
 @RequiredArgsConstructor
 public class GlobalDiagramLayoutDataRESTController {
 
@@ -65,7 +65,7 @@ public class GlobalDiagramLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The UUID of the cross-profile or custom diagram being updated.")
@@ -83,15 +83,15 @@ public class GlobalDiagramLayoutDataRESTController {
                     @RequestBody
                     DiagramLayoutDTO diagramLayoutDTO) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/layout/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/layout/{{}}\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
         updateDiagramLayoutUseCase.updateDiagramLayout(
-                datasetName, UUID.fromString(diagramUUID), diagramLayoutDTO);
+                workspaceName, UUID.fromString(diagramUUID), diagramLayoutDTO);
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/layout/{{}}\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
         return Response.SUCCESS;
@@ -109,7 +109,7 @@ public class GlobalDiagramLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The UUID of the cross-profile or custom diagram being updated.")
@@ -130,15 +130,15 @@ public class GlobalDiagramLayoutDataRESTController {
                     @RequestBody
                     List<EdgeLayoutDTO> edgeLayoutDTOList) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/layout/{{}}/edges\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/layout/{{}}/edges\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
         updateEdgeLayoutUseCase.updateEdgeLayouts(
-                datasetName, UUID.fromString(diagramUUID), edgeLayoutDTOList);
+                workspaceName, UUID.fromString(diagramUUID), edgeLayoutDTOList);
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}/edges\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/layout/{{}}/edges\" from \"{}\".",
+                workspaceName,
                 diagramUUID,
                 originURL);
         return Response.SUCCESS;

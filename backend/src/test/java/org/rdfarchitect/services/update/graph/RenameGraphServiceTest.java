@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -37,12 +38,13 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.exception.graph.InvalidSchemaNameException;
 
 class RenameGraphServiceTest {
 
     private static final String DATASET = "ds";
-    private static final String OLD_URI = "http://graph#old";
-    private static final String NEW_URI = "http://graph#new";
+    private static final String OLD_NAME = "old";
+    private static final String NEW_NAME = "new-name";
     private static final String ONTOLOGY_IRI = "http://graph#old-ontology";
     private static final String DCTERMS_TITLE = "http://purl.org/dc/terms/title";
 
@@ -82,10 +84,10 @@ class RenameGraphServiceTest {
 
     @Test
     void renameGraph_renamesTheGraph() {
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_NAME), NEW_NAME);
 
-        verify(transaction).renameGraph(OLD_URI, NEW_URI);
-        verify(transaction).commit("Renamed the schema to \"%s\"".formatted("new"));
+        verify(transaction).renameGraph(OLD_NAME, NEW_NAME);
+        verify(transaction).commit("Renamed the schema to \"%s\"".formatted(NEW_NAME));
     }
 
     /**
@@ -97,11 +99,28 @@ class RenameGraphServiceTest {
     void renameGraph_leavesTheProfileHeaderUntouched() {
         givenProfileHeader();
 
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_NAME), NEW_NAME);
 
         verify(transaction, never()).graph(anyString());
         verify(databasePort, never()).getPrefixMapping(any());
         assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Core Equipment Vocabulary");
         assertThat(literalOf(DCAT.keyword.getURI())).isEqualTo("EQ");
+    }
+
+    @Test
+    void renameGraph_nameWithSurroundingWhitespace_renamesToTheTrimmedName() {
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_NAME), "  new-name ");
+
+        verify(transaction).renameGraph(OLD_NAME, NEW_NAME);
+    }
+
+    @Test
+    void renameGraph_invalidName_isRejectedBeforeTheGraphIsTouched() {
+        var graphIdentifier = new GraphIdentifier(DATASET, OLD_NAME);
+
+        assertThatExceptionOfType(InvalidSchemaNameException.class)
+                .isThrownBy(() -> renameGraphService.renameGraph(graphIdentifier, "a:b"));
+
+        verify(databasePort, never()).beginTransaction(anyString(), any(ReadWrite.class));
     }
 }

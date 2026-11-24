@@ -17,13 +17,6 @@
 
 import { writable } from "svelte/store";
 
-import { loadSlot } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import {
-    type AsyncListSlot,
-    createEmptyListSlot,
-    type Result,
-} from "./storeTypes";
 import {
     listGraphs,
     deleteGraph,
@@ -38,6 +31,13 @@ import {
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { loadSlot } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import {
+    type AsyncListSlot,
+    createEmptyListSlot,
+    type Result,
+} from "./storeTypes";
 
 type WorkspaceState = {
     graphs: Map<string, AsyncListSlot<GraphDto>>;
@@ -67,7 +67,7 @@ function createGraphStore() {
                     ...getWorkspaceState(s, workspaceName),
                     ...patch,
                 }),
-            () => listGraphs({ path: { datasetName: workspaceName } }),
+            () => listGraphs({ path: { workspaceName: workspaceName } }),
             LOG_PREFIX,
             `graphs for workspace="${workspaceName}"`,
             force,
@@ -76,97 +76,97 @@ function createGraphStore() {
 
     async function addEmptyGraph(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Adding empty graph "${graphURI}" to workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Adding empty graph "${schemaName}" to workspace "${workspaceName}"`,
         );
 
         const { error } = await replaceGraph({
-            path: { datasetName: workspaceName, graphURI },
+            path: { workspaceName: workspaceName, schemaName },
         });
 
         if (error) {
             console.error(
-                `Failed to create empty graph "${graphURI}" to workspace "${workspaceName}"`,
+                `Failed to create empty graph "${schemaName}" to workspace "${workspaceName}"`,
             );
             toastStore.error(
                 "Create failed",
-                `Could not create schema "${graphURI}".`,
+                `Could not create schema "${schemaName}".`,
             );
             return { error };
         }
 
         invalidateWorkspace(workspaceName);
-        console.log(`${LOG_PREFIX} Added empty graph "${graphURI}"`);
+        console.log(`${LOG_PREFIX} Added empty graph "${schemaName}"`);
         toastStore.success(
             "Schema created",
-            `"${graphURI}" was added to "${workspaceName}".`,
+            `"${schemaName}" was added to "${workspaceName}".`,
         );
         return { error: null };
     }
 
     async function renameGraph(
         workspaceName: string,
-        oldGraphURI: string,
-        newGraphURI: string,
+        oldSchemaName: string,
+        newSchemaName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Renaming graph "${oldGraphURI}" to "${newGraphURI}" in workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Renaming graph "${oldSchemaName}" to "${newSchemaName}" in workspace "${workspaceName}"`,
         );
 
         const { error } = await sdkRenameGraph({
-            path: { datasetName: workspaceName, graphURI: oldGraphURI },
-            query: { newGraphURI },
+            path: { workspaceName: workspaceName, schemaName: oldSchemaName },
+            query: { newSchemaName },
         });
 
         if (error) {
             const isConflict = (error as { status?: number })?.status === 409;
             console.error(
-                `${LOG_PREFIX} Failed to rename graph "${oldGraphURI}"`,
+                `${LOG_PREFIX} Failed to rename graph "${oldSchemaName}"`,
                 await describeError(error),
             );
             toastStore.error(
                 "Rename failed",
                 isConflict
-                    ? `A schema with the uri "${newGraphURI}" already exists.`
-                    : `Could not rename schema "${oldGraphURI}".`,
+                    ? `A schema named "${newSchemaName}" already exists.`
+                    : `Could not rename schema "${oldSchemaName}".`,
             );
             return { error };
         }
 
         invalidateWorkspace(workspaceName);
         console.log(
-            `${LOG_PREFIX} Renamed graph "${oldGraphURI}" to "${newGraphURI}"`,
+            `${LOG_PREFIX} Renamed graph "${oldSchemaName}" to "${newSchemaName}"`,
         );
         toastStore.success(
             "Schema renamed",
-            `"${oldGraphURI}" is now "${newGraphURI}".`,
+            `"${oldSchemaName}" is now "${newSchemaName}".`,
         );
         return { error: null };
     }
 
     async function removeGraph(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Deleting graph "${graphURI}" from workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Deleting graph "${schemaName}" from workspace "${workspaceName}"`,
         );
 
         const { error } = await deleteGraph({
-            path: { datasetName: workspaceName, graphURI },
+            path: { workspaceName: workspaceName, schemaName },
         });
 
         if (error) {
             const msg = await describeError(error);
             console.error(
-                `${LOG_PREFIX} Could not delete graph "${graphURI}" from workspace "${workspaceName}":`,
+                `${LOG_PREFIX} Could not delete graph "${schemaName}" from workspace "${workspaceName}":`,
                 msg,
             );
             toastStore.error(
                 "Delete failed",
-                `Could not delete schema "${graphURI}".`,
+                `Could not delete schema "${schemaName}".`,
             );
             return { error };
         }
@@ -175,10 +175,7 @@ function createGraphStore() {
             const dsState = getWorkspaceState(s, workspaceName);
             if (!dsState) return s;
             const nextData =
-                dsState.data?.filter(g => {
-                    const uri = `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}`;
-                    return uri !== graphURI;
-                }) ?? null;
+                dsState.data?.filter(g => g.name !== schemaName) ?? null;
 
             return setWorkspaceState(s, workspaceName, {
                 ...dsState,
@@ -187,9 +184,9 @@ function createGraphStore() {
         });
 
         console.log(
-            `${LOG_PREFIX} Deleted graph "${graphURI}" from workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Deleted graph "${schemaName}" from workspace "${workspaceName}"`,
         );
-        toastStore.success("Schema deleted", `"${graphURI}" was removed.`);
+        toastStore.success("Schema deleted", `"${schemaName}" was removed.`);
 
         return { error: null };
     }
@@ -208,6 +205,7 @@ function createGraphStore() {
         addEmptyGraph,
         renameGraph,
         startImport,
+        startWorkspaceImport,
         getImportStatus,
         resolvePrefixConflicts,
         cancelImport,
@@ -240,7 +238,7 @@ function setWorkspaceState(
 async function startImport(
     workspaceName: string,
     files: File[],
-    graphUris: string[],
+    schemaNames: string[],
     options: {
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
@@ -260,7 +258,7 @@ async function startImport(
         const jobId = await uploadImport(
             workspaceName,
             files,
-            graphUris,
+            schemaNames,
             options,
         );
         console.log(`${LOG_PREFIX} Import job "${jobId}" started`);
@@ -271,12 +269,44 @@ async function startImport(
     }
 }
 
+async function startWorkspaceImport(
+    workspaceName: string,
+    archive: File,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Starting the import of workspace "${workspaceName}"`,
+    );
+
+    const formData = new FormData();
+    formData.append("file", archive);
+    try {
+        const jobId = await upload(
+            `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspaceName)}` +
+                "/import",
+            formData,
+            options,
+        );
+        console.log(`${LOG_PREFIX} Workspace import job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(
+            `${LOG_PREFIX} Failed to start the workspace import`,
+            error,
+        );
+        return { error };
+    }
+}
+
 async function getImportStatus(
     workspaceName: string,
     jobId: string,
 ): Promise<Result<ImportJobStatus>> {
     const { data, error } = await sdkGetImportStatus({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
     });
 
     if (error || !data) {
@@ -304,7 +334,7 @@ async function resolvePrefixConflicts(
     );
 
     const { error } = await sdkResolvePrefixConflicts({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
         body: resolutions,
     });
 
@@ -330,7 +360,7 @@ async function cancelImport(
     console.log(`${LOG_PREFIX} Cancelling import job "${jobId}"`);
 
     const { error } = await sdkCancelImport({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
     });
 
     if (error) {
@@ -357,24 +387,37 @@ async function cancelImport(
 function uploadImport(
     workspaceName: string,
     files: File[],
-    graphUris: string[],
+    schemaNames: string[],
     options: {
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
     },
 ): Promise<string> {
-    const query = graphUris
-        .map(graphUri => `graphUris=${encodeURIComponent(graphUri ?? "")}`)
+    const query = schemaNames
+        .map(
+            schemaName => `schemaNames=${encodeURIComponent(schemaName ?? "")}`,
+        )
         .join("&");
     const url =
-        `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
-        `/graphs/content/imports${query ? `?${query}` : ""}`;
+        `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspaceName)}` +
+        `/schemas/content/imports${query ? `?${query}` : ""}`;
 
     const formData = new FormData();
     for (const file of files) {
         formData.append("files", file);
     }
+    return upload(url, formData, options);
+}
 
+// XMLHttpRequest rather than fetch, since only it reports upload progress.
+function upload(
+    url: string,
+    formData: FormData,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    },
+): Promise<string> {
     return new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", url);

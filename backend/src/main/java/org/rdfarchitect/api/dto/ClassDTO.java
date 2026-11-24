@@ -33,7 +33,7 @@ public class ClassDTO {
 
     private UUID uuid;
 
-    private String graphUri;
+    private String schemaName;
 
     private String prefix;
 

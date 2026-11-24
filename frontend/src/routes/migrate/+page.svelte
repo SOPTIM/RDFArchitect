@@ -95,9 +95,9 @@
         migrationState.set({
             compareMode: null,
             workspaceA: null,
-            graphA: null,
+            schemaA: null,
             workspaceB: null,
-            graphB: null,
+            schemaB: null,
             fileA: null,
             fileB: null,
             cgmesVersionA: null,

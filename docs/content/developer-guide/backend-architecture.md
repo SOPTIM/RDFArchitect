@@ -50,7 +50,7 @@ The **in-memory** path (`database/inmemory`) is used heavily in tests and as the
 Its contents (graphs, custom diagrams, layout, namespaces) are reachable only through a workspace transaction, so that a change touching several of them commits or rolls back as a whole and becomes one entry in the workspace changelog:
 
 ```java
-try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
     var ctx = transaction.graph(graphUri);
     // … edit ctx.getRdfGraph(), transaction.diagrams(), transaction.layout() …
     transaction.commit("Deleted class \"Breaker\"");
@@ -65,7 +65,7 @@ Controllers are thin and follow a strict skeleton:
 
 ```java
 @RestController
-@RequestMapping("api/datasets")
+@RequestMapping("api/workspaces")
 @RequiredArgsConstructor
 public class DatasetRESTController {
 
@@ -87,7 +87,7 @@ public class DatasetRESTController {
 
 Conventions worth knowing:
 
-- **One controller per resource path tier.** `api/datasets`, `api/datasets/{name}/graphs`, `api/datasets/{name}/graphs/{uri}/classes`, etc. Controllers do not span tiers.
+- **One controller per resource path tier.** `api/workspaces`, `api/workspaces/{name}/schemas`, `api/workspaces/{name}/schemas/{schemaName}/classes`, etc. Controllers do not span tiers.
 - **Always `@Operation` annotated** — Swagger UI is part of the public deliverable.
 - **Always log on receive and on respond**, with the originating URL, dataset, and graph names where applicable. Audit log style.
 - **Use cases are constructor-injected via `@RequiredArgsConstructor` (Lombok).** No field injection.
@@ -135,3 +135,9 @@ The migration wizard turns one list of `SemanticClassChange` objects into two ar
 - `MigrationReportBuilder` → `MarkdownMigrationReportBuilder` — the Markdown [migration report](/user-guide/migration#the-migration-report), in a summary and a detailed variant. `MigrationArtifactsService` prepends the validation reports of both schemas via `SchemaValidationReportToMarkdownService` before handing the changes over.
 
 The report renders field changes as sentences through a `switch` over `SemanticFieldChangeType`, so a new change type needs a case there — without one it silently renders as an empty line. Keep the two builders in step: a change that migrates data but never appears in the report is invisible to whoever reviews the migration.
+
+## The workspace file
+
+The workspace export and import (`services/archive/`) write and read one `.rdfa` file, a zip whose layout is described in the [user guide](/user-guide/workspace-and-importing). Each part of it — the schema, SHACL, layout and diagrams of a schema, the layout, diagrams, colours and namespaces of the workspace — is one `WorkspaceFilePart` in `services/archive/parts/` that writes the part, reads and checks it, and applies it to the new workspace. `WorkspaceFileParts` lists them in the order the import applies them.
+
+The import reads every part before it stores anything, so a broken file is rejected as a whole with every problem listed. A new part therefore needs no change to the export or import services: add the class and its place in `WorkspaceFileParts`. A field the import cannot do without is required by default; mark one that may be missing with `@JsonSetter(nulls = Nulls.SET)`. Anything an older importer cannot simply ignore needs a new major `FORMAT_VERSION`.

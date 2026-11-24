@@ -34,7 +34,7 @@
     import ChangesRow from "./ChangesRow.svelte";
     import RestoreConfirmDialog from "./RestoreConfirmDialog.svelte";
 
-    const { getExpanded, setExpanded, cleanExpandedStateMap, graphUri } =
+    const { getExpanded, setExpanded, cleanExpandedStateMap, schemaName } =
         $props();
 
     let changelog = $state();
@@ -57,7 +57,7 @@
 
     /** What the schema in view has, before the kinds the user hid are taken off it. */
     let changesInView = $derived(
-        (changelog ?? []).filter(change => showsChange(change, { graphUri })),
+        (changelog ?? []).filter(change => showsChange(change, { schemaName })),
     );
 
     let filterKinds = $derived(filterableKinds(changelog));
@@ -103,7 +103,7 @@
             return;
         }
         const { data, error } = await getChangeLogAPI({
-            path: { datasetName: selectedWorkspaceName },
+            path: { workspaceName: selectedWorkspaceName },
         });
         if (!error) {
             changelog = data;
@@ -128,12 +128,12 @@
         restoreRequest = restoreRequestFor(changelog, change);
     }
 
-    async function restore(graphUris) {
+    async function restore(schemaNames) {
         const { change, standingOn } = restoreRequest;
         restoreRequest = null;
         const { error, skipped } = await versionControlStore.restore(
             change.changeId,
-            graphUris,
+            schemaNames,
             undefined,
             standingOn,
         );
@@ -185,7 +185,7 @@
                                 {getExpanded}
                                 {setExpanded}
                                 {hiddenKinds}
-                                {graphUri}
+                                {schemaName}
                                 current={change.changeId ===
                                     currentChange?.changeId}
                                 readonly={readonlyWorkspace}
@@ -211,7 +211,7 @@
 
 <RestoreConfirmDialog
     request={restoreRequest}
-    {graphUri}
+    {schemaName}
     onConfirm={restore}
     onCancel={() => (restoreRequest = null)}
 />

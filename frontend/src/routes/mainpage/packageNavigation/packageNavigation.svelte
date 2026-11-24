@@ -20,7 +20,7 @@
 
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -29,12 +29,12 @@
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import SchemaDropZone from "../SchemaDropZone.svelte";
+    import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
     import { getWorkspaceNavEntry } from "./build-nav-object.js";
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
-    import SchemaDropZone from "../SchemaDropZone.svelte";
-    import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     const localReloadTrigger = new SimpleTrigger();
     const readonlyValue = asyncValue(
@@ -95,7 +95,7 @@
             (await workspaceStore.getNamespaces(workspaceName)) ?? [];
         const loadedCrossProfileID =
             await crossProfileStore.getId(workspaceName);
-        await graphColors.reload(workspaceName);
+        await schemaColors.reload(workspaceName);
         if (request !== latestLoadRequest) {
             return;
         }

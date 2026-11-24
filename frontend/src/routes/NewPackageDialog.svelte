@@ -36,7 +36,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedSchemaName,
     } = $props();
 
     const uuid = crypto.randomUUID();
@@ -47,7 +47,7 @@
     };
 
     let selectedWorkspaceName = $state(null);
-    let selectedGraphURI = $state(null);
+    let selectedSchemaName = $state(null);
     let packageLabel = $state(null);
     let packageComment = $state(null);
     let packageURINamespace = $state(null);
@@ -66,7 +66,7 @@
 
     let disableSubmit = $derived(
         !selectedWorkspaceName ||
-            !selectedGraphURI ||
+            !selectedSchemaName ||
             !packageURINamespace ||
             !packageLabel ||
             resourceIriAlreadyExists,
@@ -78,14 +78,14 @@
     });
 
     $effect(async () => {
-        await getResources(selectedWorkspaceName, selectedGraphURI);
+        await getResources(selectedWorkspaceName, selectedSchemaName);
     });
 
     async function onOpen() {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        selectedGraphURI =
-            lockedGraphUri ?? editorState.selectedGraph.getValue();
+        selectedSchemaName =
+            lockedSchemaName ?? editorState.selectedGraph.getValue();
 
         packageURINamespace = null;
         packageLabel = null;
@@ -96,8 +96,8 @@
         }
         namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
 
-        if (selectedGraphURI) {
-            await getResources(selectedWorkspaceName, selectedGraphURI);
+        if (selectedSchemaName) {
+            await getResources(selectedWorkspaceName, selectedSchemaName);
         } else {
             packages = [];
             classes = [];
@@ -106,7 +106,7 @@
 
     function onClose() {
         selectedWorkspaceName = null;
-        selectedGraphURI = null;
+        selectedSchemaName = null;
         namespaces = [];
         packageURINamespace = null;
         packages = [];
@@ -115,29 +115,33 @@
         packageComment = null;
     }
 
-    async function getResources(workspaceName, graphURI) {
+    async function getResources(workspaceName, schemaName) {
         await Promise.all([
-            getPackages(workspaceName, graphURI),
-            getClasses(workspaceName, graphURI),
+            getPackages(workspaceName, schemaName),
+            getClasses(workspaceName, schemaName),
         ]);
     }
 
-    async function getPackages(workspaceName, graphURI) {
-        if (!workspaceName || !graphURI) {
+    async function getPackages(workspaceName, schemaName) {
+        if (!workspaceName || !schemaName) {
             packages = [];
             return;
         }
 
-        const result = await packageStore.getPackages(workspaceName, graphURI);
+        const result = await packageStore.getPackages(
+            workspaceName,
+            schemaName,
+        );
         packages = result ? [...result.internal, ...result.external] : [];
     }
 
-    async function getClasses(workspaceName, graphURI) {
-        if (!workspaceName || !graphURI) {
+    async function getClasses(workspaceName, schemaName) {
+        if (!workspaceName || !schemaName) {
             classes = [];
             return;
         }
-        classes = (await classStore.getClasses(workspaceName, graphURI)) ?? [];
+        classes =
+            (await classStore.getClasses(workspaceName, schemaName)) ?? [];
     }
 
     function getResourceIri(resource) {
@@ -181,7 +185,7 @@
     onPrimary={() =>
         newPackage(
             selectedWorkspaceName,
-            selectedGraphURI,
+            selectedSchemaName,
             packageLabel,
             packageComment,
             packageURINamespace,
@@ -192,9 +196,9 @@
     <div class="mx-2 flex h-full flex-col">
         <WorkspaceAndGraphSelection
             bind:workspace={selectedWorkspaceName}
-            bind:graph={selectedGraphURI}
+            bind:graph={selectedSchemaName}
             {lockedWorkspaceName}
-            {lockedGraphUri}
+            {lockedSchemaName}
             allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />

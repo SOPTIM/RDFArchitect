@@ -36,9 +36,9 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
@@ -63,22 +63,21 @@ public class QueryDatasetService
     private final DatabasePort databasePort;
 
     @Override
-    public ByteArrayOutputStream getDatasetSchema(String datasetName, RDFFormat format) {
+    public ByteArrayOutputStream getDatasetSchema(String workspaceName, RDFFormat format) {
         var resultDataset = DatasetFactory.create();
 
         // fetch graphs and insert into resultDataset
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (String graphUri : transaction.graphUris()) {
-                if (graphUri.equals("default")) {
-                    resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
-                } else {
-                    resultDataset.addNamedModel(graphUri, getGraphAsModel(datasetName, graphUri));
-                }
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
+                resultDataset.addNamedModel(
+                        SchemaIri.of(schemaName), getGraphAsModel(workspaceName, schemaName));
             }
         }
 
         // add DB prefixes too resultDataset
-        resultDataset.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
+        resultDataset
+                .getPrefixMapping()
+                .setNsPrefixes(databasePort.getPrefixMapping(workspaceName));
 
         // format to file
         var outStream = new ByteArrayOutputStream();
@@ -87,23 +86,23 @@ public class QueryDatasetService
         return outStream;
     }
 
-    private Model getGraphAsModel(String datasetName, String graphURI) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            var ctx = transaction.graph(graphURI);
+    private Model getGraphAsModel(String workspaceName, String schemaName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            var ctx = transaction.graph(schemaName);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
 
     @Override
-    public List<GraphDTO> listGraphs(String datasetName) {
+    public List<GraphDTO> listGraphs(String workspaceName) {
         var result = new ArrayList<GraphDTO>();
 
         // Read once for the whole listing: it cannot change while it is running, and asking the
         // store per graph takes its lock once per profile of the workspace.
-        var datasetPrefixes = databasePort.getPrefixMapping(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (var graphUri : transaction.graphUris()) {
-                result.add(readGraph(transaction, graphUri, datasetPrefixes));
+        var datasetPrefixes = databasePort.getPrefixMapping(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (var schemaName : transaction.schemaNames()) {
+                result.add(readGraph(transaction, schemaName, datasetPrefixes));
             }
         }
 
@@ -123,10 +122,10 @@ public class QueryDatasetService
      * graph does not declare itself.
      */
     private GraphDTO readGraph(
-            WorkspaceTransaction transaction, String graphUri, PrefixMapping datasetPrefixes) {
-        var dto = GraphDTO.builder().uri(new URI(graphUri)).build();
+            WorkspaceTransaction transaction, String schemaName, PrefixMapping datasetPrefixes) {
+        var dto = GraphDTO.builder().name(schemaName).build();
         try {
-            var stored = transaction.graph(graphUri).getRdfGraph();
+            var stored = transaction.graph(schemaName).getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);
             var prefixes = graph.getPrefixMapping().setNsPrefixes(stored.getPrefixMapping());
             fillInMissingPrefixes(prefixes, datasetPrefixes);
@@ -208,8 +207,8 @@ public class QueryDatasetService
     }
 
     @Override
-    public List<CIMPrefixPair> listPrefixes(String datasetName) {
-        var prefixMapping = databasePort.getPrefixMapping(datasetName);
+    public List<CIMPrefixPair> listPrefixes(String workspaceName) {
+        var prefixMapping = databasePort.getPrefixMapping(workspaceName);
 
         var result = new ArrayList<CIMPrefixPair>();
         for (var prefix : prefixMapping.getNsPrefixMap().entrySet()) {
@@ -219,8 +218,8 @@ public class QueryDatasetService
     }
 
     @Override
-    public String listFormattedPrefixes(String datasetName, String format) {
-        var prefixMapping = databasePort.getPrefixMapping(datasetName);
+    public String listFormattedPrefixes(String workspaceName, String format) {
+        var prefixMapping = databasePort.getPrefixMapping(workspaceName);
         var model = ModelFactory.createDefaultModel();
         model.setNsPrefixes(prefixMapping);
         var stream = new ByteArrayOutputStream();
@@ -240,15 +239,15 @@ public class QueryDatasetService
     @Override
     public List<DatasetDTO> listDatasets() {
         var result = new ArrayList<DatasetDTO>();
-        for (var datasetName : databasePort.listDatasets()) {
-            var readonly = databasePort.isReadOnly(datasetName);
-            var prefixMapping = databasePort.getPrefixMapping(datasetName);
+        for (var workspaceName : databasePort.listDatasets()) {
+            var readonly = databasePort.isReadOnly(workspaceName);
+            var prefixMapping = databasePort.getPrefixMapping(workspaceName);
 
             var prefixPairs = new ArrayList<CIMPrefixPair>();
             for (var prefix : prefixMapping.getNsPrefixMap().entrySet()) {
                 prefixPairs.add(new CIMPrefixPair(prefix.getKey() + ":", prefix.getValue()));
             }
-            result.add(new DatasetDTO(datasetName, readonly, prefixPairs));
+            result.add(new DatasetDTO(workspaceName, readonly, prefixPairs));
         }
         return result;
     }

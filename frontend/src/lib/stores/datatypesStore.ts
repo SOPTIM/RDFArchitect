@@ -17,9 +17,6 @@
 
 import { writable, get } from "svelte/store";
 
-import { type GraphKey, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./storeLogging";
-import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     listPrimitives,
     listDatatypes,
@@ -27,6 +24,9 @@ import {
     type ClassUmlAdaptedDto,
     type Uri,
 } from "../api/generated";
+import { type GraphKey, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./storeLogging";
+import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 
 // =============================================================================
 // Types
@@ -106,7 +106,7 @@ function createVocabStore() {
      */
     async function loadSlot<K extends keyof GraphVocabulary>(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         slot: K,
         label: string,
         fetcher: () => Promise<{
@@ -115,10 +115,10 @@ function createVocabStore() {
         }>,
         force: boolean,
     ): Promise<GraphVocabulary[K]["data"]> {
-        if (!workspaceName || !graphURI)
+        if (!workspaceName || !schemaName)
             return null as GraphVocabulary[K]["data"];
 
-        const key = makeGraphKey(workspaceName, graphURI);
+        const key = makeGraphKey(workspaceName, schemaName);
         const slotState = getGraphVocabulary(get(store), key)[slot];
 
         if (!force && slotState.data !== null) {
@@ -132,7 +132,7 @@ function createVocabStore() {
         }
 
         console.log(
-            `${LOG_PREFIX} Loading ${label} for workspace="${workspaceName}", graph="${graphURI}", force=${force}`,
+            `${LOG_PREFIX} Loading ${label} for workspace="${workspaceName}", graph="${schemaName}", force=${force}`,
         );
 
         const promise = (async (): Promise<GraphVocabulary[K]["data"]> => {
@@ -141,7 +141,7 @@ function createVocabStore() {
 
                 if (error) {
                     console.error(
-                        `${LOG_PREFIX} Failed to load ${label} for workspace="${workspaceName}", graph="${graphURI}":`,
+                        `${LOG_PREFIX} Failed to load ${label} for workspace="${workspaceName}", graph="${schemaName}":`,
                         await describeError(error),
                     );
                     update(s =>
@@ -161,13 +161,13 @@ function createVocabStore() {
                 );
 
                 console.log(
-                    `${LOG_PREFIX} Loaded ${(data ?? []).length} ${label} for workspace="${workspaceName}", graph="${graphURI}"`,
+                    `${LOG_PREFIX} Loaded ${(data ?? []).length} ${label} for workspace="${workspaceName}", graph="${schemaName}"`,
                 );
 
                 return result as GraphVocabulary[K]["data"];
             } catch (err) {
                 console.error(
-                    `${LOG_PREFIX} Unexpected error while loading ${label} for workspace="${workspaceName}", graph="${graphURI}":`,
+                    `${LOG_PREFIX} Unexpected error while loading ${label} for workspace="${workspaceName}", graph="${schemaName}":`,
                     err,
                 );
                 update(s =>
@@ -186,17 +186,17 @@ function createVocabStore() {
 
     function getPrimitives(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         force = false,
     ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
             workspaceName,
-            graphURI,
+            schemaName,
             "primitives",
             "primitives",
             () =>
                 listPrimitives({
-                    path: { datasetName: workspaceName, graphURI },
+                    path: { workspaceName: workspaceName, schemaName },
                 }),
             force,
         );
@@ -204,17 +204,17 @@ function createVocabStore() {
 
     function getDatatypes(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         force = false,
     ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
             workspaceName,
-            graphURI,
+            schemaName,
             "datatypes",
             "datatypes",
             () =>
                 listDatatypes({
-                    path: { datasetName: workspaceName, graphURI },
+                    path: { workspaceName: workspaceName, schemaName },
                 }),
             force,
         );
@@ -222,17 +222,17 @@ function createVocabStore() {
 
     function getStereotypes(
         workspaceName: string,
-        graphURI: string,
+        schemaName: string,
         force = false,
     ): Promise<string[] | null> {
         return loadSlot(
             workspaceName,
-            graphURI,
+            schemaName,
             "stereotypes",
             "stereotypes",
             () =>
                 listStereotypes({
-                    path: { datasetName: workspaceName, graphURI },
+                    path: { workspaceName: workspaceName, schemaName },
                 }),
             force,
         );
@@ -243,8 +243,8 @@ function createVocabStore() {
     // =========================================================================
 
     /** Marks a graph's vocabularies as stale; next loader call will refetch. */
-    function invalidateGraph(workspaceName: string, graphURI: string) {
-        const key = makeGraphKey(workspaceName, graphURI);
+    function invalidateGraph(workspaceName: string, schemaName: string) {
+        const key = makeGraphKey(workspaceName, schemaName);
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
             const byGraph = new Map(s.byGraph);

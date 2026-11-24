@@ -57,10 +57,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void sendInsert(Update insertUpdate, String datasetName) throws DataAccessException {
+    public void sendInsert(Update insertUpdate, String workspaceName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .setUpdate(insertUpdate)
                 .execute();
     }
@@ -71,11 +71,11 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void insertGraph(GraphSource graphsource, String datasetName)
+    public void insertGraph(GraphSource graphsource, String workspaceName)
             throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .insertGraph(graphsource);
     }
 
@@ -85,24 +85,24 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void sendDelete(Update deleteUpdate, String datasetName) throws DataAccessException {
+    public void sendDelete(Update deleteUpdate, String workspaceName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .setUpdate(deleteUpdate)
                 .execute();
     }
 
     @Override
-    public void deleteGraph(String datasetName) throws DataAccessException {
-        this.deleteGraph(datasetName, this.defaultDataset);
+    public void deleteGraph(String workspaceName) throws DataAccessException {
+        this.deleteGraph(workspaceName, this.defaultDataset);
     }
 
     @Override
-    public void deleteGraph(String datasetName, String graphName) throws DataAccessException {
+    public void deleteGraph(String workspaceName, String graphName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .deleteGraph(graphName);
     }
 
@@ -112,8 +112,8 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void deleteDefaultGraph(String datasetName) throws DataAccessException {
-        this.deleteGraph(datasetName, null);
+    public void deleteDefaultGraph(String workspaceName) throws DataAccessException {
+        this.deleteGraph(workspaceName, null);
     }
 
     @Override
@@ -122,10 +122,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
+    public void deleteDataset(String workspaceName) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .deleteDataset();
     }
 
@@ -135,10 +135,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void sendUpdate(Update update, String datasetName) throws DataAccessException {
+    public void sendUpdate(Update update, String workspaceName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .setUpdate(update)
                 .execute();
     }
@@ -149,35 +149,36 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public ResultFormatter sendSelect(Query query, String datasetName) throws DataAccessException {
+    public ResultFormatter sendSelect(Query query, String workspaceName)
+            throws DataAccessException {
         return new HttpSelectCommandImpl()
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .setQuery(query)
                 .execute();
     }
 
     @Override
-    public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
+    public PrefixMappingReadOnly getPrefixMapping(String workspaceName) {
         return new HttpSelectCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .getCurrentPrefixMapping();
     }
 
     @Override
-    public void addPrefix(String datasetName, String prefix, String uri) {
+    public void addPrefix(String workspaceName, String prefix, String uri) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .addPrefix(prefix, uri);
     }
 
     @Override
-    public void deletePrefix(String datasetName, String prefix) {
+    public void deletePrefix(String workspaceName, String prefix) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
                 .setEndpoint(this.url)
-                .setDatasetName(datasetName)
+                .setWorkspaceName(workspaceName)
                 .deletePrefix(prefix);
     }
 

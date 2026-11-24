@@ -24,13 +24,13 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.rdf.RDFFileLanguages;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
@@ -43,7 +43,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -69,11 +68,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     @Override
     public ImportResult importGraphs(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
-            List<String> graphUris,
+            List<String> schemaNames,
             ImportProgressListener listener) {
-        var sources = planSources(files, graphUris);
+        var sources = planSources(files, schemaNames);
         listener.planned(
                 sources.stream()
                         .flatMap(source -> source.plannedFiles().stream())
@@ -81,14 +80,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         .toList());
 
         var result = new ImportResult();
-        var negotiation = negotiatePrefixes(datasetName, sources, listener, result);
+        var negotiation = negotiatePrefixes(workspaceName, sources, listener, result);
 
-        var reservedGraphUris = loadExistingGraphUris(datasetName);
+        var reservedSchemaNames = loadExistingSchemaNames(workspaceName);
         var parsed = new ArrayList<ParsedGraph>();
         for (var source : sources) {
-            importSource(result, parsed, source, reservedGraphUris, listener, negotiation);
+            importSource(result, parsed, source, reservedSchemaNames, listener, negotiation);
         }
-        swapIn(result, datasetName, parsed, negotiation.resolved(), listener);
+        swapIn(result, workspaceName, parsed, negotiation.resolved(), listener);
         return result;
     }
 
@@ -103,7 +102,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * been answered.
      */
     private PrefixNegotiation negotiatePrefixes(
-            String datasetName,
+            String workspaceName,
             List<PlannedSource> sources,
             ImportProgressListener listener,
             ImportResult result) {
@@ -116,14 +115,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
         var readableFiles =
                 scanned.stream().map(ScanResult::scanned).filter(ScannedFile::readable).toList();
-        var comparison = PrefixComparer.compare(loadExistingPrefixes(datasetName), readableFiles);
+        var comparison = PrefixComparer.compare(loadExistingPrefixes(workspaceName), readableFiles);
         var contested = comparison.stream().filter(PrefixComparison::contested).count();
         if (contested == 0) {
             return new PrefixNegotiation(ResolvedPrefixes.none(), unreadableIndices);
         }
         logger.info(
                 "Import into dataset \"{}\" contests {} namespace prefix(es).",
-                datasetName,
+                workspaceName,
                 contested);
         var resolved = listener.awaitResolvedPrefixes(comparison);
         return new PrefixNegotiation(resolved, unreadableIndices);
@@ -241,9 +240,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     /**
      * The prefixes of the dataset, none when it does not exist yet and so collides with nothing.
      */
-    private Map<String, String> loadExistingPrefixes(String datasetName) {
+    private Map<String, String> loadExistingPrefixes(String workspaceName) {
         try {
-            return Map.copyOf(databasePort.getPrefixMapping(datasetName).getNsPrefixMap());
+            return Map.copyOf(databasePort.getPrefixMapping(workspaceName).getNsPrefixMap());
         } catch (RuntimeException _) {
             return Map.of();
         }
@@ -259,7 +258,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * file it holds; an archive that cannot be read contributes a single entry that fails right
      * away, leaving the other uploads unaffected.
      */
-    private List<PlannedSource> planSources(List<MultipartFile> files, List<String> graphUris) {
+    private List<PlannedSource> planSources(List<MultipartFile> files, List<String> schemaNames) {
         var sources = new ArrayList<PlannedSource>();
         int index = 0;
         for (int i = 0; i < files.size(); i++) {
@@ -275,7 +274,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         new PlannedFile(
                                 index++,
                                 fileName,
-                                getRequestedGraphUri(graphUris, i),
+                                getRequestedSchemaName(schemaNames, i),
                                 file.getSize());
                 sources.add(new PlannedSource(file, false, List.of(plannedFile), null));
             }
@@ -336,12 +335,12 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return !entry.isDirectory() && isGraphFile(entry.getName());
     }
 
-    private String getRequestedGraphUri(List<String> graphUris, int index) {
-        if (graphUris != null
-                && graphUris.size() > index
-                && graphUris.get(index) != null
-                && !graphUris.get(index).isBlank()) {
-            return graphUris.get(index);
+    private String getRequestedSchemaName(List<String> schemaNames, int index) {
+        if (schemaNames != null
+                && schemaNames.size() > index
+                && schemaNames.get(index) != null
+                && !schemaNames.get(index).isBlank()) {
+            return schemaNames.get(index);
         }
         return null;
     }
@@ -354,7 +353,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             ImportResult result,
             List<ParsedGraph> parsed,
             PlannedSource source,
-            Set<String> reservedGraphUris,
+            Set<String> reservedSchemaNames,
             ImportProgressListener listener,
             PrefixNegotiation negotiation) {
         if (source.unreadableReason() != null) {
@@ -369,7 +368,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         parsed,
                         plannedFile,
                         source.file(),
-                        reservedGraphUris,
+                        reservedSchemaNames,
                         listener,
                         negotiation.resolved());
             }
@@ -395,7 +394,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                                     parsed,
                                     plannedFile,
                                     InMemoryMultipartFile.of(plannedFile.fileName(), content),
-                                    reservedGraphUris,
+                                    reservedSchemaNames,
                                     listener,
                                     negotiation.resolved());
                         });
@@ -411,7 +410,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             List<ParsedGraph> parsed,
             PlannedFile plannedFile,
             MultipartFile file,
-            Set<String> reservedGraphUris,
+            Set<String> reservedSchemaNames,
             ImportProgressListener listener,
             ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
@@ -420,13 +419,13 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
         listener.started(plannedFile.index());
         try {
-            var graphUri =
-                    ensureUniqueGraphUri(
-                            normalizeGraphUri(
-                                    plannedFile.requestedGraphUri(), plannedFile.fileName()),
-                            reservedGraphUris);
+            var schemaName =
+                    ensureUniqueSchemaName(
+                            normalizeSchemaName(
+                                    plannedFile.requestedSchemaName(), plannedFile.fileName()),
+                            reservedSchemaNames);
 
-            var graph = parseGraph(file, graphUri);
+            var graph = parseGraph(file, schemaName);
             resolved.applyTo(graph.getPrefixMapping());
 
             var undisplayableProperties = findUndisplayableProperties(graph);
@@ -434,7 +433,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             // everything has been read.
             parsed.add(
                     new ParsedGraph(
-                            graphUri,
+                            schemaName,
                             graph,
                             plannedFile.index(),
                             plannedFile.fileName(),
@@ -475,7 +474,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      */
     private void swapIn(
             ImportResult result,
-            String datasetName,
+            String workspaceName,
             List<ParsedGraph> parsed,
             ResolvedPrefixes resolved,
             ImportProgressListener listener) {
@@ -485,8 +484,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         // The import may name a workspace that does not exist yet, and one it works in must not be
         // left read-only. Created at the first write, not up front: an import that writes nothing
         // leaves nothing behind, and a new workspace's prefixes cannot contest the first file's.
-        databasePort.createWorkspaceIfAbsent(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        databasePort.createWorkspaceIfAbsent(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             resolved.rewriteWorkspacePrefixes(transaction.prefixes())
                     .ifPresent(transaction::setPrefixes);
             for (var graph : parsed) {
@@ -503,7 +502,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             return;
         }
         for (var graph : parsed) {
-            result.importedGraphUris().add(graph.uri());
+            result.importedSchemaNames().add(graph.uri());
             if (!graph.undisplayableProperties().isEmpty()) {
                 result.warnings()
                         .add(new ImportWarning(graph.fileName(), graph.undisplayableProperties()));
@@ -514,8 +513,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static String importMessage(List<ParsedGraph> parsed) {
         return parsed.size() == 1
-                ? ChangeDescriptions.actionOn(
-                        "Imported", "schema", ChangeDescriptions.localName(parsed.getFirst().uri()))
+                ? ChangeDescriptions.actionOn("Imported", "schema", parsed.getFirst().uri())
                 : "Imported %d schemas".formatted(parsed.size());
     }
 
@@ -559,57 +557,51 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return localName == null || localName.isBlank() ? property.getURI() : localName;
     }
 
-    private Set<String> loadExistingGraphUris(String datasetName) {
+    private Set<String> loadExistingSchemaNames(String workspaceName) {
         try {
-            return new HashSet<>(databasePort.listGraphUris(datasetName));
+            return new HashSet<>(databasePort.listSchemaNames(workspaceName));
         } catch (RuntimeException _) {
             return new HashSet<>();
         }
     }
 
-    private Graph parseGraph(MultipartFile file, String graphUri) {
+    private Graph parseGraph(MultipartFile file, String schemaName) {
         return new GraphFileSourceBuilderImpl()
                 .setFile(file)
-                .setGraphName(graphUri)
+                .setGraphName(schemaName)
                 .build()
                 .graph();
     }
 
-    private String ensureUniqueGraphUri(String graphUri, Set<String> reservedGraphUris) {
-        var candidate = graphUri;
-        int suffix = 1;
-        while (reservedGraphUris.contains(candidate)) {
-            candidate = graphUri + "_" + suffix++;
-        }
-        reservedGraphUris.add(candidate);
+    private String ensureUniqueSchemaName(String schemaName, Set<String> reservedSchemaNames) {
+        var candidate = SchemaNames.unique(schemaName, reservedSchemaNames);
+        reservedSchemaNames.add(candidate);
         return candidate;
     }
 
-    private String buildGraphUriFromFileName(String fileName) {
+    private String buildSchemaNameFromFileName(String fileName) {
         var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        var fileNamePath = Paths.get(name).getFileName();
-        var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
+        // Not Paths.get: a name such as a:b.ttl is no valid path on Windows, but a valid file
+        // name elsewhere, and the zip entry may well come from there.
+        var lastSeparator = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        var lastPathSegment = name.substring(lastSeparator + 1);
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
-        var sanitized =
-                lastPathSegment
-                        .substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
-                        .replaceAll("\\W", "_");
-
-        if (sanitized.isBlank()) {
-            sanitized = FALL_BACK_NAME;
-        }
-        return RDFA.GRAPH_URI + sanitized;
+        var baseName =
+                lastPathSegment.substring(
+                        0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex);
+        return baseName.isBlank() ? FALL_BACK_NAME : baseName;
     }
 
-    private String normalizeGraphUri(String requestedUri, String fallbackFileName) {
-        if (requestedUri == null || requestedUri.isBlank()) {
-            return buildGraphUriFromFileName(fallbackFileName);
+    /**
+     * A name the user asked for has to be valid as it is. One taken from a file name is made valid
+     * instead: the entries of a zip cannot be renamed before they are imported.
+     */
+    private String normalizeSchemaName(String requestedName, String fallbackFileName) {
+        if (requestedName == null || requestedName.isBlank()) {
+            return SchemaNames.fromFileName(
+                    buildSchemaNameFromFileName(fallbackFileName), FALL_BACK_NAME);
         }
-        var trimmed = requestedUri.trim();
-        if (trimmed.contains("://")) {
-            return trimmed;
-        }
-        return RDFA.GRAPH_URI + trimmed;
+        return SchemaNames.validate(requestedName);
     }
 
     private boolean isZipFile(MultipartFile file) {
@@ -618,7 +610,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private boolean isGraphFile(String fileName) {
-        return fileName != null && RDFLanguages.filenameToLang(fileName) != null;
+        return fileName != null && RDFFileLanguages.of(fileName) != null;
     }
 
     /**
@@ -634,7 +626,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     /** One graph file of the import, in the order the import will process it. */
     private record PlannedFile(
-            int index, String fileName, String requestedGraphUri, long sizeBytes) {
+            int index, String fileName, String requestedSchemaName, long sizeBytes) {
 
         PlannedImport toPlannedImport() {
             return new PlannedImport(index, fileName, sizeBytes);

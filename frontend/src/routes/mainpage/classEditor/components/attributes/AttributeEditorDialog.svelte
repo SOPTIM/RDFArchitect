@@ -33,9 +33,9 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
-    import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
     import { resolveSaveTarget } from "../resolve-save-target.js";
     import AttributeStereotypes from "./AttributeStereotypes.svelte";
+    import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
 
     let {
         showDialog = $bindable(),
@@ -97,7 +97,7 @@
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.schemaName,
             classUuid,
             apiAttribute,
             isNewAttribute,

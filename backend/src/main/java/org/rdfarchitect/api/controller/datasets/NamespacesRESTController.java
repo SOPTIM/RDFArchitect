@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/namespaces")
+@RequestMapping("api/workspaces/{workspaceName}/namespaces")
 @RequiredArgsConstructor
 public class NamespacesRESTController {
 
@@ -80,17 +80,17 @@ public class NamespacesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/namespaces\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var result = listNamespaceUseCase.listPrefixes(datasetName);
+        var result = listNamespaceUseCase.listPrefixes(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/namespaces\" from \"{}\".",
+                workspaceName,
                 originURL);
         return result;
     }
@@ -109,18 +109,18 @@ public class NamespacesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The format of the namespaces.") @PathVariable String format) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/namespaces?format=ttl\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        var result = listNamespaceUseCase.listFormattedPrefixes(datasetName, format);
+        var result = listNamespaceUseCase.listFormattedPrefixes(workspaceName, format);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/namespaces?format=ttl\" from \"{}\".",
+                workspaceName,
                 originURL);
         return result;
     }
@@ -139,19 +139,19 @@ public class NamespacesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The new Namespaces.") @RequestBody
                     List<CIMPrefixPair> namespaces) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/namespaces\" from \"{}\".",
+                workspaceName,
                 originURL);
 
-        replaceNamespacesUseCase.replaceNamespaces(datasetName, namespaces);
+        replaceNamespacesUseCase.replaceNamespaces(workspaceName, namespaces);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/namespaces\" from \"{}\".",
+                workspaceName,
                 originURL);
         return Response.SUCCESS;
     }

@@ -24,7 +24,7 @@
         schemaLabel,
     } from "$lib/actions/schemaExtensionActions.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import { uriSuffix } from "$lib/utils/iri.js";
 
     let {
@@ -122,18 +122,18 @@
                         <span
                             class="text-default-text flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold"
                         >
-                            {#each group.occurrences as occurrence (occurrence.graphUri)}
+                            {#each group.occurrences as occurrence (occurrence.schemaName)}
                                 <span
                                     class="flex items-center gap-1"
-                                    title={occurrence.graphUri}
+                                    title={occurrence.schemaName}
                                 >
                                     <span
                                         class="shrink-0"
-                                        style={graphColors.get(
+                                        style={schemaColors.get(
                                             workspaceName,
-                                            occurrence.graphUri,
+                                            occurrence.schemaName,
                                         )
-                                            ? `color: ${graphColors.get(workspaceName, occurrence.graphUri)};`
+                                            ? `color: ${schemaColors.get(workspaceName, occurrence.schemaName)};`
                                             : ""}
                                     >
                                         <Fa icon={faDiagramProject} />

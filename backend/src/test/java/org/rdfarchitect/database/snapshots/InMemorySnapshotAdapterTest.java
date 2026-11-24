@@ -92,7 +92,7 @@ class InMemorySnapshotAdapterTest {
 
         var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
         assertTrue(databasePort.listDatasets().contains(snapshotName));
-        assertTrue(databasePort.listGraphUris(snapshotName).contains(GRAPH_URI));
+        assertTrue(databasePort.listSchemaNames(snapshotName).contains(GRAPH_URI));
         try (var transaction = databasePort.beginTransaction(snapshotName, ReadWrite.READ)) {
             assertTrue(transaction.graph(GRAPH_URI).getRdfGraph().contains(CLASS_TRIPLE));
         }

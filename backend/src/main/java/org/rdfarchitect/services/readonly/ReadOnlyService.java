@@ -30,17 +30,17 @@ public class ReadOnlyService
     private final DatabasePort databasePort;
 
     @Override
-    public boolean isReadOnly(String datasetName) {
-        return databasePort.isReadOnly(datasetName);
+    public boolean isReadOnly(String workspaceName) {
+        return databasePort.isReadOnly(workspaceName);
     }
 
     @Override
-    public void enableEditing(String datasetName) {
-        databasePort.enableEditing(datasetName);
+    public void enableEditing(String workspaceName) {
+        databasePort.enableEditing(workspaceName);
     }
 
     @Override
-    public void disableEditing(String datasetName) {
-        databasePort.disableEditing(datasetName);
+    public void disableEditing(String workspaceName) {
+        databasePort.disableEditing(workspaceName);
     }
 }

@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.PersistUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,13 +36,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/writeToDatabase")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/writeToDatabase")
 @RequiredArgsConstructor
 public class PersistRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(PersistRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final PersistUseCase persistUseCase;
 
     @Operation(
@@ -60,26 +58,20 @@ public class PersistRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/redo\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        persistUseCase.persist(new GraphIdentifier(datasetName, extendedGraphURI));
+        persistUseCase.persist(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/redo\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

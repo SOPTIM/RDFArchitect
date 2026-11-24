@@ -14,7 +14,9 @@
  *    limitations under the License.
  *
  */
+import adapter from "@sveltejs/adapter-static";
 import { sveltekit } from "@sveltejs/kit/vite";
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,7 +37,18 @@ if (!process.env.PUBLIC_COMMIT_SHA && gitBuildMetadata.commitSha) {
 }
 
 export default defineConfig({
-    plugins: [sveltekit(), tailwindcss()],
+    plugins: [
+        sveltekit({
+            adapter: adapter({
+                pages: "build",
+                assets: "build",
+                fallback: "index.html",
+            }),
+            alias: { $lib: "src/lib" },
+            preprocess: vitePreprocess(),
+        }),
+        tailwindcss(),
+    ],
     optimizeDeps: {
         exclude: ["tinybench"], // Add the package name here
     },

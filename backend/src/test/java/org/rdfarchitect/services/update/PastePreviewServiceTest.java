@@ -41,7 +41,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassReference.Kind;
 import org.rdfarchitect.services.update.classes.CopyClassReferenceResolver;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
@@ -79,14 +78,14 @@ class PastePreviewServiceTest {
         pastePreviewService =
                 new PastePreviewService(
                         databasePort,
-                        new CopyClassSourceReader(databasePort, new ExpandURIService(databasePort)),
+                        new CopyClassSourceReader(databasePort),
                         new CopyClassReferenceResolver(databasePort));
 
         var file = readMultipartFileFromFile(PATH, "class-with-references.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(sourceGraphIdentifier.graphUri())
+                        .setGraphName(sourceGraphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphIdentifier, graphSource.graph());
         TestWorkspaces.createGraph(
@@ -95,8 +94,8 @@ class PastePreviewServiceTest {
 
     private PasteSourceClassDTO source(String classUUID) {
         var source = new PasteSourceClassDTO();
-        source.setSourceDatasetName(sourceGraphIdentifier.datasetName());
-        source.setSourceGraphURI(sourceGraphIdentifier.graphUri());
+        source.setSourceWorkspaceName(sourceGraphIdentifier.workspaceName());
+        source.setSourceSchemaName(sourceGraphIdentifier.schemaName());
         source.setClassUUID(classUUID);
         return source;
     }
@@ -268,8 +267,8 @@ class PastePreviewServiceTest {
     void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
         try (var transaction =
                 databasePort.beginTransaction(
-                        sourceGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(sourceGraphIdentifier.graphUri());
+                        sourceGraphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(sourceGraphIdentifier.schemaName());
             ctx.getRdfGraph()
                     .remove(
                             NodeFactory.createURI("http://example.org#class.associatedClass"),

@@ -79,7 +79,7 @@ public class ClassMappingsRESTController {
         var classes = getClassMappingsUseCase.getClassMappings();
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/migrations/class-renamings\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/migrations/class-renamings\" from \"{}\".",
                 originURL);
 
         return classes;

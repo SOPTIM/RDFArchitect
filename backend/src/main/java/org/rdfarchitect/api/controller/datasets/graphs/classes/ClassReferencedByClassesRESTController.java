@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassesReferencingThisClassUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +38,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/referencedByClasses")
 @RequiredArgsConstructor
 public class ClassReferencedByClassesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassReferencedByClassesRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final GetClassesReferencingThisClassUseCase getClassesReferencingThisClassUseCase;
 
@@ -63,31 +60,26 @@ public class ClassReferencedByClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classesReferencingThisClass =
                 getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(
                         graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return classesReferencingThisClass;

@@ -67,8 +67,8 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_diagramFromGraph_returnsCIMCollection() {
-        var class1 = new ClassInDiagram(UUID.randomUUID(), new URI("http://example.org#graph"));
-        var class2 = new ClassInDiagram(UUID.randomUUID(), new URI("http://example.org#graph"));
+        var class1 = new ClassInDiagram(UUID.randomUUID(), "http://example.org#graph");
+        var class2 = new ClassInDiagram(UUID.randomUUID(), "http://example.org#graph");
 
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -114,10 +114,10 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_datasetDiagramSingleGraph_returnsCIMCollection() {
-        var graphUri = new URI("http://example.org#graph");
+        var schemaName = "http://example.org#graph";
 
-        var class1 = new ClassInDiagram(UUID.randomUUID(), graphUri);
-        var class2 = new ClassInDiagram(UUID.randomUUID(), graphUri);
+        var class1 = new ClassInDiagram(UUID.randomUUID(), schemaName);
+        var class2 = new ClassInDiagram(UUID.randomUUID(), schemaName);
 
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -149,8 +149,8 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_datasetDiagramMultipleGraphs_mergesCollections() {
-        var uri1 = new URI("http://example.org#graph1");
-        var uri2 = new URI("http://example.org#graph2");
+        var uri1 = "http://example.org#graph1";
+        var uri2 = "http://example.org#graph2";
 
         var class1 = new ClassInDiagram(UUID.randomUUID(), uri1);
         var class2 = new ClassInDiagram(UUID.randomUUID(), uri2);
@@ -187,8 +187,8 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_multipleGraphsInDiagram_buildsCorrectGraphIdentifiers() {
-        var uri1 = new URI("http://example.org#graph1");
-        var uri2 = new URI("http://example.org#graph2");
+        var uri1 = "http://example.org#graph1";
+        var uri2 = "http://example.org#graph2";
 
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -215,7 +215,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         var identifiers = captor.getAllValues();
         assertThat(identifiers)
-                .extracting(GraphIdentifier::graphUri)
+                .extracting(GraphIdentifier::schemaName)
                 .containsExactlyInAnyOrder(
                         "http://example.org#graph1", "http://example.org#graph2");
     }

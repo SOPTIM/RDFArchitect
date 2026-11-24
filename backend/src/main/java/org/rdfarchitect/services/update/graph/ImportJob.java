@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.Getter;
 
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase.WorkspaceImportResult;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportFileStatus;
@@ -39,14 +40,16 @@ class ImportJob implements ImportProgressListener {
 
     @Getter private final UUID id;
     @Getter private final String sessionId;
-    @Getter private final String datasetName;
+    @Getter private final String workspaceName;
 
     private JobState state = JobState.RUNNING;
     private final List<FileProgress> files = new ArrayList<>();
-    private List<String> importedGraphUris = List.of();
+    private List<String> importedSchemaNames = List.of();
     private List<String> failedImports = List.of();
     private List<ImportGraphsUseCase.ImportWarning> warnings = List.of();
     private String errorMessage;
+    private List<String> problems = List.of();
+    private List<String> notices = List.of();
     private boolean cancelRequested;
     private boolean startedAFile;
     private Instant finishedAt;
@@ -54,10 +57,10 @@ class ImportJob implements ImportProgressListener {
     private ResolvedPrefixes resolvedPrefixes;
     private Instant lastPolledAt;
 
-    ImportJob(UUID id, String sessionId, String datasetName, Instant startedAt) {
+    ImportJob(UUID id, String sessionId, String workspaceName, Instant startedAt) {
         this.id = id;
         this.sessionId = sessionId;
-        this.datasetName = datasetName;
+        this.workspaceName = workspaceName;
         this.lastPolledAt = startedAt;
     }
 
@@ -106,7 +109,7 @@ class ImportJob implements ImportProgressListener {
     }
 
     @Override
-    public synchronized void finished(int index, Outcome outcome, String graphUri) {
+    public synchronized void finished(int index, Outcome outcome, String schemaName) {
         var file = fileAt(index);
         file.state =
                 switch (outcome) {
@@ -114,7 +117,7 @@ class ImportJob implements ImportProgressListener {
                     case FAILED -> FileState.FAILED;
                     case SKIPPED -> FileState.SKIPPED;
                 };
-        file.graphUri = graphUri;
+        file.schemaName = schemaName;
     }
 
     @Override
@@ -179,11 +182,29 @@ class ImportJob implements ImportProgressListener {
     }
 
     synchronized void complete(ImportResult result) {
-        importedGraphUris = List.copyOf(result.importedGraphUris());
         failedImports = List.copyOf(result.failedFileNames());
         warnings = List.copyOf(result.warnings());
-        state = cancelRequested ? JobState.CANCELLED : JobState.COMPLETED;
+        finish(result.importedSchemaNames(), cancelRequested);
+    }
+
+    /**
+     * Ends a workspace import, which keeps everything or nothing. A cancellation that came too late
+     * to stop it leaves a completed import.
+     */
+    synchronized void complete(WorkspaceImportResult result) {
+        notices = List.copyOf(result.notices());
+        finish(result.importedSchemaNames(), result.cancelled());
+    }
+
+    private void finish(List<String> importedSchemaNames, boolean cancelled) {
+        this.importedSchemaNames = List.copyOf(importedSchemaNames);
+        state = cancelled ? JobState.CANCELLED : JobState.COMPLETED;
         finishedAt = Instant.now();
+    }
+
+    synchronized void reject(List<String> problems) {
+        this.problems = List.copyOf(problems);
+        fail("The workspace file cannot be imported.");
     }
 
     synchronized void fail(String message) {
@@ -199,10 +220,10 @@ class ImportJob implements ImportProgressListener {
         }
         // The result died with the exception, but every file that made it through reported its
         // outcome, so what the import did manage to write is still recoverable from the progress.
-        importedGraphUris =
+        importedSchemaNames =
                 files.stream()
-                        .filter(file -> file.state == FileState.IMPORTED && file.graphUri != null)
-                        .map(file -> file.graphUri)
+                        .filter(file -> file.state == FileState.IMPORTED && file.schemaName != null)
+                        .map(file -> file.schemaName)
                         .toList();
         failedImports =
                 files.stream()
@@ -222,14 +243,16 @@ class ImportJob implements ImportProgressListener {
     synchronized ImportJobStatus status() {
         return new ImportJobStatus(
                 id,
-                datasetName,
+                workspaceName,
                 state,
                 files.stream().map(FileProgress::toStatus).toList(),
-                importedGraphUris,
+                importedSchemaNames,
                 failedImports,
                 warnings,
                 prefixComparison,
-                errorMessage);
+                errorMessage,
+                problems,
+                notices);
     }
 
     private FileProgress fileAt(int index) {
@@ -244,7 +267,7 @@ class ImportJob implements ImportProgressListener {
 
         private final PlannedImport plannedImport;
         private FileState state = FileState.PENDING;
-        private String graphUri;
+        private String schemaName;
 
         private FileProgress(PlannedImport plannedImport) {
             this.plannedImport = plannedImport;
@@ -256,7 +279,7 @@ class ImportJob implements ImportProgressListener {
                     plannedImport.fileName(),
                     plannedImport.sizeBytes(),
                     state,
-                    graphUri);
+                    schemaName);
         }
     }
 }

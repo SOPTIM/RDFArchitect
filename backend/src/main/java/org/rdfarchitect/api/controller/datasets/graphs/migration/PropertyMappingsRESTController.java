@@ -83,7 +83,7 @@ public class PropertyMappingsRESTController {
         var result = getPropertyMappingsUseCase.getPropertyMappings();
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/migrations/property-mappings\" from \"{}\".",
+                "Sending response to GET request: \"/api/migrations/property-mappings\" from \"{}\".",
                 originURL);
 
         return result;

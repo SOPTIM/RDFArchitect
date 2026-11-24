@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.rdfarchitect.services.update.classes.associations.UpdateAssociationsUseCase;
 import org.slf4j.Logger;
@@ -41,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/associations/{associationUUID}")
 @RequiredArgsConstructor
 public class ClassAssociationsRESTController {
 
@@ -49,7 +48,6 @@ public class ClassAssociationsRESTController {
             LoggerFactory.getLogger(ClassAssociationsRESTController.class);
 
     private final UpdateAssociationsUseCase updateAssociationsUseCase;
-    private final ExpandURIUseCase expandURIUseCase;
 
     @Operation(
             summary = "Replace/Create association",
@@ -64,12 +62,8 @@ public class ClassAssociationsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
+                    String workspaceName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The old, to be replaced association.") @PathVariable
                     String associationUUID,
@@ -85,23 +79,22 @@ public class ClassAssociationsRESTController {
                     @RequestBody
                     AssociationPairDTO associationPairDTO) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 associationUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAssociationUUIDs =
                 updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 associationUUID,
                 originURL);

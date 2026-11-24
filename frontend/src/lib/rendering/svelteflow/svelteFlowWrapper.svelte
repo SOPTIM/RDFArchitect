@@ -360,8 +360,8 @@
 
     function diagramTarget() {
         return {
-            datasetName: editorState.selectedWorkspace.getValue(),
-            graphURI: editorState.selectedGraph.getValue(),
+            workspaceName: editorState.selectedWorkspace.getValue(),
+            schemaName: editorState.selectedGraph.getValue(),
             diagramUUID: editorState.selectedDiagram.getProperty("id"),
         };
     }
@@ -540,7 +540,7 @@
             nodeOrderCtrl.bringToFrontTemporarily(focusNode.id);
             svelteFlowAPI.svelteFlow.fitView({
                 nodes: [focusNode],
-                padding: 0.4,
+                padding: "14%",
                 duration: 400,
                 maxZoom: 1.6,
             });
@@ -794,7 +794,7 @@
         }
 
         return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
-            padding: 0.1,
+            padding: "4.5%",
             duration,
         });
     }
@@ -815,6 +815,7 @@
     class:box-selecting={boxSelecting}
 >
     <SvelteFlow
+        forceColorMode="light"
         bind:nodes
         bind:edges
         {nodeTypes}
@@ -900,11 +901,11 @@
         request={contextMenus.paneRequest}
         disabled={isWorkspaceReadOnly}
         lockedWorkspaceName={editorState.selectedWorkspace.getValue()}
-        lockedGraphUri={editorState.selectedGraph.getValue()}
+        lockedSchemaName={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
         classes={classNodes.map(node => ({
             id: node.id,
-            graphUri: node.data?.graphUri,
+            schemaName: node.data?.schemaName,
         }))}
         onClose={() => contextMenus.close()}
     />
@@ -914,7 +915,7 @@
         readOnly={isWorkspaceReadOnly}
         contextMenuClass={contextMenus.contextMenuClass}
         workspaceName={editorState.selectedWorkspace.getValue()}
-        graphUri={editorState.selectedGraph.getValue()}
+        schemaName={editorState.selectedGraph.getValue()}
         nodeOrder={nodeOrderCtrl.nodeOrder}
         nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}

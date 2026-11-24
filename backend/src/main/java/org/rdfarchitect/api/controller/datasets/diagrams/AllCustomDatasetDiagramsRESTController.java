@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/diagrams")
+@RequestMapping("/api/workspaces/{workspaceName}/diagrams")
 @RequiredArgsConstructor
 public class AllCustomDatasetDiagramsRESTController {
 
@@ -76,17 +76,17 @@ public class AllCustomDatasetDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/diagrams\" from \"{}\"",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/diagrams\" from \"{}\"",
+                workspaceName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCustomDiagramsForDataset(datasetName);
+        var result = getCustomDiagramsUseCase.getCustomDiagramsForDataset(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/diagrams\" from \"{}\"",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/diagrams\" from \"{}\"",
+                workspaceName,
                 originURL);
         return result;
     }

@@ -36,7 +36,7 @@
         pack,
         readonly = false,
         workspaceName = null,
-        graphUri = null,
+        schemaName = null,
     } = $props();
 
     let pkg = $state(null);
@@ -52,12 +52,15 @@
     async function onOpen() {
         namespaces = await workspaceStore.getNamespaces(workspaceName);
 
-        if (!workspaceName || !graphUri) {
+        if (!workspaceName || !schemaName) {
             packages = [];
             return;
         }
 
-        const result = await packageStore.getPackages(workspaceName, graphUri);
+        const result = await packageStore.getPackages(
+            workspaceName,
+            schemaName,
+        );
         packages = result ? [...result.internal, ...result.external] : [];
 
         if (pack) {
@@ -88,7 +91,7 @@
     }
 
     async function savePackage() {
-        if (!workspaceName || !graphUri) {
+        if (!workspaceName || !schemaName) {
             return;
         }
 
@@ -99,7 +102,7 @@
         );
         const res = await packageStore.savePackage(
             workspaceName,
-            graphUri,
+            schemaName,
             apiPackage,
         );
 

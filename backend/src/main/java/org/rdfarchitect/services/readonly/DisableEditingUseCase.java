@@ -22,7 +22,7 @@ public interface DisableEditingUseCase {
     /**
      * Disables editing for the dataset and switches it back to read-only mode.
      *
-     * @param datasetName The name of the dataset to disable editing for
+     * @param workspaceName The name of the dataset to disable editing for
      */
-    void disableEditing(String datasetName);
+    void disableEditing(String workspaceName);
 }

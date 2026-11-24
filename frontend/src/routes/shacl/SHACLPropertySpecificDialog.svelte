@@ -53,7 +53,7 @@
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
     );
-    let classGraphUri = $derived(
+    let classSchemaName = $derived(
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
@@ -98,8 +98,8 @@
             if (type === "attributes") {
                 res = await getAttributeShacl({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                         classUUID: newViewedClassUUID,
                         attributeUUID: viewedPropertyUUID,
                     },
@@ -107,8 +107,8 @@
             } else if (type === "associations") {
                 res = await getAssociationShacl({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                         classUUID: newViewedClassUUID,
                         associationUUID: viewedPropertyUUID,
                     },
@@ -141,14 +141,14 @@
             const [generatedRes, customRes] = await Promise.all([
                 getGeneratedShaclNamespacesAsString({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                     },
                 }),
                 getCustomShaclNamespacesAsString({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                     },
                 }),
             ]);
@@ -185,8 +185,8 @@
             if (type === "attributes") {
                 res = await replaceAttributeShacl({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                         classUUID: getViewedClassUuid(),
                         attributeUUID: property.uuid.value,
                     },
@@ -195,8 +195,8 @@
             } else if (type === "associations") {
                 res = await replaceAssociationShacl({
                     path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
+                        workspaceName: classWorkspaceName,
+                        schemaName: classSchemaName,
                         classUUID: getViewedClassUuid(),
                         associationUUID: property.uuid.value,
                     },
