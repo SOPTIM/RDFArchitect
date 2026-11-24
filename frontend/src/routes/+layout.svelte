@@ -17,8 +17,10 @@
 
 <script>
     import "../app.css";
+    import { faLock } from "@fortawesome/free-solid-svg-icons";
     import { Tooltip } from "bits-ui";
     import { onMount } from "svelte";
+    import { Fa } from "svelte-fa";
 
     import {
         installBackendFetchInterceptor,
@@ -315,64 +317,59 @@
     >
         {#if page.url.pathname !== "/"}
             <nav
-                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center {pageTitle
+                class="toolbar-surface toolbar-layout text-default-text relative h-12 min-h-12 w-full {pageTitle
                     ? 'toolbar-surface--named'
                     : ''}"
             >
-                <!-- Left -->
-                <div class="w-1/3">
-                    <div class="flex min-w-0 flex-1 items-center">
-                        <BrandLogo
-                            class="toolbar-brand"
-                            onclick={navigateHome}
-                        />
+                <div class="flex items-center">
+                    <BrandLogo class="toolbar-brand" onclick={navigateHome} />
 
-                        {#if page.url.pathname !== "/"}
-                            <Menubar.Root
-                                bind:value={menubarValue}
-                                class="toolbar-menubar"
-                            >
-                                <File {isWorkspaceReadOnly} />
-                                <Edit
-                                    {canRedo}
-                                    {canUndo}
-                                    {isWorkspaceReadOnly}
-                                    {reload}
-                                />
-                                <View />
-                                <Help />
-                            </Menubar.Root>
-                        {/if}
-                    </div>
+                    {#if page.url.pathname !== "/"}
+                        <Menubar.Root
+                            bind:value={menubarValue}
+                            class="toolbar-menubar"
+                        >
+                            <File {isWorkspaceReadOnly} />
+                            <Edit
+                                {canRedo}
+                                {canUndo}
+                                {isWorkspaceReadOnly}
+                                {reload}
+                            />
+                            <View />
+                            <Help />
+                        </Menubar.Root>
+                    {/if}
                 </div>
 
-                <!-- Center -->
-                <div class="w-1/3">
+                <div class="min-w-0">
                     {#if page.url.pathname === "/mainpage"}
-                        <div class="w-full">
-                            <Searchbar />
-                        </div>
+                        <Searchbar />
                     {:else if pageTitle}
-                        <div class="w-full text-center text-sm font-semibold">
+                        <div class="truncate text-center text-sm font-semibold">
                             {pageTitle}
                         </div>
                     {/if}
                 </div>
 
-                <!-- Right -->
-                <div class="w-1/3">
-                    <div
-                        class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
-                    >
-                        {#if isWorkspaceReadOnly}
+                <div class="flex items-center justify-end gap-2 pr-2">
+                    {#if isWorkspaceReadOnly}
+                        <!-- ButtonControl fills its parent; this one is as wide as the button. -->
+                        <div class="shrink-0">
                             <ButtonControl
                                 callOnClick={requestEnableEditing}
                                 height={9}
+                                title="The workspace is read-only. Enable editing"
                             >
-                                Enable Editing
+                                <span class="flex items-center gap-2">
+                                    <Fa icon={faLock} />
+                                    <span class="max-lg:sr-only">
+                                        Enable Editing
+                                    </span>
+                                </span>
                             </ButtonControl>
-                        {/if}
-                    </div>
+                        </div>
+                    {/if}
                 </div>
             </nav>
         {/if}
