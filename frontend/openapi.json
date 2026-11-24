@@ -641,6 +641,143 @@
         },
         "type" : "object"
       },
+      "ConformanceDocument" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceFinding" : {
+        "properties" : {
+          "documentSays" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CONTRADICTED",
+              "DIFFERENT",
+              "MISSING_IN_DOCUMENT",
+              "NOT_IN_SCHEMA"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "schemaSays" : {
+            "type" : "string"
+          },
+          "statedIn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetClass" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceNotCompared" : {
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "document" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "enum" : [
+              "OTHER_VOCABULARY",
+              "OTHER_TARGET",
+              "COMBINATION"
+            ],
+            "type" : "string"
+          },
+          "terms" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceReport" : {
+        "properties" : {
+          "agreeing" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "compared" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "conforms" : {
+            "type" : "boolean"
+          },
+          "contradictedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "differentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "documents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceDocument"
+            },
+            "type" : "array"
+          },
+          "findings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceFinding"
+            },
+            "type" : "array"
+          },
+          "impliedBySchema" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "missingInDocumentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "notCompared" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceNotCompared"
+            },
+            "type" : "array"
+          },
+          "notInSchemaCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "schemaName" : {
+            "type" : "string"
+          },
+          "stated" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ContextDeltaDTO" : {
         "properties" : {
           "additions" : {
@@ -10554,6 +10691,78 @@
         "summary" : "Write to database",
         "tags" : [
           "graph"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceName}/shacl/conformance" : {
+      "get" : {
+        "description" : "Reports where a schema and the enabled constraints documents applying to it disagree: what the schema implies and the documents omit, what they say that the schema does not have, and — the case worth acting on — what the two assert that cannot both be true. Compared per class and property, not by shape name, because generated and official shapes share no naming convention. Finds nothing about instance data or about a document on its own: that is what validation is for.",
+        "operationId" : "compare",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the workspace.",
+            "in" : "path",
+            "name" : "workspaceName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the schema to compare.",
+            "in" : "query",
+            "name" : "schema",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConformanceReport"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConformanceReport"
+                }
+              }
+            },
+            "description" : "The schema name is not valid."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConformanceReport"
+                }
+              }
+            },
+            "description" : "The workspace or the schema does not exist."
+          }
+        },
+        "summary" : "compare a schema with its constraints",
+        "tags" : [
+          "shacl"
         ]
       }
     },

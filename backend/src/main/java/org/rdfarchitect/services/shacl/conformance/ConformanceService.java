@@ -1,0 +1,391 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.services.shacl.conformance;
+
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.GraphUtil;
+import org.apache.jena.graph.Node;
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.system.PrefixEntry;
+import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.context.SessionContext;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
+import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
+import org.rdfarchitect.shacl.dto.ConformanceDocument;
+import org.rdfarchitect.shacl.dto.ConformanceFinding;
+import org.rdfarchitect.shacl.dto.ConformanceReport;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Answers "does my schema still agree with the constraints that came with it?".
+ *
+ * <p>Both sides are turned into the same thing before they are compared: one statement per class
+ * and property, merged from however many shapes said it. That is what makes the comparison possible
+ * at all — generated shapes and official ENTSO-E ones share no naming convention, and both sides
+ * spread one property's rules over separate cardinality, datatype and value-type shapes.
+ *
+ * <p>The right-hand side is the <em>enabled</em> documents applying to the schema, together. A
+ * schema's constraints are their conjunction, and official releases split their rules across files
+ * on purpose, so one file read alone would report its neighbours' rules as missing.
+ *
+ * <p>The left-hand side is the <em>workspace's</em> schemas, scoped to this schema. Profiles build
+ * on each other — an NC profile adds properties to classes the Equipment profile declares, and
+ * inherits everything else from it — so generating from one schema alone would leave NC documents
+ * with constraints "the schema does not have", with Equipment loaded right next to it. What the
+ * schema is asked to cover is still only its own properties; what the documents are compared
+ * against is everything the workspace says about the classes they target. Where two schemas declare
+ * the same property, the schema being compared speaks for it.
+ *
+ * <p>Inverse cardinality is left out. RDFArchitect states it as {@code sh:path [ sh:inversePath …
+ * ]}, a path expression rather than a property, and there is nothing on the other side to line it
+ * up with.
+ */
+public class ConformanceService implements ConformanceUseCase {
+
+    /** Generated schemas to keep. A handful: one per schema someone is looking at. */
+    private static final int MAX_CACHED = 8;
+
+    private final DatabasePort databasePort;
+
+    /**
+     * What the schema implies, per workspace content.
+     *
+     * <p>Generating shapes is most of the work of a comparison, and the report is asked for again
+     * every time the panel opens. The key holds every schema's version, because the scope is the
+     * whole workspace; and the session, because the in-memory database is per session.
+     */
+    private final Map<CacheKey, Implied> cache = new LeastRecentlyUsed<>(MAX_CACHED);
+
+    /** Access-ordered, dropping the least recently used entry beyond {@code capacity}. */
+    private static final class LeastRecentlyUsed<K, V> extends LinkedHashMap<K, V> {
+
+        @java.io.Serial private static final long serialVersionUID = 1L;
+
+        private final int capacity;
+
+        LeastRecentlyUsed(int capacity) {
+            super(16, 0.75f, true);
+            this.capacity = capacity;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+            return size() > capacity;
+        }
+    }
+
+    public ConformanceService(DatabasePort databasePort) {
+        this.databasePort = databasePort;
+    }
+
+    private record CacheKey(
+            String sessionId,
+            String workspaceName,
+            String schemaName,
+            Map<String, UUID> schemaVersions,
+            Set<String> targetedClasses) {}
+
+    /**
+     * @param constraints what the schema implies for the classes that matter to it
+     * @param ownClasses the classes this schema declares
+     * @param ownProperties the properties this schema declares; with {@code ownClasses}, what it is
+     *     asked to cover
+     * @param properties every property the workspace declares
+     * @param vocabulary the namespaces this schema is written in, or the workspace's when it
+     *     declares nothing itself
+     */
+    private record Implied(
+            Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> constraints,
+            ClassHierarchy hierarchy,
+            Set<String> ownClasses,
+            Set<String> ownProperties,
+            Set<String> properties,
+            Set<String> vocabulary) {
+
+        /**
+         * Whether this schema is expected to state {@code key} itself. Profiles re-declare the
+         * classes and properties they share — nearly every one carries {@code
+         * IdentifiedObject.name} — so a property alone would hold each schema to account for every
+         * class in the workspace.
+         */
+        boolean owns(EffectiveConstraints.Key key) {
+            return ownClasses.contains(key.targetClass()) && ownProperties.contains(key.path());
+        }
+    }
+
+    @Override
+    public ConformanceReport compare(GraphIdentifier schema) {
+        if (!databasePort.listSchemaNames(schema.workspaceName()).contains(schema.schemaName())) {
+            throw new ResourceNotFoundException("No schema named " + schema.schemaName() + ".");
+        }
+        var prefixes = databasePort.getPrefixMapping(schema.workspaceName());
+
+        var documentShapes = new LinkedHashMap<String, Graph>();
+        var documentRefs = new ArrayList<ConformanceDocument>();
+        try (var transaction =
+                databasePort.beginTransaction(schema.workspaceName(), ReadWrite.READ)) {
+            transaction.shapesDocuments().values().stream()
+                    .filter(ShapesDocument::isEnabled)
+                    .filter(document -> document.getSchemas().contains(schema.schemaName()))
+                    // Reading order, matching the document list and every other merge, so the
+                    // report's "read together" line names them the way the workbench shows them.
+                    .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                    .forEach(
+                            document -> {
+                                documentShapes.put(document.getName(), copyOf(document.getGraph()));
+                                documentRefs.add(
+                                        new ConformanceDocument(
+                                                document.getId(), document.getName()));
+                            });
+        }
+
+        var implies = impliedFor(schema, targetedClasses(documentShapes.values()));
+        var kept =
+                OtherVocabularies.leaveOut(
+                        EffectiveConstraints.of(documentShapes, implies.hierarchy()),
+                        implies.vocabulary());
+        var asserted = kept.asserted();
+        var stated = new HashSet<>(asserted.constraints().keySet());
+        stated.addAll(asserted.advisory().keySet());
+
+        // Everything the workspace implies for a stated key is compared; only this schema's own
+        // properties are expected to be covered.
+        var implied =
+                new LinkedHashMap<EffectiveConstraints.Key, EffectiveConstraints.Constraint>();
+        implies.constraints()
+                .forEach(
+                        (key, constraint) -> {
+                            if (implies.owns(key) || stated.contains(key)) {
+                                implied.put(key, constraint);
+                            }
+                        });
+
+        var findings =
+                ConformanceComparator.compare(
+                        implied, asserted, prefixes, implies.hierarchy(), implies.properties());
+
+        var contradicted = count(findings, ConformanceFinding.Kind.CONTRADICTED);
+        var different = count(findings, ConformanceFinding.Kind.DIFFERENT);
+        var notInSchema = count(findings, ConformanceFinding.Kind.NOT_IN_SCHEMA);
+        // Only what both sides state is a question of agreement: counting the schema's whole
+        // surface would score a document's silence as disagreement.
+        var compared = overlap(implied.keySet(), stated);
+
+        return ConformanceReport.builder()
+                .schemaName(schema.schemaName())
+                .documents(List.copyOf(documentRefs))
+                .conforms(contradicted == 0 && different == 0 && notInSchema == 0)
+                .compared(compared)
+                .agreeing(compared - contradicted - different)
+                .impliedBySchema(implied.size())
+                .stated(stated.size())
+                .contradictedCount(contradicted)
+                .differentCount(different)
+                .missingInDocumentCount(
+                        count(findings, ConformanceFinding.Kind.MISSING_IN_DOCUMENT))
+                .notInSchemaCount(notInSchema)
+                .findings(findings)
+                .notCompared(
+                        NotCompared.of(
+                                documentShapes.keySet(),
+                                kept.leftOut(),
+                                EffectiveConstraints.unread(documentShapes),
+                                prefixes))
+                .build();
+    }
+
+    /** The schema's side, from the cache unless some schema of the workspace has changed. */
+    private Implied impliedFor(GraphIdentifier schema, Set<String> targetedClasses) {
+        var key =
+                new CacheKey(
+                        SessionContext.getSessionId(),
+                        schema.workspaceName(),
+                        schema.schemaName(),
+                        schemaVersions(schema.workspaceName()),
+                        targetedClasses);
+        synchronized (cache) {
+            var cached = cache.get(key);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        var implied = generate(schema, targetedClasses);
+        // Generation reads the schemas again; a commit in between means the result describes newer
+        // content than the key, and filing it under the older versions would outlive an undo.
+        if (key.schemaVersions().equals(schemaVersions(schema.workspaceName()))) {
+            synchronized (cache) {
+                cache.put(key, implied);
+            }
+        }
+        return implied;
+    }
+
+    private Implied generate(GraphIdentifier schema, Set<String> targetedClasses) {
+        var own = readGraph(schema);
+        var ownProperties = subjectsOf(own, RDFS.domain.asNode());
+        var ownClasses = ClassHierarchy.of(own);
+
+        // This schema's own statements, then everything else the workspace says — except about
+        // the properties this schema declares, which it defines for itself, and about whether its
+        // own classes are abstract. Profiles disagree on that: SteadyStateHypothesis marks
+        // cim:Equipment concrete, Equipment does not, and taking SSH's word held the Equipment
+        // constraints to account for rules on an abstract class no official file states.
+        var ownClassUris = ownClassesOf(own);
+        var stereotype = CIMS.stereotype.asNode();
+        var union = copyOf(own);
+        for (String schemaName : databasePort.listSchemaNames(schema.workspaceName())) {
+            if (schemaName.equals(schema.schemaName())) {
+                continue;
+            }
+            var other = readGraph(new GraphIdentifier(schema.workspaceName(), schemaName));
+            other.find()
+                    .forEachRemaining(
+                            triple -> {
+                                var subject = triple.getSubject();
+                                var ownProperty =
+                                        subject.isURI() && ownProperties.contains(subject.getURI());
+                                var ownClassStereotype =
+                                        subject.isURI()
+                                                && stereotype.equals(triple.getPredicate())
+                                                && ownClassUris.contains(subject.getURI());
+                                if (!ownProperty && !ownClassStereotype) {
+                                    union.add(triple);
+                                }
+                            });
+        }
+
+        // A rule on a class applies to the classes deriving from it, so the schema has to speak for
+        // those as well; but only in its own vocabulary. The documents' rules on other versions'
+        // classes are left out, and generating them as well would let the generator, which names
+        // property shapes by local name, give a CIM 18 property the multiplicity of its CIM100
+        // namesake.
+        var hierarchy = ClassHierarchy.of(union);
+        var ownVocabulary = OtherVocabularies.of(own);
+        var vocabulary = ownVocabulary.isEmpty() ? OtherVocabularies.of(union) : ownVocabulary;
+        var reached = new HashSet<String>();
+        targetedClasses.forEach(
+                target ->
+                        hierarchy.withSubClasses(target).stream()
+                                .filter(OtherVocabularies.within(vocabulary))
+                                .forEach(reached::add));
+
+        var ontology = ModelFactory.createModelForGraph(union);
+        ontology.setNsPrefixes(databasePort.getPrefixMapping(schema.workspaceName()));
+        var shapes =
+                new SHACLFromCIMGenerator(
+                                ontology,
+                                PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL),
+                                true)
+                        .generate(
+                                instantiableClass ->
+                                        reached.contains(instantiableClass.getURI())
+                                                || ownClasses.declares(instantiableClass.getURI()))
+                        .getGraph();
+        return new Implied(
+                CompoundAttributes.asBlankNodes(EffectiveConstraints.of(shapes), union),
+                hierarchy,
+                ownClassUris,
+                ownProperties,
+                subjectsOf(union, RDFS.domain.asNode()),
+                vocabulary);
+    }
+
+    private static Set<String> ownClassesOf(Graph own) {
+        return own.stream(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode())
+                .map(triple -> triple.getSubject())
+                .filter(Node::isURI)
+                .map(Node::getURI)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** The classes the documents target, which the comparison has to have the schema's word on. */
+    private static Set<String> targetedClasses(Iterable<Graph> documents) {
+        var targets = new TreeSet<String>();
+        documents.forEach(document -> targets.addAll(EffectiveConstraints.targetClasses(document)));
+        return Set.copyOf(targets);
+    }
+
+    private static Set<String> subjectsOf(Graph graph, Node predicate) {
+        return graph.stream(Node.ANY, predicate, Node.ANY)
+                .map(triple -> triple.getSubject())
+                .filter(Node::isURI)
+                .map(Node::getURI)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** Committed version id per schema, which together identify what the workspace declares. */
+    private Map<String, UUID> schemaVersions(String workspaceName) {
+        var versions = new LinkedHashMap<String, UUID>();
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (String schemaName : transaction.schemaNames()) {
+                versions.put(schemaName, transaction.graph(schemaName).getRdfGraphVersion());
+            }
+        }
+        return versions;
+    }
+
+    private Graph readGraph(GraphIdentifier schema) {
+        try (var transaction =
+                databasePort.beginTransaction(schema.workspaceName(), ReadWrite.READ)) {
+            return copyOf(transaction.graph(schema.schemaName()).getRdfGraph());
+        }
+    }
+
+    private static int count(List<ConformanceFinding> findings, ConformanceFinding.Kind kind) {
+        return (int) findings.stream().filter(finding -> finding.getKind() == kind).count();
+    }
+
+    private static int overlap(
+            Set<EffectiveConstraints.Key> schema, Set<EffectiveConstraints.Key> documents) {
+        return (int) schema.stream().filter(documents::contains).count();
+    }
+
+    /**
+     * A detached copy taken while the read transaction is held.
+     *
+     * <p>Generating shapes walks the whole ontology and outlives the transaction, and the generator
+     * writes its own prefixes onto the model it is given — neither is safe on a live versioned
+     * graph.
+     */
+    private static Graph copyOf(Graph live) {
+        var copy = GraphFactory.createDefaultGraph();
+        GraphUtil.addInto(copy, live);
+        copy.getPrefixMapping().setNsPrefixes(live.getPrefixMapping());
+        return copy;
+    }
+}

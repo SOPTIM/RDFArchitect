@@ -29,6 +29,7 @@
         faFileImport,
         faFolderOpen,
         faPen,
+        faScaleBalanced,
         faTrash,
         faWandMagicSparkles,
     } from "@fortawesome/free-solid-svg-icons";
@@ -96,6 +97,7 @@
 
     async function open(documentId) {
         if (documentId === workbench.selectedId) {
+            workbench.closeComparison();
             return;
         }
         if (await onbeforeswitch()) {
@@ -243,7 +245,8 @@
   Every enabled document applies and none overrides another, so the checkbox is about participation
   and the arrows are about reading order — neither changes which constraints win.
 
-  The first entry under a schema is not a document at all but what RDFArchitect derives from it, because this is where someone looks for "what constrains
+  Opening a schema compares it with its documents. The first entry under it is not a document at all
+  but what RDFArchitect derives from it, because this is where someone looks for "what constrains
   this schema".
 
   Each row carries its actions twice, on purpose: on the row itself, where hovering shows them
@@ -260,11 +263,12 @@
           : null}
     {@const summary = summarise(result)}
     {@const selected = document.id === workbench.selectedId}
+    {@const shown = selected && !workbench.comparedSchema}
     <li class="py-px">
         <ContextMenu.Root>
             <ContextMenu.TriggerArea class="block w-full">
                 <div
-                    class="group relative flex items-center gap-2 rounded-md border px-2 py-1.5 {selected
+                    class="group relative flex items-center gap-2 rounded-md border px-2 py-1.5 {shown
                         ? 'bg-nav-active-background text-nav-active-text border-border-select'
                         : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
@@ -299,7 +303,7 @@
                     {:else}
                         <button
                             class="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left"
-                            aria-current={selected ? "true" : undefined}
+                            aria-current={shown ? "true" : undefined}
                             ondblclick={() => {
                                 if (!readOnly) {
                                     startRename(document);
@@ -397,7 +401,7 @@
             <ContextMenu.Content>
                 <ContextMenu.Item.Button
                     onSelect={() => open(document.id)}
-                    disabled={selected}
+                    disabled={shown}
                     faIcon={faFolderOpen}
                 >
                     Open
@@ -468,7 +472,7 @@
 
 {#snippet generatedRow(schema)}
     {@const id = generatedId(schema.name)}
-    {@const selected = id === workbench.selectedId}
+    {@const selected = !workbench.comparedSchema && id === workbench.selectedId}
     <li class="py-px">
         <button
             class="flex w-full cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-left {selected
@@ -543,14 +547,19 @@
     <ul class="min-h-0 flex-1 overflow-y-auto px-1.5 py-1">
         {#each workbench.schemas as schema (schema.name)}
             {@const documents = workbench.documentsOf(schema.name)}
+            {@const comparing = workbench.comparedSchema === schema.name}
             <li>
                 <div
-                    class="group hover:bg-nav-hover-background focus-within:bg-nav-hover-background relative flex items-center gap-1 rounded-md border border-transparent px-1 py-1"
+                    class="group relative flex items-center gap-1 rounded-md border px-1 py-1 {comparing
+                        ? 'bg-nav-active-background text-nav-active-text border-border-select'
+                        : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
                     {@render groupToggle(schema.name, schema.label)}
-                    <span
-                        class="flex min-w-0 flex-1 items-baseline gap-2"
-                        title={schema.name}
+                    <button
+                        class="flex min-w-0 flex-1 cursor-pointer items-baseline gap-2 text-left"
+                        aria-current={comparing ? "true" : undefined}
+                        title={`${schema.name}\nOpen to compare this schema with its documents`}
+                        onclick={() => workbench.compare(schema.name)}
                     >
                         <span class="truncate text-sm font-semibold">
                             {schema.label}
@@ -559,10 +568,18 @@
                             {documents.length}
                             {documents.length === 1 ? "document" : "documents"}
                         </span>
-                    </span>
+                    </button>
                     <div
                         class="absolute inset-y-0 right-1 flex items-center gap-0.5 rounded bg-inherit pl-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100"
                     >
+                        <button
+                            class={ROW_ACTION}
+                            title="Compare with the schema"
+                            aria-label={`Compare ${schema.label} with its documents`}
+                            onclick={() => workbench.compare(schema.name)}
+                        >
+                            <Fa icon={faScaleBalanced} />
+                        </button>
                         {#if !readOnly}
                             <button
                                 class={ROW_ACTION}

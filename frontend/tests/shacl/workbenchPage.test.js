@@ -62,6 +62,21 @@ function fakeServer() {
         texts: { [EQ]: SHAPES, [CUSTOM]: "" },
         /** Answers a PUT instead of the default when set. */
         answerPut: null,
+        report: {
+            schemaName: "EQ",
+            documents: [{ id: EQ, name: "eq.ttl" }],
+            conforms: true,
+            compared: 1,
+            agreeing: 1,
+            impliedBySchema: 1,
+            stated: 1,
+            contradictedCount: 0,
+            differentCount: 0,
+            missingInDocumentCount: 0,
+            notInSchemaCount: 0,
+            findings: [],
+            notCompared: [],
+        },
     };
     server.fetch = async request => {
         const url = new URL(request.url);
@@ -95,6 +110,9 @@ function fakeServer() {
             server.documents = [...server.documents, created];
             server.texts["new-id"] = entry.body;
             return json(created);
+        }
+        if (entry.path.endsWith("/shacl/conformance")) {
+            return json(server.report);
         }
         if (entry.path.endsWith("/generate/string")) {
             return new Response("# generated\n", { status: 200 });
@@ -472,6 +490,54 @@ describe("the app-wide reload", () => {
 
         await vi.waitFor(() => expect(server.texts["new-id"]).toBe(TYPED));
         expect(puts()).toEqual([]);
+    });
+});
+
+describe("comparing a schema", () => {
+    function compareSchema() {
+        [...target.querySelectorAll("button")]
+            .find(button => button.title.includes("Open to compare"))
+            .click();
+        flushSync();
+    }
+
+    function reportShown() {
+        return target.textContent.includes("Compare EQ with its documents");
+    }
+
+    test("leaves the open document and its unsaved edits alone", async () => {
+        type(TYPED);
+
+        compareSchema();
+
+        expect(reportShown()).toBe(true);
+        expect(unsavedQuestion()).toBeUndefined();
+        expect(editor().value).toBe(TYPED);
+
+        openDocument("eq.ttl");
+        await vi.waitFor(() => expect(reportShown()).toBe(false));
+        expect(unsavedQuestion()).toBeUndefined();
+        expect(editor().value).toBe(TYPED);
+        expect(puts()).toEqual([]);
+    });
+
+    test("drops the report it shows once the documents change", async () => {
+        compareSchema();
+        buttonNamed("Compare", target).click();
+        await vi.waitFor(() =>
+            expect(target.textContent).toContain(
+                "The constraints and the schema agree",
+            ),
+        );
+
+        forceReloadTrigger.trigger();
+
+        await vi.waitFor(() =>
+            expect(target.textContent).not.toContain(
+                "The constraints and the schema agree",
+            ),
+        );
+        expect(buttonNamed("Compare", target)).toBeDefined();
     });
 });
 

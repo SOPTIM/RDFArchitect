@@ -29,6 +29,7 @@ import org.rdfarchitect.services.shacl.effective.EffectiveConstraints.Key;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 class EffectiveConstraintsTest {
 
@@ -62,6 +63,148 @@ class EffectiveConstraintsTest {
 
         assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
         assertThat(asserted.statedIn().get(THING_VALUE)).containsExactly("referring.ttl");
+    }
+
+    @Test
+    void aRuleOnAClassIsFiledUnderTheClassesDerivingFromIt() {
+        var hierarchy =
+                ClassHierarchy.of(
+                        RDFParser.fromString(
+                                        """
+                                        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                                        @prefix ex: <http://example.org/> .
+                                        ex:Thing a rdfs:Class .
+                                        ex:Part a rdfs:Class ; rdfs:subClassOf ex:Thing .
+                                        """,
+                                        Lang.TURTLE)
+                                .toGraph());
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "thing.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                        """));
+        documents.put(
+                "part.ttl",
+                shapes(
+                        """
+                        ex:PartShape sh:targetClass ex:Part ;
+                            sh:property [ sh:path ex:value ; sh:maxCount 1 ] .
+                        """));
+
+        var asserted = EffectiveConstraints.of(documents, hierarchy);
+
+        var part = new Key(EX + "Part", EX + "value");
+        assertThat(asserted.constraints().get(part).minCount()).isEqualTo(1);
+        assertThat(asserted.constraints().get(part).maxCount()).isEqualTo(1);
+        assertThat(asserted.statedIn().get(part)).containsExactly("thing.ttl", "part.ttl");
+        assertThat(asserted.constraints().get(THING_VALUE).maxCount()).isNull();
+    }
+
+    @Test
+    void theRulesOfAShapeTheTargetMustConformToApplyToIt() {
+        var asserted =
+                EffectiveConstraints.of(
+                        Map.of(
+                                "doc.ttl",
+                                shapes(
+                                        """
+                                        ex:Shape sh:targetClass ex:Thing ; sh:node ex:Inner .
+                                        ex:Inner sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                                        """)));
+
+        assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
+        assertThat(asserted.statedIn().get(THING_VALUE)).containsExactly("doc.ttl");
+    }
+
+    @Test
+    void everyMemberOfShAndApplies() {
+        var asserted =
+                EffectiveConstraints.of(
+                        Map.of(
+                                "doc.ttl",
+                                shapes(
+                                        """
+                                        ex:Shape sh:targetClass ex:Thing ;
+                                            sh:and ( [ sh:path ex:value ; sh:maxCount 0 ]
+                                                     [ sh:property [ sh:path ex:value ;
+                                                                     sh:datatype xsd:string ] ] ) .
+                                        """)));
+
+        var constraint = asserted.constraints().get(THING_VALUE);
+        assertThat(constraint.maxCount()).isZero();
+        assertThat(constraint.dataTypes()).containsExactly(XSD + "string");
+    }
+
+    @Test
+    void aRuleInsideShAndIsReportedAtTheSeverityOfTheShapeHoldingIt() {
+        // sh:and reports one result, for the shape it is a constraint of, at that shape's severity.
+        var asserted =
+                EffectiveConstraints.of(
+                        Map.of(
+                                "doc.ttl",
+                                shapes(
+                                        """
+                                        ex:Shape sh:targetClass ex:Thing ; sh:severity sh:Warning ;
+                                            sh:and ( [ sh:path ex:value ; sh:maxCount 0 ] ) .
+                                        """)));
+
+        assertThat(asserted.constraints()).doesNotContainKey(THING_VALUE);
+        assertThat(asserted.advisory().get(THING_VALUE).maxCount()).isZero();
+    }
+
+    @Test
+    void aShapeThatIsAlsoAClassTargetsItself() {
+        var asserted =
+                EffectiveConstraints.of(
+                        Map.of(
+                                "doc.ttl",
+                                shapes(
+                                        """
+                                        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                                        ex:Thing a sh:NodeShape, rdfs:Class ;
+                                            sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                                        """)));
+
+        assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
+        assertThat(
+                        EffectiveConstraints.targetClasses(
+                                shapes(
+                                        "ex:Thing a sh:NodeShape, <http://www.w3.org/2000/01/rdf-schema#Class> .")))
+                .containsExactly(EX + "Thing");
+    }
+
+    @Test
+    void whatTheReaderCannotFollowIsCountedPerDocument() {
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put(
+                "targets.ttl",
+                shapes(
+                        """
+                        ex:A sh:targetSubjectsOf ex:value ; sh:property ex:Rule .
+                        ex:B sh:targetNode ex:x .
+                        ex:C sh:targetNode ex:y ; sh:deactivated true .
+                        ex:Rule sh:path ex:value ; sh:or ( [ sh:minCount 1 ] [ sh:maxCount 0 ] ) .
+                        """));
+        documents.put(
+                "classes.ttl",
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule ;
+                            sh:not [ sh:path ex:value ; sh:minCount 2 ] .
+                        """));
+        documents.put("plain.ttl", shapes("ex:Other sh:targetClass ex:Thing ."));
+
+        var unread = EffectiveConstraints.unread(documents);
+
+        assertThat(unread)
+                .containsOnlyKeys("targets.ttl", "classes.ttl")
+                .containsEntry(
+                        "targets.ttl",
+                        Map.of(SH + "targetSubjectsOf", 1, SH + "targetNode", 1, SH + "or", 1))
+                .containsEntry("classes.ttl", Map.of(SH + "not", 1));
     }
 
     @Test

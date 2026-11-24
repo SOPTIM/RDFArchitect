@@ -21,6 +21,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -137,8 +139,23 @@ public final class EffectiveConstraints {
      * by the document naming the rule it comes from.
      */
     public static Asserted of(Map<String, Graph> documents) {
+        return of(documents, ClassHierarchy.NONE);
+    }
+
+    /**
+     * As {@link #of(Map)}, with each rule also filed under every class deriving from its target.
+     *
+     * <p>{@code sh:targetClass C} targets the instances of {@code C} and of its subclasses, so a
+     * rule written on an abstract class constrains the classes data is typed with, and joins
+     * whatever their own shapes require.
+     *
+     * @param hierarchy the classes deriving from each target
+     */
+    public static Asserted of(Map<String, Graph> documents, ClassHierarchy hierarchy) {
         var read = new Read();
-        documents.values().forEach(document -> readTargets(document, documents.values(), read));
+        documents
+                .values()
+                .forEach(document -> readTargets(document, documents.values(), hierarchy, read));
         var statedIn = new LinkedHashMap<Key, List<String>>();
         read.namedIn()
                 .forEach(
@@ -155,7 +172,7 @@ public final class EffectiveConstraints {
     /** Reads a shapes graph into one enforced constraint per class and property. */
     public static Map<Key, Constraint> of(Graph shapes) {
         var read = new Read();
-        readTargets(shapes, List.of(shapes), read);
+        readTargets(shapes, List.of(shapes), ClassHierarchy.NONE, read);
         return read.enforced();
     }
 
@@ -163,22 +180,60 @@ public final class EffectiveConstraints {
      * Adds what the shapes targeting a class in {@code shapes} require, finding their rules in
      * {@code documents}.
      */
-    private static void readTargets(Graph shapes, Collection<Graph> documents, Read into) {
-        shapes.stream(Node.ANY, SHACL.targetClass, Node.ANY)
-                .filter(triple -> triple.getObject().isURI())
-                .filter(triple -> !isDeactivated(shapes, triple.getSubject()))
+    private static void readTargets(
+            Graph shapes, Collection<Graph> documents, ClassHierarchy hierarchy, Read into) {
+        targets(shapes)
                 .forEach(
-                        triple ->
+                        target ->
                                 collect(
                                         shapes,
                                         documents,
-                                        triple.getSubject(),
-                                        triple.getObject().getURI(),
+                                        target.shape(),
+                                        hierarchy.withSubClasses(target.targetClass()),
                                         into));
     }
 
+    /** A shape, and a class it targets. */
+    private record Target(Node shape, String targetClass) {}
+
+    /**
+     * The class targets of the shapes in {@code shapes} that are switched on: {@code
+     * sh:targetClass}, and a shape that is a class itself, which targets that class.
+     */
+    private static List<Target> targets(Graph shapes) {
+        var targets = new ArrayList<Target>();
+        shapes.stream(Node.ANY, SHACL.targetClass, Node.ANY)
+                .filter(triple -> triple.getObject().isURI())
+                .forEach(
+                        triple ->
+                                targets.add(
+                                        new Target(
+                                                triple.getSubject(), triple.getObject().getURI())));
+        shapes.stream(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode())
+                .map(triple -> triple.getSubject())
+                .filter(Node::isURI)
+                .filter(
+                        subject ->
+                                shapes.contains(subject, RDF.type.asNode(), SHACL.NodeShape)
+                                        || shapes.contains(
+                                                subject, RDF.type.asNode(), SHACL.PropertyShape))
+                .forEach(subject -> targets.add(new Target(subject, subject.getURI())));
+        return targets.stream().filter(target -> !isDeactivated(shapes, target.shape())).toList();
+    }
+
+    /** The classes the shapes in {@code shapes} target, as the reader finds them. */
+    public static Set<String> targetClasses(Graph shapes) {
+        return targets(shapes).stream()
+                .map(Target::targetClass)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
     private static void collect(
-            Graph shapes, Collection<Graph> documents, Node shape, String targetClass, Read into) {
+            Graph shapes,
+            Collection<Graph> documents,
+            Node shape,
+            Set<String> targetClasses,
+            Read into) {
         for (var rule : rulesOf(shape, shapes, documents).toList()) {
             var property = rule.node();
             var definedIn = definedIn(property, rule.namedIn(), documents);
@@ -197,17 +252,22 @@ public final class EffectiveConstraints {
             if (constraint.isEmpty()) {
                 continue;
             }
-            var merged =
-                    isAdvisory(rule.namedIn(), property) || isAdvisory(definedIn, property)
-                            ? into.advisory()
-                            : into.enforced();
-            for (var path : paths) {
-                var key = new Key(targetClass, path);
-                merged.merge(key, constraint, EffectiveConstraints::conjunction);
-                into.namedIn()
-                        .computeIfAbsent(
-                                key, ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
-                        .add(rule.namedIn());
+            var advisory =
+                    rule.reportedBy() != null
+                            ? isAdvisory(rule.reportedBy().namedIn(), rule.reportedBy().node())
+                            : isAdvisory(rule.namedIn(), property)
+                                    || isAdvisory(definedIn, property);
+            var merged = advisory ? into.advisory() : into.enforced();
+            for (var targetClass : targetClasses) {
+                for (var path : paths) {
+                    var key = new Key(targetClass, path);
+                    merged.merge(key, constraint, EffectiveConstraints::conjunction);
+                    into.namedIn()
+                            .computeIfAbsent(
+                                    key,
+                                    ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                            .add(rule.namedIn());
+                }
             }
         }
     }
@@ -222,18 +282,75 @@ public final class EffectiveConstraints {
     private static Stream<NamedRule> rulesOf(
             Node shape, Graph shapes, Collection<Graph> documents) {
         if (definedIn(shape, shapes, documents).contains(shape, SHACL.path, Node.ANY)) {
-            return Stream.of(new NamedRule(shape, shapes));
+            return Stream.of(new NamedRule(shape, shapes, null));
         }
-        return documents.stream().flatMap(document -> rulesListedIn(document, shape));
+        var rules = new ArrayList<NamedRule>();
+        nodeShapeRules(shape, documents, null, new HashSet<>(), rules);
+        return rules.stream();
     }
 
-    private static Stream<NamedRule> rulesListedIn(Graph document, Node shape) {
-        return document.stream(shape, SHACL.property, Node.ANY)
-                .map(triple -> new NamedRule(triple.getObject(), document));
+    /**
+     * A node shape's rules: those any document lists with {@code sh:property}, and those of the
+     * shapes its focus node has to conform to, through {@code sh:node} and every member of {@code
+     * sh:and}.
+     *
+     * <p>A shape conforms to {@code sh:and} and {@code sh:node} as one constraint of its own, so
+     * what they require is reported at the severity of the shape holding them, not of the shapes
+     * they name.
+     */
+    private static void nodeShapeRules(
+            Node shape,
+            Collection<Graph> documents,
+            NamedRule reportedBy,
+            Set<Node> visited,
+            List<NamedRule> into) {
+        if (!visited.add(shape)) {
+            return;
+        }
+        for (var document : documents) {
+            document.stream(shape, SHACL.property, Node.ANY)
+                    .forEach(
+                            triple ->
+                                    into.add(
+                                            new NamedRule(
+                                                    triple.getObject(), document, reportedBy)));
+        }
+        for (var document : documents) {
+            var holder = reportedBy != null ? reportedBy : new NamedRule(shape, document, null);
+            for (var member : conformedTo(document, shape)) {
+                if (isDeactivated(document, member)) {
+                    continue;
+                }
+                if (definedIn(member, document, documents).contains(member, SHACL.path, Node.ANY)) {
+                    into.add(new NamedRule(member, document, holder));
+                } else {
+                    nodeShapeRules(member, documents, holder, visited, into);
+                }
+            }
+        }
     }
 
-    /** A rule, and the document listing it as one of a shape's. */
-    private record NamedRule(Node node, Graph namedIn) {}
+    /** The shapes {@code shape} requires its focus node to conform to, as {@code document} says. */
+    private static List<Node> conformedTo(Graph document, Node shape) {
+        var members = new ArrayList<Node>();
+        document.stream(shape, SHACL.node, Node.ANY)
+                .forEach(triple -> members.add(triple.getObject()));
+        document.stream(shape, SHACL.and, Node.ANY)
+                .forEach(
+                        triple -> {
+                            var list = list(document, triple.getObject());
+                            if (list != null) {
+                                members.addAll(list);
+                            }
+                        });
+        return members;
+    }
+
+    /**
+     * A rule, the document listing it as one of a shape's, and, for a rule reached through {@code
+     * sh:node} or {@code sh:and}, the shape whose severity it is reported at.
+     */
+    private record NamedRule(Node node, Graph namedIn, NamedRule reportedBy) {}
 
     /** Where a rule is written: the naming document if it says itself, else whichever does. */
     private static Graph definedIn(Node rule, Graph namedIn, Collection<Graph> documents) {
@@ -244,6 +361,79 @@ public final class EffectiveConstraints {
                 .filter(document -> document.contains(rule, SHACL.path, Node.ANY))
                 .findFirst()
                 .orElse(namedIn);
+    }
+
+    /** Targets other than a class, which say nothing about the class of what they select. */
+    private static final List<Node> OTHER_TARGETS =
+            List.of(SHACL.targetSubjectsOf, SHACL.targetObjectsOf, SHACL.targetNode);
+
+    /** Combinations of shapes no reading per class and property can follow. */
+    private static final List<Node> COMBINATIONS = List.of(SHACL.or, SHACL.xone, SHACL.not);
+
+    /**
+     * What {@link #of(Map)} leaves unread in each document, by the SHACL term that makes it: how
+     * many shapes target nodes other than by class ({@code sh:targetSubjectsOf}, {@code
+     * sh:targetObjectsOf}, {@code sh:targetNode}), and how many of the shapes it does read combine
+     * rules with {@code sh:or}, {@code sh:xone} or {@code sh:not}.
+     *
+     * <p>Path expressions are not counted: what a profile states about inverse and nested paths has
+     * nothing to line up with on a schema's side.
+     *
+     * @return per document name, in the order given, the number of shapes per term's IRI; a
+     *     document leaving nothing unread is not listed
+     */
+    public static Map<String, Map<String, Integer>> unread(Map<String, Graph> documents) {
+        var reached = new HashSet<Node>();
+        for (var document : documents.values()) {
+            for (var target : targets(document)) {
+                reached.add(target.shape());
+                var visited = new HashSet<Node>();
+                if (definedIn(target.shape(), document, documents.values())
+                        .contains(target.shape(), SHACL.path, Node.ANY)) {
+                    continue;
+                }
+                var rules = new ArrayList<NamedRule>();
+                nodeShapeRules(target.shape(), documents.values(), null, visited, rules);
+                reached.addAll(visited);
+                rules.forEach(rule -> reached.add(rule.node()));
+            }
+        }
+        var unread = new LinkedHashMap<String, Map<String, Integer>>();
+        documents.forEach(
+                (name, document) -> {
+                    var counts = new LinkedHashMap<String, Integer>();
+                    for (var term : OTHER_TARGETS) {
+                        count(
+                                counts,
+                                term,
+                                document.stream(Node.ANY, term, Node.ANY)
+                                        .map(triple -> triple.getSubject())
+                                        .filter(shape -> !isDeactivated(document, shape))
+                                        .distinct()
+                                        .count());
+                    }
+                    for (var term : COMBINATIONS) {
+                        count(
+                                counts,
+                                term,
+                                document.stream(Node.ANY, term, Node.ANY)
+                                        .map(triple -> triple.getSubject())
+                                        .filter(reached::contains)
+                                        .filter(shape -> !isDeactivated(document, shape))
+                                        .distinct()
+                                        .count());
+                    }
+                    if (!counts.isEmpty()) {
+                        unread.put(name, counts);
+                    }
+                });
+        return unread;
+    }
+
+    private static void count(Map<String, Integer> counts, Node term, long shapes) {
+        if (shapes > 0) {
+            counts.put(term.getURI(), (int) shapes);
+        }
     }
 
     /**

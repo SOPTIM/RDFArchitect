@@ -57,6 +57,7 @@ function fakeWorkbench(overrides = {}) {
     return {
         documents: DOCUMENTS,
         schemas: SCHEMAS,
+        comparedSchema: null,
         contextSchemas: [EQ],
         documentsOf(schemaName) {
             return this.documents.filter(document =>
@@ -96,6 +97,8 @@ function fakeWorkbench(overrides = {}) {
             },
         ],
         select: vi.fn(),
+        compare: vi.fn(),
+        closeComparison: vi.fn(),
         create: vi.fn().mockResolvedValue({ id: "new" }),
         importFile: vi.fn().mockResolvedValue({ id: "new" }),
         rename: vi.fn().mockResolvedValue(true),
@@ -383,6 +386,44 @@ describe("DocumentList", () => {
             expect.stringContaining("none.ttl"),
             expect.stringContaining("gone.ttl"),
         ]);
+    });
+
+    test("opening a schema compares it, and asks nothing about unsaved edits", async () => {
+        const workbench = fakeWorkbench();
+        const onbeforeswitch = vi.fn().mockResolvedValue(false);
+        const list = render({ workbench, onbeforeswitch });
+
+        [...list.querySelectorAll("button")]
+            .find(candidate => candidate.textContent.includes("Hypothesis"))
+            .click();
+        await Promise.resolve();
+
+        expect(workbench.compare).toHaveBeenCalledWith(SSH);
+        expect(onbeforeswitch).not.toHaveBeenCalled();
+    });
+
+    test("coming back to the open document leaves the comparison", async () => {
+        const workbench = fakeWorkbench({ comparedSchema: EQ });
+        const onbeforeswitch = vi.fn();
+        const list = render({ workbench, onbeforeswitch });
+
+        documentRows(list)[0].querySelector("button").click();
+        await Promise.resolve();
+
+        expect(workbench.closeComparison).toHaveBeenCalled();
+        expect(onbeforeswitch).not.toHaveBeenCalled();
+    });
+
+    test("nothing but the schema shows as open while it is being compared", () => {
+        const list = render({
+            workbench: fakeWorkbench({ comparedSchema: EQ }),
+        });
+
+        expect(
+            [...list.querySelectorAll("button[aria-current]")].map(current =>
+                current.textContent.includes("Equipment"),
+            ),
+        ).toEqual([true]);
     });
 
     test("a schema can be collapsed", () => {

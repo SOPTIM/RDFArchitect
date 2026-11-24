@@ -994,6 +994,9 @@ describe("the workspace's schemas", () => {
         await workbench.load();
         expect(workbench.contextSchemas).toEqual([EQ_SCHEMA, SSH_SCHEMA]);
 
+        workbench.compare(SSH_SCHEMA);
+        expect(workbench.contextSchemas).toEqual([SSH_SCHEMA]);
+
         await workbench.select(generatedId(EQ_SCHEMA));
         expect(workbench.contextSchemas).toEqual([EQ_SCHEMA]);
     });
@@ -1004,6 +1007,38 @@ describe("the workspace's schemas", () => {
         await workbench.load();
 
         expect(workbench.contextSchemas).toEqual([]);
+    });
+});
+
+describe("comparing a schema", () => {
+    test("replaces nothing, so unsaved edits stay and nothing has to be asked", async () => {
+        await workbench.load();
+        workbench.text = "edited";
+
+        workbench.compare(EQ_SCHEMA);
+
+        expect(workbench.comparedSchema).toBe(EQ_SCHEMA);
+        expect(workbench.text).toBe("edited");
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("ends when a document is opened", async () => {
+        await workbench.load();
+        workbench.compare(EQ_SCHEMA);
+
+        await workbench.select(CUSTOM);
+
+        expect(workbench.comparedSchema).toBeNull();
+    });
+
+    test("ends when the schema is gone", async () => {
+        await workbench.load();
+        workbench.compare(SSH_SCHEMA);
+        getGraphs.mockResolvedValue([graph("EQ")]);
+
+        await workbench.reload();
+
+        expect(workbench.comparedSchema).toBeNull();
     });
 });
 

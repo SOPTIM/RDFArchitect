@@ -35,7 +35,10 @@
 
     let search = $state("");
 
-    const document = $derived(workbench.selected);
+    /** A comparison is about a schema, and the tree shows it so: this must not say otherwise. */
+    const document = $derived(
+        workbench.comparedSchema ? null : workbench.selected,
+    );
     const shapes = $derived(extractOutline(workbench.text));
     const matches = $derived.by(() => {
         const wanted = search.trim().toLowerCase();
@@ -165,7 +168,7 @@
             <section>
                 <h3
                     class="text-text-subtle mb-1 text-xs font-semibold uppercase"
-                    title="Decides under which schemas the document is listed. It is validated against every schema of the workspace either way."
+                    title="Decides under which schemas the document is listed, and which schema's comparison reads it. It is validated against every schema of the workspace either way."
                 >
                     Applies to
                 </h3>
