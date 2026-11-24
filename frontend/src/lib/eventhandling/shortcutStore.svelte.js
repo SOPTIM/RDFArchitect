@@ -131,6 +131,10 @@ function isSpecialChar(key) {
     return key.length === 1 && !/[a-z0-9]/.test(key);
 }
 
+function worksWhileTyping({ whileTyping }) {
+    return typeof whileTyping === "function" ? whileTyping() : whileTyping;
+}
+
 /**
  * Normalizes a key-combination array into a canonical string.
  * Order of modifiers does not matter: ["shift", "ctrl", "s"] === ["ctrl", "shift", "s"]
@@ -138,10 +142,6 @@ function isSpecialChar(key) {
  * @param {string[]} combo
  * @returns {string} e.g. "ctrl+shift+s" or "ctrl+?"
  */
-function worksWhileTyping({ whileTyping }) {
-    return typeof whileTyping === "function" ? whileTyping() : whileTyping;
-}
-
 function normalizeCombo(combo) {
     const keys = combo.map(k => k.toLowerCase());
     const nonModifiers = keys.filter(k => !MODIFIER_ORDER.includes(k));
