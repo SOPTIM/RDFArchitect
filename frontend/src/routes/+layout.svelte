@@ -62,11 +62,11 @@
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
-    import DesktopOpenRequests from "./DesktopOpenRequests.svelte";
     import {
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
+    import DesktopOpenRequests from "./DesktopOpenRequests.svelte";
     import Edit from "./layout/menu-bar/Edit.svelte";
     import File from "./layout/menu-bar/File.svelte";
     import Help from "./layout/menu-bar/Help.svelte";
