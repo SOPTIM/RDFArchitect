@@ -169,7 +169,7 @@ jobs:
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             if [[ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != true ]]; then
-              echo "::error::Release $TAG is published already, so nothing is attached to it."
+              echo "::error::Release $TAG is published already, so nothing is attached to it. Push the tag without creating the release: this workflow drafts it (see Releases in the developer guide)."
               exit 1
             fi
             exit 0
