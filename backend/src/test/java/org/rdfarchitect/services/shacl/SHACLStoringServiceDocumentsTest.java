@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * How several shapes documents combine when the service reads a graph's constraints.
+ * How several shapes documents combine when the service reads a schema's constraints.
  *
  * <p>SHACL is conjunctive and has no precedence, so every enabled document contributes and none
  * overrides another. A disabled document contributes nothing — that is what switching one off
@@ -50,8 +50,7 @@ import java.util.List;
  */
 class SHACLStoringServiceDocumentsTest {
 
-    private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("cgmes", "http://example.org/EQ");
+    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier("cgmes", "EQ");
 
     private DatabasePort databasePort;
     private SHACLStoringService service;
@@ -62,7 +61,7 @@ class SHACLStoringServiceDocumentsTest {
         SessionContext.setSessionId(getClass().getSimpleName());
         DatabaseFixtures.createGraph(
                 databasePort, GRAPH_IDENTIFIER, GraphFactory.createDefaultGraph());
-        databasePort.enableEditing(GRAPH_IDENTIFIER.datasetName());
+        databasePort.enableEditing(GRAPH_IDENTIFIER.workspaceName());
         service = new SHACLStoringService(databasePort);
     }
 
@@ -74,12 +73,12 @@ class SHACLStoringServiceDocumentsTest {
     /** Adds a document holding one shape, committed as a named change. */
     private ShapesDocument givenDocument(String name, String shapeTriple, boolean enabled) {
         try (var transaction =
-                databasePort.beginTransaction(GRAPH_IDENTIFIER.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(GRAPH_IDENTIFIER.workspaceName(), ReadWrite.WRITE)) {
             var document =
                     transaction.createShapesDocument(
                             name,
                             ShapesDocument.Origin.IMPORTED,
-                            List.of(GRAPH_IDENTIFIER.graphUri()));
+                            List.of(GRAPH_IDENTIFIER.schemaName()));
             document.setEnabled(enabled);
             document.getGraph().add(TestRDFUtils.triple(shapeTriple));
             transaction.commit("import " + name);
@@ -132,14 +131,14 @@ class SHACLStoringServiceDocumentsTest {
         assertThat(exportedCustomShapes()).doesNotContain("DraftShape");
 
         service.updateShapesDocument(
-                GRAPH_IDENTIFIER.datasetName(), draft.getId(), null, true, null, null);
+                GRAPH_IDENTIFIER.workspaceName(), draft.getId(), null, true, null, null);
 
         assertThat(exportedCustomShapes()).contains("DraftShape");
     }
 
     @Test
     void graphWithoutAnyImportedDocumentExportsNoShapes() {
-        // A graph starts with no documents.
+        // A workspace starts with no documents.
         assertThat(exportedCustomShapes()).doesNotContain("targetClass");
     }
 
@@ -147,13 +146,13 @@ class SHACLStoringServiceDocumentsTest {
     void readOnlyWorkspace_refusesEveryWriteToItsDocuments() {
         var document = givenDocument("official.ttl", "<urn:s> <urn:p> <urn:o>", true);
         var id = document.getId();
-        databasePort.disableEditing(GRAPH_IDENTIFIER.datasetName());
+        databasePort.disableEditing(GRAPH_IDENTIFIER.workspaceName());
 
         assertThatThrownBy(
                         () ->
                                 service.createShapesDocument(
-                                        GRAPH_IDENTIFIER.datasetName(),
-                                        List.of(GRAPH_IDENTIFIER.graphUri()),
+                                        GRAPH_IDENTIFIER.workspaceName(),
+                                        List.of(GRAPH_IDENTIFIER.schemaName()),
                                         "new.ttl",
                                         null,
                                         "",
@@ -163,17 +162,17 @@ class SHACLStoringServiceDocumentsTest {
         assertThatThrownBy(
                         () ->
                                 service.replaceShapesDocumentText(
-                                        GRAPH_IDENTIFIER.datasetName(), id, ""))
+                                        GRAPH_IDENTIFIER.workspaceName(), id, ""))
                 .isInstanceOf(ResourceConflictException.class);
         assertThatThrownBy(
                         () ->
                                 service.updateShapesDocument(
-                                        GRAPH_IDENTIFIER.datasetName(), id, "x", false, 0, null))
+                                        GRAPH_IDENTIFIER.workspaceName(), id, "x", false, 0, null))
                 .isInstanceOf(ResourceConflictException.class);
-        assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH_IDENTIFIER.datasetName(), id))
+        assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH_IDENTIFIER.workspaceName(), id))
                 .isInstanceOf(ResourceConflictException.class);
 
-        assertThat(service.listShapesDocuments(GRAPH_IDENTIFIER.datasetName()))
+        assertThat(service.listShapesDocuments(GRAPH_IDENTIFIER.workspaceName()))
                 .singleElement()
                 .satisfies(
                         info -> {

@@ -120,7 +120,7 @@
     });
 
     $effect(() => {
-        onselection(selectedWorkspaceName, graphURI);
+        onselection(selectedWorkspaceName, schemaName);
     });
 
     onMount(async () => {

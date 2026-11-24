@@ -24,7 +24,7 @@ import SHACLClassSpecificPopUp from "../../src/routes/shacl/shaclclassspecific/S
 
 const DOCUMENT_ID = "11111111-2222-3333-4444-555555555555";
 const WORKSPACE = "other";
-const GRAPH = "http://example.org/Other";
+const SCHEMA = "Other";
 
 const api = vi.hoisted(() => ({
     getShaclRelatedToClass: vi.fn(),
@@ -63,7 +63,7 @@ async function render() {
         props: {
             showDialog: true,
             workspaceName: WORKSPACE,
-            graphUri: GRAPH,
+            schemaName: SCHEMA,
             reactiveClass: {
                 uuid: { value: "class-uuid" },
                 label: { value: "Thing" },
@@ -98,7 +98,7 @@ vi.mock("$lib/monaco/TurtleEditor.svelte", async () => {
 
 beforeEach(() => {
     editorState.selectedWorkspace.updateValue("selected");
-    editorState.selectedGraph.updateValue("http://example.org/Selected");
+    editorState.selectedGraph.updateValue("Selected");
     api.getClassesReferencingThisClass.mockResolvedValue({
         data: { classesReferencingThisClass: {} },
     });
@@ -148,7 +148,7 @@ describe("SHACLClassSpecificPopUp", () => {
         button("mine.ttl").click();
 
         expect(editorState.selectedWorkspace.getValue()).toBe(WORKSPACE);
-        expect(editorState.selectedGraph.getValue()).toBe(GRAPH);
+        expect(editorState.selectedGraph.getValue()).toBe(SCHEMA);
         expect(goto).toHaveBeenCalledWith(
             `/shacl?document=${DOCUMENT_ID}&line=7`,
         );
@@ -163,7 +163,7 @@ describe("SHACLClassSpecificPopUp", () => {
         expect(goto).toHaveBeenCalledWith(
             `/shacl?document=${DOCUMENT_ID}&line=7`,
         );
-        expect(editorState.selectedGraph.getValue()).toBe(GRAPH);
+        expect(editorState.selectedGraph.getValue()).toBe(SCHEMA);
     });
 
     test("shows the class's constraints without a references sidebar", async () => {

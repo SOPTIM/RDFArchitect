@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.services.shacl;
 
-import org.apache.jena.irix.IRIs;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.ErrorHandlerFactory;
@@ -55,17 +54,17 @@ final class TurtleSubjectLines {
      * would start looking. A lexical error ends the scan, as it ends the parse, so a subject after
      * it has no line.
      *
+     * @param base what relative IRIs resolve against until the text sets its own {@code @base}; the
+     *     base the text was parsed with
      * @param prefixes prefixes bound before the text starts; the text's own directives override
      *     them from where they stand
      */
-    static Map<String, Integer> linesBySubject(String turtle, PrefixMapping prefixes) {
+    static Map<String, Integer> linesBySubject(String turtle, String base, PrefixMapping prefixes) {
         if (turtle == null || turtle.isEmpty()) {
             return Map.of();
         }
-        // The base and checks RDFParser uses for Turtle when it is given no base.
-        var profile =
-                RiotLib.profile(
-                        Lang.TURTLE, IRIs.getBaseStr(), ErrorHandlerFactory.errorHandlerNoLogging);
+        // The checks RDFParser uses for Turtle.
+        var profile = RiotLib.profile(Lang.TURTLE, base, ErrorHandlerFactory.errorHandlerNoLogging);
         profile.getPrefixMap().putAll(prefixes);
         // Lines are counted as the editor counts them, where a lone \r ends one too. The tokenizer
         // counts only \n.

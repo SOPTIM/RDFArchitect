@@ -45,10 +45,10 @@ import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.database.StaleWriteException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
+import org.rdfarchitect.services.shacl.effective.ConstraintFormatter;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
@@ -275,7 +275,9 @@ public class SHACLStoringService
     private static void indexSubjects(
             Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {
         var model = ModelFactory.createModelForGraph(document.getGraph());
-        var lines = TurtleSubjectLines.linesBySubject(document.getRawText(), model);
+        var lines =
+                TurtleSubjectLines.linesBySubject(
+                        document.getRawText(), ShapesDocument.BASE_IRI, model);
         var scope = blankNodeScope(document);
         var seen = new HashSet<String>();
         model.listSubjects()
@@ -385,7 +387,7 @@ public class SHACLStoringService
                             .filter(Objects::nonNull)
                             .toList();
             wrapper.setSummary(
-                    EffectiveConstraints.describe(
+                    ConstraintFormatter.describe(
                             EffectiveConstraints.readAll(shaclModel.getGraph(), shapes),
                             prefixes,
                             hierarchy));

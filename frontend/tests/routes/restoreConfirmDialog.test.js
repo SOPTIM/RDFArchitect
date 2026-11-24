@@ -104,7 +104,7 @@ describe("RestoreConfirmDialog", () => {
     });
 
     test("held to the schema, says constraints documents stay as they are", async () => {
-        await render({ request: requestTo([GRAPH_A]), graphUri: GRAPH_A });
+        await render({ request: requestTo([GRAPH_A]), schemaName: GRAPH_A });
 
         expect(text()).toContain("leaves them as they are");
     });

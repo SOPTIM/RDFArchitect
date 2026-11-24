@@ -42,22 +42,22 @@ const TTL = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 ex:Shape a sh:NodeShape .
 `;
 
-const GRAPH = { datasetName: "cgmes", graphURI: "http://example.org/EQ" };
+const WORKSPACE = { workspaceName: "cgmes" };
 
 const OPERATIONS = [
     ["createSnapshot", createSnapshot, {}],
     [
         "createShapesDocument",
         createShapesDocument,
-        { path: GRAPH, query: { name: "eq.ttl" } },
+        { path: WORKSPACE, query: { name: "eq.ttl" } },
     ],
-    ["validateShapesText", validateShapesText, { path: GRAPH }],
+    ["validateShapesText", validateShapesText, { path: WORKSPACE }],
     [
         "replaceShapesDocumentText",
         replaceShapesDocumentText,
         {
             path: {
-                ...GRAPH,
+                ...WORKSPACE,
                 documentId: "0f8fad5b-d9cb-469f-a165-70867728950e",
             },
         },

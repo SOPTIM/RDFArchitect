@@ -28,11 +28,11 @@
         emptyRelations,
         firstDocumentOf,
     } from "$lib/shacl/classConstraints.js";
-    import { showClass } from "$lib/shacl/classNavigation.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import ClassConstraintsView from "./ClassConstraintsView.svelte";
 
@@ -53,8 +53,8 @@
 
     /** The schema the shown rules are read against, for hover and Ctrl+click on their terms. */
     const termSource = $derived(
-        workspaceName && graphUri
-            ? new SchemaTermSource({ datasetName: workspaceName })
+        workspaceName && schemaName
+            ? new SchemaTermSource({ workspaceName })
             : null,
     );
 
@@ -69,9 +69,14 @@
         if (!showDialog) {
             return;
         }
-        return onOpenClass((targetGraph, classUUID, packageUUID) => {
+        return onOpenClass((targetSchema, classUUID, packageUUID) => {
             showDialog = false;
-            showClass(workspaceName, targetGraph, classUUID, packageUUID);
+            navigateToClass({
+                workspaceName,
+                schemaName: targetSchema,
+                packageUUID,
+                classUUID,
+            });
         });
     });
 
@@ -116,13 +121,13 @@
     /**
      * Follows a provenance chip into the workbench, at the document and line the rule lives in.
      *
-     * Without the document the workbench opens on whatever it opened last, which for a graph with
+     * Without the document the workbench opens on whatever it opened last, which for a schema with
      * a dozen constraints files is rarely the one being asked about. The class's schema is
      * selected first, because the workbench opens the selected one.
      */
     function openInWorkbench(documentId = null, line = null) {
         showDialog = false;
-        selectSchemaOf(editorState, workspaceName, graphUri);
+        selectSchemaOf(editorState, workspaceName, schemaName);
         goto(workbenchHref(documentId, line));
     }
 

@@ -33,7 +33,7 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
+    import { graphLabeller, schemaName } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
 
     import SchemaChecklist from "./workbench/SchemaChecklist.svelte";

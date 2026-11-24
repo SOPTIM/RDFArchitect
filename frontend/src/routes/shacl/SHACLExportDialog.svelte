@@ -77,26 +77,26 @@
      * constraints file they restate most of it in other words, which doubles every rule in the
      * export.
      */
-    async function loadDocuments(workspaceName, graphUri) {
+    async function loadDocuments(workspaceName, schemaName) {
         // The selection can change again while a listing is in flight, and the older request may
         // answer last. Its documents belong to the workspace that is no longer chosen, and
         // exporting would ask the new one for ids it has never heard of — which it skips in silence.
         const load = {};
         loadingFor = load;
-        if (!workspaceName || !graphUri) {
+        if (!workspaceName || !schemaName) {
             documents = [];
             selected = new Set();
             includeGenerated = true;
             return;
         }
         const { data, error } = await listShapesDocuments({
-            path: { datasetName: workspaceName },
+            path: { workspaceName },
         });
         if (loadingFor !== load) {
             return;
         }
         loadFailed = !!error;
-        const applies = document => document.schemas?.includes(graphUri);
+        const applies = document => document.schemas?.includes(schemaName);
         // The chosen schema's own first, so they are what a long list starts with.
         documents = error
             ? []
@@ -123,16 +123,16 @@
         selected = next;
     }
 
-    function exportUrl(workspaceName, graphURI) {
+    function exportUrl(workspaceName, schemaName) {
         const query = [...selected].map(
             id => `documentId=${encodeURIComponent(id)}`,
         );
         if (includeGenerated) {
-            query.push(`generatedFor=${encodeURIComponent(graphURI)}`);
+            query.push(`generatedFor=${encodeURIComponent(schemaName)}`);
         }
         return (
             PUBLIC_BACKEND_URL +
-            "/api/datasets/" +
+            "/api/workspaces/" +
             encodeURIComponent(workspaceName) +
             "/shacl/export/file?" +
             query.join("&")

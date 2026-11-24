@@ -15,16 +15,17 @@
  *
  */
 
-import { mount, unmount } from "svelte";
+import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import SHACLExportDialog from "../../src/routes/shacl/SHACLExportDialog.svelte";
 
 const WORKSPACE = "cgmes";
-const GRAPH = "http://example.org/EQ";
-const OTHER = "http://example.org/SSH";
+const SCHEMA = "EQ";
+const OTHER = "SSH";
 
 const listShapesDocuments = vi.hoisted(() => vi.fn());
+const saveFile = vi.hoisted(() => vi.fn());
 
 let mounted = null;
 let target = null;
@@ -53,18 +54,23 @@ async function render() {
         props: {
             showDialog: true,
             lockedWorkspaceName: WORKSPACE,
-            lockedGraphUri: GRAPH,
+            lockedSchemaName: SCHEMA,
         },
     });
     await vi.waitFor(() => expect(dialog()).not.toBeNull());
     await vi.waitFor(() =>
         expect(listShapesDocuments).toHaveBeenCalledWith({
-            path: { datasetName: WORKSPACE },
+            path: { workspaceName: WORKSPACE },
         }),
     );
 }
 
 vi.mock("$lib/api/generated/index.ts", () => ({ listShapesDocuments }));
+
+vi.mock("$lib/utils/fileUtils.ts", async original => ({
+    ...(await original()),
+    saveFile,
+}));
 
 vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
@@ -83,7 +89,7 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: {
         getGraphs: vi.fn().mockResolvedValue([
             {
-                uri: { prefix: "http://example.org/", suffix: "EQ" },
+                name: "EQ",
                 keyword: "EQ",
             },
         ]),
@@ -100,6 +106,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    vi.unstubAllGlobals();
     if (mounted) unmount(mounted);
     target?.remove();
     mounted = null;
@@ -126,14 +133,14 @@ describe("SHACLExportDialog", () => {
                 name: "on.ttl",
                 order: 0,
                 enabled: true,
-                schemas: [GRAPH],
+                schemas: [SCHEMA],
             },
             {
                 id: "off",
                 name: "off.ttl",
                 order: 1,
                 enabled: false,
-                schemas: [GRAPH],
+                schemas: [SCHEMA],
             },
             {
                 id: "other",
@@ -167,7 +174,7 @@ describe("SHACLExportDialog", () => {
                 name: "on.ttl",
                 order: 1,
                 enabled: true,
-                schemas: [GRAPH],
+                schemas: [SCHEMA],
             },
         );
 
@@ -186,7 +193,7 @@ describe("SHACLExportDialog", () => {
             name: "on.ttl",
             order: 0,
             enabled: true,
-            schemas: [GRAPH],
+            schemas: [SCHEMA],
         });
 
         await render();
@@ -219,5 +226,43 @@ describe("SHACLExportDialog", () => {
             ),
         );
         expect(checkbox("Generated shapes").checked).toBe(true);
+    });
+
+    test("asks for the ticked documents and the schema's generated shapes", async () => {
+        const fetch = vi.fn(async () => new Response("", { status: 200 }));
+        vi.stubGlobal("fetch", fetch);
+        documents(
+            {
+                id: "on",
+                name: "on.ttl",
+                order: 0,
+                enabled: true,
+                schemas: [SCHEMA],
+            },
+            {
+                id: "other",
+                name: "other.ttl",
+                order: 1,
+                enabled: true,
+                schemas: [OTHER],
+            },
+        );
+        await render();
+        await vi.waitFor(() => expect(checkbox("other.ttl")).toBeTruthy());
+
+        checkbox("other.ttl").click();
+        checkbox("Generated shapes").click();
+        flushSync();
+        [...dialog().querySelectorAll("button")]
+            .find(button => button.textContent.trim() === "Export")
+            .click();
+
+        await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+        const url = new URL(fetch.mock.calls[0][0]);
+        expect(url.origin + url.pathname).toBe(
+            "http://backend.test/api/workspaces/cgmes/shacl/export/file",
+        );
+        expect(url.searchParams.getAll("documentId")).toEqual(["on", "other"]);
+        expect(url.searchParams.getAll("generatedFor")).toEqual([SCHEMA]);
     });
 });

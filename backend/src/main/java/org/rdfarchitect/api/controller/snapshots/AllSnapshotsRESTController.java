@@ -49,7 +49,7 @@ public class AllSnapshotsRESTController {
             tags = {"snapshot", "dataset"},
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
-    // body would be looked up as a dataset name that still includes its quotes.
+    // body would be looked up as a workspace name that still includes its quotes.
     @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
     public String createSnapshot(
             @Parameter(description = "The name/url of the inquirer.")

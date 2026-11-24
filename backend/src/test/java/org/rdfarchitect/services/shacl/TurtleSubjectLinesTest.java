@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.irix.IRIs;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class TurtleSubjectLinesTest {
     }
 
     private static Map<String, Integer> lines(String turtle) {
-        return TurtleSubjectLines.linesBySubject(turtle, prefixes());
+        return TurtleSubjectLines.linesBySubject(turtle, IRIs.getBaseStr(), prefixes());
     }
 
     @Test
@@ -286,7 +287,7 @@ class TurtleSubjectLinesTest {
         // The graph's own prefixes hold the last binding only.
         var bound = new PrefixMappingImpl().setNsPrefix("ex", "http://b.example/");
 
-        assertThat(TurtleSubjectLines.linesBySubject(turtle, bound))
+        assertThat(TurtleSubjectLines.linesBySubject(turtle, IRIs.getBaseStr(), bound))
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of("http://a.example/S", 2, "http://b.example/S", 5));
     }

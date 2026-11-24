@@ -31,11 +31,11 @@
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
-    import { showClass } from "$lib/shacl/classNavigation.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import { goto } from "$app/navigation";
 
@@ -66,10 +66,8 @@
 
     /** The schema the shown rules are read against, for hover and Ctrl+click on their terms. */
     const termSource = $derived(
-        classWorkspaceName && classGraphUri
-            ? new SchemaTermSource({
-                  datasetName: classWorkspaceName,
-              })
+        classWorkspaceName && classSchemaName
+            ? new SchemaTermSource({ workspaceName: classWorkspaceName })
             : null,
     );
 
@@ -84,9 +82,14 @@
         if (!showDialog) {
             return;
         }
-        return onOpenClass((targetGraph, classUUID, packageUUID) => {
+        return onOpenClass((targetSchema, classUUID, packageUUID) => {
             showDialog = false;
-            showClass(classWorkspaceName, targetGraph, classUUID, packageUUID);
+            navigateToClass({
+                workspaceName: classWorkspaceName,
+                schemaName: targetSchema,
+                packageUUID,
+                classUUID,
+            });
         });
     });
 
@@ -221,7 +224,7 @@
             line = first?.line ?? null;
         }
         showDialog = false;
-        selectSchemaOf(editorState, classWorkspaceName, classGraphUri);
+        selectSchemaOf(editorState, classWorkspaceName, classSchemaName);
         goto(workbenchHref(documentId, line));
     }
 

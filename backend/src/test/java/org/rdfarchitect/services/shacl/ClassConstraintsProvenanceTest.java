@@ -49,7 +49,7 @@ import java.util.UUID;
 /**
  * A shape read at class level can be traced back to the file it came from.
  *
- * <p>The class dialog reads the graph's constraints merged from every enabled document, which is
+ * <p>The class dialog reads the schema's constraints merged from every enabled document, which is
  * the only way to answer "what constrains this class" — official constraints are split across files
  * on purpose. Merging is also what throws away the one thing a reader needs in order to change a
  * rule, so the merge has to put the file back.
@@ -62,9 +62,8 @@ class ClassConstraintsProvenanceTest {
     private static final String SIMPLE =
             "SHACL/TTL/61970-600-2_DiagramLayout-AP-Con-Simple-SHACL.ttl";
 
-    private static final String DATASET = "cgmes";
-    private static final GraphIdentifier GRAPH =
-            new GraphIdentifier(DATASET, "http://ex.org/DiagramLayout");
+    private static final String WORKSPACE = "cgmes";
+    private static final GraphIdentifier GRAPH = new GraphIdentifier(WORKSPACE, "DiagramLayout");
     private static final String DIAGRAM = "http://iec.ch/TC57/CIM100#Diagram";
 
     private final InMemoryDatabaseImpl database = new InMemoryDatabaseImpl(new SchemaConfig());
@@ -76,7 +75,7 @@ class ClassConstraintsProvenanceTest {
     @BeforeEach
     void setUp() throws IOException {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort.createDataset(DATASET);
+        databasePort.createDataset(WORKSPACE);
 
         var schema = GraphFactory.createDefaultGraph();
         RDFParser.source(Path.of(BASE + VOCABULARY).toUri().toString()).parse(schema);
@@ -84,8 +83,8 @@ class ClassConstraintsProvenanceTest {
 
         service = new SHACLStoringService(databasePort);
         service.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                GRAPH.workspaceName(),
+                List.of(GRAPH.schemaName()),
                 "simple.ttl",
                 "simple.ttl",
                 Files.readString(Path.of(BASE + SIMPLE)),
@@ -156,8 +155,8 @@ class ClassConstraintsProvenanceTest {
     @Test
     void aSecondDocumentIsNamedOnItsOwnShapes() {
         service.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                GRAPH.workspaceName(),
+                List.of(GRAPH.schemaName()),
                 "mine.ttl",
                 null,
                 """
@@ -206,8 +205,8 @@ class ClassConstraintsProvenanceTest {
         // A blank node without "a sh:PropertyShape" is a rule too; being the value of sh:property
         // is what makes it one.
         service.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                GRAPH.workspaceName(),
+                List.of(GRAPH.schemaName()),
                 "inline.ttl",
                 null,
                 """
@@ -243,8 +242,8 @@ class ClassConstraintsProvenanceTest {
     /** A document a user wrote or imported, on top of the official one. */
     private void givenDocument(String name, String body) {
         service.createShapesDocument(
-                GRAPH.datasetName(),
-                List.of(GRAPH.graphUri()),
+                GRAPH.workspaceName(),
+                List.of(GRAPH.schemaName()),
                 name,
                 null,
                 """
@@ -255,6 +254,28 @@ class ClassConstraintsProvenanceTest {
                 """
                         + body,
                 Lang.TURTLE);
+    }
+
+    @Test
+    void aShapeWrittenAsARelativeIriHasItsLineToo() {
+        givenDocument(
+                "relative.ttl",
+                """
+
+                <#RelativeShape> a sh:NodeShape ; sh:targetClass cim:Diagram ;
+                    sh:property <#RelativeRule> .
+                <#RelativeRule> sh:path cim:Diagram.orientation ; sh:maxCount 1 .
+                """);
+
+        var rule =
+                shapesOf(custom()).stream()
+                        .filter(shape -> shape.getId().endsWith("#RelativeRule"))
+                        .findFirst()
+                        .orElseThrow();
+
+        assertThat(rule.getOrigins())
+                .singleElement()
+                .satisfies(origin -> assertThat(origin.getLine()).isEqualTo(8));
     }
 
     @Test
@@ -308,8 +329,8 @@ class ClassConstraintsProvenanceTest {
     }
 
     private UUID uuidOf(String classUri) {
-        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
-            return transaction.graph(GRAPH.graphUri()).getRdfGraph().stream(
+        try (var transaction = databasePort.beginTransaction(WORKSPACE, ReadWrite.READ)) {
+            return transaction.graph(GRAPH.schemaName()).getRdfGraph().stream(
                             NodeFactory.createURI(classUri), RDFA.uuid.asNode(), Node.ANY)
                     .map(triple -> UUID.fromString(triple.getObject().getLiteralLexicalForm()))
                     .findFirst()

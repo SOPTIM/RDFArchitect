@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import SHACLUploadDialog from "../../src/routes/shacl/SHACLUploadDialog.svelte";
 
-const GRAPH = "http://example.org/EQ";
+const SCHEMA = "EQ";
 
 const WORKSPACES = vi.hoisted(() => [
     { label: "editable", readOnly: false },
@@ -52,7 +52,7 @@ async function render(props) {
     document.body.appendChild(target);
     mounted = mount(SHACLUploadDialog, {
         target,
-        props: { showDialog: true, lockedGraphUri: GRAPH, ...props },
+        props: { showDialog: true, lockedSchemaName: SCHEMA, ...props },
     });
     await vi.waitFor(() => expect(dialog()).not.toBeNull());
 }
@@ -89,7 +89,7 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
     graphStore: {
         getGraphs: vi.fn().mockResolvedValue([
             {
-                uri: { prefix: "http://example.org/", suffix: "EQ" },
+                name: "EQ",
                 keyword: "Equipment",
             },
         ]),
@@ -160,8 +160,8 @@ describe("SHACLUploadDialog", () => {
 
         await vi.waitFor(() => expect(toasts.success).toHaveBeenCalled());
         const [request] = api.createShapesDocumentFromFile.mock.calls[0];
-        expect(request.path).toEqual({ datasetName: "editable" });
-        expect(request.query.schema).toEqual([GRAPH]);
+        expect(request.path).toEqual({ workspaceName: "editable" });
+        expect(request.query.schema).toEqual([SCHEMA]);
         expect(toasts.success.mock.calls[0][1]).toContain('"editable"');
     });
 
