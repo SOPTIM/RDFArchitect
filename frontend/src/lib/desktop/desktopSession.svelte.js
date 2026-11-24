@@ -182,9 +182,12 @@ async function sendOneHeartbeat() {
         desktopSession.workspacesWithFile = status?.workspacesWithFile ?? [];
         desktopSession.workspaceIds = status?.workspaceIds ?? {};
     } catch (error) {
-        // A network error means nobody listens any more; an error status is a backend that is
-        // still there.
-        if (error instanceof TypeError) {
+        // A network error means nobody listens any more, and 401 a backend that does not know
+        // this window's access token, one started anew. Other error statuses come from the
+        // backend this window belongs to.
+        if (error?.status === 401) {
+            desktopSession.stopped = true;
+        } else if (error instanceof TypeError) {
             missedHeartbeats += 1;
             if (missedHeartbeats >= MISSED_HEARTBEATS_UNTIL_STOPPED) {
                 desktopSession.stopped = true;

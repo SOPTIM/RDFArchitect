@@ -184,6 +184,18 @@ describe("desktopSession", () => {
         expect(desktopSession.unsavedWorkspaces).toEqual(["Draft"]);
     });
 
+    test("heartbeat_accessTokenRefused_countsTheBackendAsStopped", async () => {
+        startDesktopSession();
+        await vi.advanceTimersByTimeAsync(0);
+        vi.mocked(sendHeartbeat).mockRejectedValue(
+            Object.assign(new Error("401 Unauthorized"), { status: 401 }),
+        );
+
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(desktopSession.stopped).toBe(true);
+    });
+
     test("heartbeat_errorAnswer_doesNotCountAsStopped", async () => {
         startDesktopSession();
         await vi.advanceTimersByTimeAsync(0);
