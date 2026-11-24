@@ -59,7 +59,11 @@ function button(label) {
 function responseWith(filename) {
     return {
         data: new Blob(["content"]),
-        response: { headers: new Headers({ "content-disposition": filename }) },
+        response: {
+            headers: new Headers({
+                "content-disposition": `attachment; filename="${filename}"`,
+            }),
+        },
     };
 }
 
@@ -68,9 +72,9 @@ vi.mock("$lib/api/generated/index.ts", () => ({
     generateMigrationScript,
 }));
 
-vi.mock("$lib/utils/fileUtils.js", () => ({
+vi.mock("$lib/utils/fileUtils.js", async importOriginal => ({
+    ...(await importOriginal()),
     saveFile,
-    sparqlMediaType: { fileExtension: ".sparql" },
 }));
 
 vi.mock("$app/navigation", () => ({ goto: vi.fn() }));
@@ -99,16 +103,24 @@ describe("MigrationArtifacts", () => {
     });
 
     test.each([
-        ["Download script", "the migration script"],
-        ["Download report", "a report"],
-    ])("%s reports back that %s was taken", async label => {
-        render();
+        ["Download script", "the migration script", "migration.sparql"],
+        ["Download report", "a report", "migration_report.md"],
+    ])(
+        "%s reports back that %s was taken",
+        async (label, _description, filename) => {
+            render();
 
-        button(label).click();
+            button(label).click();
 
-        await vi.waitFor(() => expect(saveFile).toHaveBeenCalled());
-        expect(downloaded).toBe(true);
-    });
+            await vi.waitFor(() => expect(saveFile).toHaveBeenCalled());
+            expect(saveFile).toHaveBeenCalledWith(
+                expect.anything(),
+                filename,
+                expect.anything(),
+            );
+            expect(downloaded).toBe(true);
+        },
+    );
 
     test("a failed generation does not count as downloaded", async () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
