@@ -168,7 +168,10 @@ const VOCABULARY = [
                 "select",
                 "The SELECT query a SPARQL constraint is violated by the results of.",
             ],
-            ["ask", "The ASK query a SPARQL constraint must answer true for."],
+            [
+                "ask",
+                "The ASK query of a SPARQL-based constraint component's validator; true means the value conforms.",
+            ],
             [
                 "prefixes",
                 "The prefix declarations the embedded SPARQL is read with.",

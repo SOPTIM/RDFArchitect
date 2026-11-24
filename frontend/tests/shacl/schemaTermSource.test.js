@@ -248,6 +248,14 @@ describe("the standard vocabulary", () => {
         expect(server.requests).toHaveLength(0);
     });
 
+    test("says sh:ask belongs to a validator, which SHACL gives it to", async () => {
+        const detail = await source.detailOf("http://www.w3.org/ns/shacl#ask");
+
+        // A sh:SPARQLConstraint takes exactly one sh:select; ASK is for sh:SPARQLAskValidator.
+        expect(detail.comment).toContain("validator");
+        expect(detail.comment).toContain("conforms");
+    });
+
     test("anything else is still a question for the schema", async () => {
         await source.detailOf(`${CIM}ACLineSegment`);
 
