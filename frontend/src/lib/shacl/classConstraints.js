@@ -18,10 +18,9 @@
 /**
  * What is enforced on one class, arranged the way the question gets asked.
  *
- * The endpoint answers in two halves — what the schema generates and what the documents add — and
- * the old dialog put them behind two buttons, leaving the reader to merge them in their head.
- * Nobody wants "the custom shapes"; they want to know what applies to this property. So the halves
- * are folded into one row per property, and where a rule came from becomes a label on the answer
+ * The endpoint answers in two halves — what the schema generates and what the documents add. A
+ * reader wants to know what applies to a property, not which half says it, so the halves are
+ * folded into one row per property, and where a rule came from becomes a label on the answer
  * rather than the question.
  *
  * Free of Svelte so it can be tested as plain data handling.
@@ -97,8 +96,7 @@ export function classRules({ custom, generated, scope = "both" } = {}) {
  * How a row's rule reads.
  *
  * Normally one line. When both halves state something and they disagree, both are shown with their
- * source, because that disagreement is the single most interesting thing the dialog can surface —
- * and hiding one of them behind a tab is what made it invisible before.
+ * source, because that disagreement is the single most interesting thing the dialog can surface.
  */
 export function summaryOf(row) {
     const stated = row.sources.filter(source => source.summary);

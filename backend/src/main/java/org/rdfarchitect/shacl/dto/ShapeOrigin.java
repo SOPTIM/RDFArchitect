@@ -43,7 +43,8 @@ public class ShapeOrigin {
 
     /**
      * The 1-based line the shape starts on in that document, or {@code null} when it cannot be
-     * found — a document restored from a snapshot carries triples but no text to count lines in.
+     * found: a blank-node shape has no subject to look for, and a document held without its text
+     * has no lines to count.
      */
     private Integer line;
 }

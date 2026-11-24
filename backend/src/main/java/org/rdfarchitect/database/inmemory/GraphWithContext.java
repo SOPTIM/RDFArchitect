@@ -33,8 +33,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The contents of one named graph: RDF schema, diagram layout, shapes documents and custom
- * diagrams.
+ * The contents of one named graph: RDF schema, diagram layout and custom diagrams.
  *
  * <p>Holds no transaction and no lock. The graph takes part in the transaction of the workspace
  * that owns it, which is also what decides when its participants commit, abort or step through

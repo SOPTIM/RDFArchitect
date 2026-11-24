@@ -268,8 +268,8 @@ public class SHACLStoringService
      *
      * <p>Lines are counted in the document's own text rather than in a re-serialisation, because
      * the text is what the workbench will open and the line has to agree with it. A blank-node
-     * shape has no subject to look for, and a document restored from a snapshot may have no text at
-     * all; both simply get no line.
+     * shape has no subject to look for, and a document held without its text has no lines; both
+     * simply get no line.
      */
     private static void indexSubjects(
             Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {

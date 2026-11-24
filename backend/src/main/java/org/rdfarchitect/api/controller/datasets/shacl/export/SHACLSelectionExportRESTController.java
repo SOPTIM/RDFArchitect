@@ -45,9 +45,9 @@ import java.util.UUID;
 /**
  * Exporting a chosen set of a workspace's constraints.
  *
- * <p>The older endpoints offer three fixed combinations — generated, all enabled documents, or
- * both. Since a workspace holds several documents, which of them belongs in an export is a question
- * only the user can answer, so this one takes the answer.
+ * <p>A workspace holds several documents, and which of them belongs in an export is a question only
+ * the user can answer, so this endpoint takes the answer: the documents named, with or without the
+ * shapes generated from schemas.
  */
 @RestController
 @RequestMapping("api/workspaces/{workspaceName}/shacl/export")

@@ -20,10 +20,9 @@
      * Exports a chosen set of a workspace's constraints as one file.
      *
      * A workspace holds many constraints documents, so which of them belongs in an export is a
-     * question only the user can answer. The dialog asks it directly instead of offering three
-     * fixed combinations whose names — "generate", "custom", "combined" — said nothing about which
-     * documents they covered. The schema chosen above decides what is ticked to begin with and
-     * whose shapes "generated" means; any document of the workspace can be added.
+     * question only the user can answer, and the dialog asks it directly. The schema chosen above
+     * decides what is ticked to begin with and whose shapes "generated" means; any document of the
+     * workspace can be added.
      */
 
     import { listShapesDocuments } from "$lib/api/generated/index.ts";
@@ -83,7 +82,7 @@
     async function loadDocuments(workspaceName, schemaName) {
         // The selection can change again while a listing is in flight, and the older request may
         // answer last. Its documents belong to the workspace that is no longer chosen, and
-        // exporting would ask the new one for ids it has never heard of — which it skips in silence.
+        // exporting would ask the new one for ids it has never heard of, which it refuses.
         const load = {};
         loadingFor = load;
         if (!workspaceName || !schemaName) {
