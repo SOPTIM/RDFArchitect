@@ -13,6 +13,12 @@ The backend follows a hexagonal architecture (`docs/content/developer-guide/back
 - New SPARQL queries MUST be separate files under `backend/src/main/resources/sparql-templates/`, loaded via `SparqlTemplateLoader`, not inline in Java.
 - Existing code has deviations (use cases with several methods, packages by operation, inline queries). New code MUST NOT copy them.
 
+The frontend is described in `docs/content/developer-guide/frontend-architecture.md`. For new code:
+
+- Backend calls MUST go through the generated API client or a store, not through hand-written `fetch` calls.
+- New validation functions SHOULD be added to `frontend/src/lib/models/reactive/validity-rules/validityFunctions.js`, and existing ones there SHOULD be reused.
+- Global selections, such as the selected workspace, schema or class, SHOULD be read from `frontend/src/lib/sharedState.svelte.js` instead of being passed down as props.
+
 ## Generated files
 
 These files are generated and MUST NOT be edited by hand. Where a command is given, run it when the trigger applies.
