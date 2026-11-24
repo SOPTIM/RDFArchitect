@@ -31,8 +31,9 @@ export const shortcutStore = {
      *     does not still keeps the browser's own action for the keys from running, but leaves them
      *     to the next shortcut registered for the same keys, e.g. the class editor's Ctrl+S, which
      *     only saves a class that was changed, to the desktop app's Save.
-     * @param {boolean} [options.whileTyping] whether the shortcut also works while the focus is in
-     *     a text field, like Save in a desktop app. Others leave the keys to the field there.
+     * @param {boolean | (() => boolean)} [options.whileTyping] whether the shortcut also works while
+     *     the focus is in a text field, like Save in a desktop app. Others leave the keys to the
+     *     field there.
      * @returns {() => void} unregisters the shortcut again
      */
     register(
@@ -86,7 +87,7 @@ export const shortcutStore = {
             .reverse();
         if (
             matching.length === 0 ||
-            (typing && !matching.some(({ whileTyping }) => whileTyping))
+            (typing && !matching.some(worksWhileTyping))
         ) {
             return false;
         }
@@ -94,7 +95,7 @@ export const shortcutStore = {
         const shortcut = matching.find(
             ({ isActive }) => !isActive || isActive(),
         );
-        if (!shortcut || (typing && !shortcut.whileTyping)) {
+        if (!shortcut || (typing && !worksWhileTyping(shortcut))) {
             return false;
         }
         const { handler, closeDialogs } = shortcut;
@@ -129,6 +130,10 @@ function isSpecialChar(key) {
  * @param {string[]} combo
  * @returns {string} e.g. "ctrl+shift+s" or "ctrl+?"
  */
+function worksWhileTyping({ whileTyping }) {
+    return typeof whileTyping === "function" ? whileTyping() : whileTyping;
+}
+
 function normalizeCombo(combo) {
     const keys = combo.map(k => k.toLowerCase());
     const nonModifiers = keys.filter(k => !MODIFIER_ORDER.includes(k));

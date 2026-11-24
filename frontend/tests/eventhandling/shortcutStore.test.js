@@ -152,4 +152,20 @@ describe("shortcutStore", () => {
         expect(saveWorkspace).not.toHaveBeenCalled();
         expect(saveClass).not.toHaveBeenCalled();
     });
+
+    test("handleEvent_typingAndWhileTypingDependsOnTheState_followsIt", () => {
+        const saveClass = vi.fn();
+        let dialogOpen = true;
+        register("saveClass", ["ctrl", "s"], saveClass, false, {
+            whileTyping: () => !dialogOpen,
+        });
+
+        const behindDialog = press("s", { ctrl: true, typing: true });
+        expect(behindDialog.handled).toBe(false);
+        expect(behindDialog.event.defaultPrevented).toBe(false);
+
+        dialogOpen = false;
+        expect(press("s", { ctrl: true, typing: true }).handled).toBe(true);
+        expect(saveClass).toHaveBeenCalledTimes(1);
+    });
 });

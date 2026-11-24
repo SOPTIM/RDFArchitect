@@ -35,6 +35,7 @@ The desktop app keeps your workspaces in memory while it runs, like the server k
 - **File → Save Workspace** (Ctrl+S) saves the workspace you are working on. The first time it asks where to; afterwards it writes to the same file again without asking.
 - **File → Save Workspace As…** (Ctrl+Shift+S) saves it to another file.
 - **File → Open Workspace…** (Ctrl+O) opens a workspace file as a new workspace, with all of its schemas, constraints, diagrams and layouts. Saving it again writes back to the file it came from.
+- The shortcuts also work while you type in a text field. While the class editor holds changes, Ctrl+S saves the class.
 
 Saving to the same file again works where the browser can write files, which Chrome, Edge and Brave can. In other browsers, such as Firefox or Safari, every save downloads the file into your downloads folder, and the workspace counts as saved as soon as the download starts. If you cancel the download, the workspace still counts as saved, so save it again.
 

@@ -26,6 +26,7 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { isDialogOpen } from "$lib/dialog/openDialogs.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
@@ -92,6 +93,8 @@
                     isActive: () =>
                         !readonly &&
                         !!(reactiveClass?.isValid && reactiveClass?.isModified),
+                    // A dialog on top, such as the attribute editor, holds edits of its own.
+                    whileTyping: () => !isDialogOpen(),
                 },
             ),
         );
