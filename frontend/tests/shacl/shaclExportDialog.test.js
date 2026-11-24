@@ -26,6 +26,7 @@ const OTHER = "SSH";
 
 const listShapesDocuments = vi.hoisted(() => vi.fn());
 const saveFile = vi.hoisted(() => vi.fn());
+const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 let mounted = null;
 let target = null;
@@ -66,6 +67,10 @@ async function render() {
 }
 
 vi.mock("$lib/api/generated/index.ts", () => ({ listShapesDocuments }));
+
+vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
+    toastStore: toasts,
+}));
 
 vi.mock("$lib/utils/fileUtils.ts", async original => ({
     ...(await original()),
@@ -264,5 +269,64 @@ describe("SHACLExportDialog", () => {
         );
         expect(url.searchParams.getAll("documentId")).toEqual(["on", "other"]);
         expect(url.searchParams.getAll("generatedFor")).toEqual([SCHEMA]);
+    });
+
+    function exportButton() {
+        return [...dialog().querySelectorAll("button")].find(
+            button => button.textContent.trim() === "Export",
+        );
+    }
+
+    async function exportOneDocumentAnswered(response) {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => response),
+        );
+        documents({
+            id: "on",
+            name: "eq.ttl",
+            order: 0,
+            enabled: true,
+            schemas: [SCHEMA],
+        });
+        await render();
+        await vi.waitFor(() => expect(checkbox("eq.ttl")?.checked).toBe(true));
+        exportButton().click();
+    }
+
+    test("names the file it saved, not the schema", async () => {
+        await exportOneDocumentAnswered(
+            new Response("", {
+                status: 200,
+                headers: {
+                    "content-disposition": 'attachment; filename="eq.ttl"',
+                },
+            }),
+        );
+
+        await vi.waitFor(() => expect(toasts.success).toHaveBeenCalled());
+        expect(saveFile.mock.calls[0][1]).toBe("eq.ttl");
+        expect(toasts.success.mock.calls[0][1]).toContain('"eq.ttl"');
+        expect(toasts.success.mock.calls[0][1]).not.toContain(SCHEMA);
+    });
+
+    test("says why the server refused the export, not which schema it was for", async () => {
+        await exportOneDocumentAnswered(
+            new Response(
+                JSON.stringify({
+                    status: 404,
+                    detail: "No constraints document with id on in this workspace.",
+                }),
+                {
+                    status: 404,
+                    headers: { "content-type": "application/problem+json" },
+                },
+            ),
+        );
+
+        await vi.waitFor(() => expect(toasts.error).toHaveBeenCalled());
+        expect(toasts.error.mock.calls[0][1]).toBe(
+            "No constraints document with id on in this workspace.",
+        );
     });
 });

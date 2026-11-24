@@ -68,6 +68,18 @@ public interface SHACLExportUseCase {
             Collection<UUID> documentIds,
             Collection<String> generatedFor);
 
+    /**
+     * What a download of the selection {@link #exportSelectedSHACLGraph} exports is called, without
+     * its extension: the document's own name for a document exported on its own, and the
+     * workspace's otherwise.
+     *
+     * @param workspaceName The workspace holding the documents.
+     * @param documentIds The documents to include.
+     * @param generatedFor Names of the schemas whose generated shapes to merge in.
+     */
+    String selectionFileStem(
+            String workspaceName, Collection<UUID> documentIds, Collection<String> generatedFor);
+
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**

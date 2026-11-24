@@ -65,7 +65,10 @@
 
     let onPrimary = $derived(
         shaclExportDialog && !nothingChosen
-            ? () => shaclExportDialog.handleExport(exportUrl)
+            ? () =>
+                  shaclExportDialog.handleExport(exportUrl, {
+                      subject: "the constraints",
+                  })
             : null,
     );
 

@@ -27,6 +27,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
@@ -653,6 +654,24 @@ public class SHACLStoringService
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted", "constraints document", document.getName()));
+        }
+    }
+
+    @Override
+    public String selectionFileStem(
+            String workspaceName, Collection<UUID> documentIds, Collection<String> generatedFor) {
+        var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+        if (ids.size() != 1 || !generatedFor.isEmpty()) {
+            return workspaceName + "-shacl";
+        }
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            var name = requireDocument(transaction, ids.iterator().next()).getName();
+            var extension = name.lastIndexOf('.');
+            // An imported document keeps its file's name, extension included, and the download
+            // takes the extension of the format it is written in.
+            return extension > 0 && RDFLanguages.filenameToLang(name) != null
+                    ? name.substring(0, extension)
+                    : name;
         }
     }
 

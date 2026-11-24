@@ -147,8 +147,26 @@
         });
     }
 
-    // This function is called from the parent component when the user clicks the export button
-    export async function handleExport(getAPIRoute) {
+    /** What the server said went wrong, when it said it as a problem detail. */
+    async function problemDetail(response) {
+        if (!response.headers.get("content-type")?.includes("json")) {
+            return null;
+        }
+        try {
+            return (await response.json())?.detail ?? null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Called from the parent component when the user clicks the export button.
+     *
+     * @param getAPIRoute builds the url from the chosen workspace and schema
+     * @param subject what the messages call the export when it is not the schema; a successful one
+     *     is then called by the name of the file it was saved as
+     */
+    export async function handleExport(getAPIRoute, { subject = null } = {}) {
         if (
             !getAPIRoute ||
             !selectedWorkspaceName ||
@@ -179,7 +197,8 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${schemaName}".`,
+                    (await problemDetail(response)) ??
+                        `Could not export ${subject ?? `"${schemaName}"`}.`,
                 );
                 return;
             }
@@ -188,9 +207,13 @@
                 response.headers.get("content-disposition"),
             );
             saveFile(blob, suggestedFilename, selectedMediaType);
+            const saved =
+                subject && suggestedFilename
+                    ? `"${suggestedFilename}"`
+                    : (subject ?? `"${schemaName}"`);
             toastStore.success(
                 "Export ready",
-                `"${schemaName}" downloaded as ${selectedMediaType.name}.`,
+                `${saved} downloaded as ${selectedMediaType.name}.`,
             );
         } catch (e) {
             console.error("Failed to download graph:", e);

@@ -10859,7 +10859,7 @@
     },
     "/api/workspaces/{workspaceName}/shacl/export/file" : {
       "get" : {
-        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from schemas. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text.",
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from schemas. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text, and a single document is named after itself; anything else after the workspace.",
         "operationId" : "exportSelection",
         "parameters" : [
           {
