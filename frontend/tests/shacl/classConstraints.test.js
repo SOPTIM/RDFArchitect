@@ -186,6 +186,41 @@ describe("originsOf", () => {
     });
 });
 
+describe("originsOf, with a document named like the generated shapes", () => {
+    test("keeps the document and the generated shapes apart", () => {
+        const custom = {
+            ...CUSTOM,
+            propertyShapes: [
+                wrapper("length", "0..1, xsd:float", [
+                    {
+                        id: "custom-length",
+                        origins: [
+                            {
+                                documentId: DOCUMENT_ID,
+                                documentName: "generated",
+                                line: 3,
+                            },
+                        ],
+                    },
+                ]),
+            ],
+        };
+        const row = constraintRows({ custom, generated: GENERATED }).find(
+            candidate => candidate.label === "length",
+        );
+
+        expect(originsOf(row)).toEqual([
+            { label: "generated", generated: true },
+            {
+                label: "generated",
+                documentId: DOCUMENT_ID,
+                line: 3,
+                generated: false,
+            },
+        ]);
+    });
+});
+
 describe("ruleCount and classRules", () => {
     test("counts every shape behind a row", () => {
         const row = constraintRows({

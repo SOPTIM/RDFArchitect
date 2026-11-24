@@ -21,6 +21,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import ClassConstraintsView from "../../src/routes/shacl/shaclclassspecific/ClassConstraintsView.svelte";
 
 const DOCUMENT_ID = "11111111-2222-3333-4444-555555555555";
+const OTHER_DOCUMENT_ID = "66666666-7777-8888-9999-000000000000";
 
 const CUSTOM = {
     namespaces: "@prefix sh: <http://www.w3.org/ns/shacl#> .\n",
@@ -70,7 +71,7 @@ const CUSTOM = {
                     triples: "off:name a sh:PropertyShape .",
                     origins: [
                         {
-                            documentId: DOCUMENT_ID,
+                            documentId: OTHER_DOCUMENT_ID,
                             documentName: "ido.ttl",
                             line: 12,
                         },

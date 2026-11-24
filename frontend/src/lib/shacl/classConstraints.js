@@ -131,9 +131,11 @@ export function originsOf(row) {
             }
         }
     }
+    // By document, not by name: a document may be called "generated".
+    const key = origin => origin.documentId ?? GENERATED;
     return origins.filter(
         (origin, index) =>
-            origins.findIndex(other => other.label === origin.label) === index,
+            origins.findIndex(other => key(other) === key(origin)) === index,
     );
 }
 

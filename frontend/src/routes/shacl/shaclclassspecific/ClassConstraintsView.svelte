@@ -67,7 +67,7 @@
                 if (origin.generated) {
                     fromSchema = true;
                 } else {
-                    documents.add(origin.label);
+                    documents.add(origin.documentId);
                 }
             }
         }
