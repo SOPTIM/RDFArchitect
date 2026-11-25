@@ -190,7 +190,7 @@
     let classBoundsDiagramId = null;
     let dockingPointsCheckPending = false;
 
-    let hasFittedInitially = false;
+    let hasFittedView = false;
     let contextMenuEdge = $derived(
         contextMenus.edgeRequest
             ? edges.find(edge => edge.id === contextMenus.edgeRequest.edgeId)
@@ -401,10 +401,9 @@
     }
 
     function fitInitiallyIfNeeded() {
-        if (hasFittedInitially || !nodesInitialized.current) {
+        if (hasFittedView || !nodesInitialized.current) {
             return;
         }
-        hasFittedInitially = true;
         untrack(() => fitViewIncludingEdgePoints({ duration: 0 }));
     }
 
@@ -513,7 +512,6 @@
 
     function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
         layouted = false;
-        hasFittedInitially = false;
 
         // Keep the loading state active until persisted positions or ELK layout
         if (!hasDefaultLayoutAfterSync) {
@@ -784,6 +782,7 @@
      * the classes.
      */
     export async function fitViewIncludingEdgePoints({ duration = 400 } = {}) {
+        hasFittedView = true;
         const bounds = getDiagramBounds(nodes, edges, id =>
             svelteFlowAPI.svelteFlow.getInternalNode(id),
         );
