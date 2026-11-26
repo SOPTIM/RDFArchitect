@@ -70,7 +70,55 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>org.rdfarchitect.Launcher</mainClass>
+                    <!-- Repackaging takes provided dependencies along; Lombok is compile time only. -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                        </exclude>
+                    </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>ban-test-libraries</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <!-- Every scope but test, the provided one included, reaches the application jar. -->
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>org.springframework.boot:spring-boot-starter-test</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-test*</exclude>
+                                        <exclude>org.springframework:spring-test</exclude>
+                                        <exclude>org.junit*</exclude>
+                                        <exclude>org.mockito*</exclude>
+                                        <exclude>org.assertj*</exclude>
+                                        <exclude>org.hamcrest*</exclude>
+                                        <exclude>org.awaitility*</exclude>
+                                        <exclude>org.xmlunit*</exclude>
+                                        <exclude>org.skyscreamer:jsonassert</exclude>
+                                        <exclude>com.vaadin.external.google:android-json</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>*:*:*:*:test</include>
+                                    </includes>
+                                    <message>Test libraries must only be in the test scope; otherwise they are packaged into the application jar.</message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
@@ -368,11 +416,6 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.1.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
         <dependency>
@@ -389,6 +432,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <version>4.1.2</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

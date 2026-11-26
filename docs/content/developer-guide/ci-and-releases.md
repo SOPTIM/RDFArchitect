@@ -12,6 +12,8 @@ Two GitHub Actions workflows run on every push and PR:
 - **`.github/workflows/backend-ci.yml`** — checkout, setup Java 25, resolve version, lint (`mvn -B -Plint -DskipTests verify`), unit tests (`mvn -B test`), integration tests (`mvn -B verify`), third-party license consistency check, build & push Docker image (only on `main` and tags).
 - **`.github/workflows/frontend-ci.yml`** — checkout, setup Node 24, install, lint, test, build, third-party license check, build & push Docker image (only on `main` and tags).
 
+Every Maven build of the backend fails in the `validate` phase when a test library (JUnit, Mockito, AssertJ, the Spring test modules and others) is in a scope other than `test`, because it would end up in the application jar. The rule is the enforcer execution `ban-test-libraries` in `backend/pom.xml`.
+
 A third workflow, **`publish-test-images.yml`**, builds preview images for PRs from trusted contributors.
 
 ## Releases
