@@ -77,4 +77,11 @@
             font-size: 1.12rem;
         }
     }
+
+    /* Leaves the menu room on very narrow windows; the button is still named in full. */
+    @media (width < 40rem) {
+        .brand-wordmark__label {
+            display: none;
+        }
+    }
 </style>
