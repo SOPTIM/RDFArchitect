@@ -201,6 +201,24 @@ describe("Searchbar field", () => {
         }
     });
 
+    test("showResults_scopeListOpened_hidesResultsUntilItCloses", async () => {
+        render();
+        await typeQuery("Term");
+        const resultList = () => results()[0].parentElement;
+        expect(resultList().classList).not.toContain("hidden");
+
+        scopeButton().click();
+        flushSync();
+
+        expect(scopeButton().getAttribute("aria-expanded")).toBe("true");
+        expect(resultList().classList).toContain("hidden");
+
+        pressEscape(scopeButton());
+
+        expect(scopeButton().getAttribute("aria-expanded")).toBe("false");
+        expect(resultList().classList).not.toContain("hidden");
+    });
+
     test("chooseFilter_currentSchemaChosen_namesScopeBrieflyAndSearchesWithinIt", async () => {
         editorState.selectGraph("Draft", "Core");
         render();

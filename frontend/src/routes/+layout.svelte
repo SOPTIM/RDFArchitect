@@ -362,7 +362,7 @@
                                 title="The workspace is read-only. Enable editing"
                             >
                                 <span class="flex items-center gap-2">
-                                    <Fa icon={faLock} />
+                                    <Fa icon={faLock} fw />
                                     <span class="max-lg:sr-only">
                                         Enable Editing
                                     </span>

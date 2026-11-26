@@ -25,6 +25,7 @@
     import { Fa } from "svelte-fa";
 
     import { search } from "$lib/api/generated/index.ts";
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -48,10 +49,12 @@
     let queryString = $state("");
     let searchResults = $state([]);
     let inputElement = $state(null);
-    let toggleButton = $state(null);
+    let toggleWrapper = $state(null);
     // Below the md breakpoint the field folds into a button and opens below the toolbar; on wider
     // windows it is always shown and this stays false.
     let open = $state(false);
+    // Both lists sit below the field, so the results give way while the scope list is open.
+    let showResults = $derived(searchResults.length > 0 && !showScopeDropdown);
 
     onMount(() => {
         shortcutsUnregister.push(
@@ -215,7 +218,7 @@
         }
         open = false;
         if (returnFocus) {
-            toggleButton?.focus();
+            toggleWrapper?.querySelector("button")?.focus();
         }
     }
 
@@ -272,19 +275,17 @@
     onfocusout={handleFocusOut}
 >
     <!-- Hidden through a wrapper: app.css forces the display of every button. -->
-    <div class="shrink-0 md:hidden">
-        <button
-            bind:this={toggleButton}
-            type="button"
-            class="text-blue hover:bg-lightblue focus-visible:outline-blue flex h-9 w-9 cursor-pointer items-center justify-center rounded focus-visible:outline-2"
+    <div class="shrink-0 md:hidden" bind:this={toggleWrapper}>
+        <ButtonControl
+            callOnClick={() => (open ? closeSearch() : openSearch())}
+            height={9}
+            title="Search (Ctrl+F)"
             aria-label="Search"
             aria-expanded={open}
             aria-controls="toolbar-search"
-            title="Search (Ctrl+F)"
-            onclick={() => (open ? closeSearch() : openSearch())}
         >
-            <Fa icon={faMagnifyingGlass} />
-        </button>
+            <Fa icon={faMagnifyingGlass} fw />
+        </ButtonControl>
     </div>
     <!-- Esc is answered for the controls inside, all of which take the keyboard themselves. -->
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -365,10 +366,9 @@
             </button>
 
             <div
-                class="bg-window-background border-border absolute top-full right-0 z-50 mt-0.5 max-h-72 w-full min-w-[min(26rem,calc(100vw-1rem))] overflow-y-auto rounded border shadow {searchResults.length ===
-                0
-                    ? 'hidden'
-                    : ''}"
+                class="bg-window-background border-border absolute top-full right-0 z-50 mt-0.5 max-h-72 w-full min-w-[min(26rem,calc(100vw-1rem))] overflow-y-auto rounded border shadow {showResults
+                    ? ''
+                    : 'hidden'}"
             >
                 {#each searchResults as result}
                     {#if "message" in result}
