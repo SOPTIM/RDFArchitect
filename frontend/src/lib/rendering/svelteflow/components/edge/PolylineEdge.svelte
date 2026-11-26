@@ -16,7 +16,12 @@
   -->
 
 <script>
-    import { getStraightPath, useEdges, useInternalNode } from "@xyflow/svelte";
+    import {
+        getStraightPath,
+        useEdges,
+        useInternalNode,
+        useSvelteFlow,
+    } from "@xyflow/svelte";
 
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import {
@@ -40,6 +45,7 @@
     let { id, source, target, data, selected, children } = $props();
 
     const edges = useEdges();
+    const { updateEdgeData } = useSvelteFlow();
 
     let sourceNode = useInternalNode(() => ({ id: source }));
     let targetNode = useInternalNode(() => ({ id: target }));
@@ -121,18 +127,8 @@
         })[0];
     }
 
-    function patchEdgeData(dataPatch) {
-        edges.update(current =>
-            current.map(edge =>
-                edge.id === id
-                    ? { ...edge, data: { ...edge.data, ...dataPatch } }
-                    : edge,
-            ),
-        );
-    }
-
     function handleEdgePointsChange(nextPoints) {
-        patchEdgeData({ edgePoints: nextPoints });
+        updateEdgeData(id, { edgePoints: nextPoints });
     }
 
     function handleEdgePointsCommit() {
@@ -143,7 +139,7 @@
             isSelfLoop({ source, target }),
         );
         if (dissolved !== current) {
-            patchEdgeData({ edgePoints: dissolved });
+            updateEdgeData(id, { edgePoints: dissolved });
         }
     }
 </script>
