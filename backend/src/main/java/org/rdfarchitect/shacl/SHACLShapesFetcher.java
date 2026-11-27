@@ -107,17 +107,23 @@ public class SHACLShapesFetcher {
      * defined.
      *
      * @param propertyShapeModel the model containing the property shape
-     * @return the order of the property shape, if no order exists return 0
+     * @return the order of the property shape, or 0 if it has none or the order is not a valid
+     *     number
      */
     private double getPropertyShapeOrder(Model propertyShapeModel) {
         var order =
                 propertyShapeModel
                         .listObjectsOfProperty(ResourceFactory.createProperty(SHACL.order.getURI()))
                         .toList();
-        if (order.isEmpty()) {
+        if (order.isEmpty() || !order.get(0).isLiteral()) {
             return 0;
         }
-        return order.get(0).asLiteral().getInt();
+        var literal = order.get(0).asLiteral();
+        if (literal.getDatatype().isValid(literal.getLexicalForm())
+                && literal.getValue() instanceof Number number) {
+            return number.doubleValue();
+        }
+        return 0;
     }
 
     /**

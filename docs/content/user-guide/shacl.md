@@ -26,7 +26,12 @@ When you view SHACL for a graph, both sets are shown and clearly labelled.
 
 In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer the question *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
 
-A similar dialog exists at the class level to inspect the NodeShapes and the PropertyShapes related to the properties of the selected class.
+A similar dialog exists at the class level to inspect the NodeShapes and the PropertyShapes related to the properties of the selected class. Its PropertyShapes are grouped by property and sorted by `sh:order`:
+
+- The groups are sorted by the lowest `sh:order` of their shapes. Groups with the same order are sorted by name.
+- The shapes within a group are sorted by their `sh:order`.
+- Fractional values such as `0.1` are kept. A missing or non-numeric `sh:order` counts as 0.
+- Derived PropertyShapes are sorted the same way within each superclass.
 
 ## Importing custom SHACL
 
