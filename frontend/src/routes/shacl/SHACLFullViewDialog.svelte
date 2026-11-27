@@ -21,6 +21,7 @@
         getGeneratedShaclasString,
         replaceGraphWithGraphString,
     } from "$lib/api/generated/index.ts";
+    import { plainTextBody } from "$lib/api/plainTextBody.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -107,7 +108,7 @@
                     workspaceName: editorState.selectedWorkspace.getValue(),
                     schemaName: editorState.selectedGraph.getValue(),
                 },
-                body: customSHACL ? customSHACL : " ",
+                ...plainTextBody(customSHACL ? customSHACL : " "),
             });
 
             if (!error) {

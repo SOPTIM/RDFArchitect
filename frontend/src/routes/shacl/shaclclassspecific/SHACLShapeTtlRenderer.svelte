@@ -19,6 +19,7 @@
     import { onMount } from "svelte";
 
     import { putShacl } from "$lib/api/generated/index.ts";
+    import { plainTextBody } from "$lib/api/plainTextBody.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -85,7 +86,7 @@
                 schemaName: classSchemaName,
                 classUUID: editorState.selectedClass.getProperty("id"),
             },
-            body: ttlString,
+            ...plainTextBody(ttlString),
         })
             .then(res => {
                 if (!res.error) {

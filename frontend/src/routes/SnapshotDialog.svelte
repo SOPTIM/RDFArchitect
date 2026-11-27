@@ -21,6 +21,7 @@
     import { v4 as uuidv4 } from "uuid";
 
     import { createSnapshot } from "$lib/api/generated/index.ts";
+    import { plainTextBody } from "$lib/api/plainTextBody.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -46,14 +47,9 @@
     }
 
     async function snapshotWorkspace() {
-        // The endpoint takes the workspace name as a raw request body: the
-        // backend reads it verbatim, so the default JSON serializer would send
-        // it quoted and the workspace would not be found.
-        const { data, error } = await createSnapshot({
-            body: workspaceName,
-            bodySerializer: null,
-            headers: { "Content-Type": "text/plain" },
-        });
+        const { data, error } = await createSnapshot(
+            plainTextBody(workspaceName),
+        );
         if (!error) {
             base64Token = data;
             console.log(
