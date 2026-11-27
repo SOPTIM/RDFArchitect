@@ -24,6 +24,7 @@
         replaceAssociationShacl,
         replaceAttributeShacl,
     } from "$lib/api/generated/index.ts";
+    import { plainTextBody } from "$lib/api/plainTextBody.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -190,7 +191,7 @@
                         classUUID: getViewedClassUuid(),
                         attributeUUID: property.uuid.value,
                     },
-                    body: ttlString,
+                    ...plainTextBody(ttlString),
                 });
             } else if (type === "associations") {
                 res = await replaceAssociationShacl({
@@ -200,7 +201,7 @@
                         classUUID: getViewedClassUuid(),
                         associationUUID: property.uuid.value,
                     },
-                    body: ttlString,
+                    ...plainTextBody(ttlString),
                 });
             } else {
                 console.warn(
