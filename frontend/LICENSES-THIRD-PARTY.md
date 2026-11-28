@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 3.2.0
+- **Version:** 3.4.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.72.2
+- **Version:** 8.73.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -92,13 +92,13 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.2.1
+- **Version:** 4.3.0
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.2
+- **Version:** 10.7.0
 - **License:** MIT
 
 ### bits-ui
@@ -197,7 +197,7 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 4.1.1
+- **Version:** 4.2.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
@@ -209,7 +209,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.3
+- **Version:** 5.59.1
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -251,7 +251,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.72.2
+- **Version:** 8.73.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -280,7 +280,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.1.0
+- **Version:** 5.1.1
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
