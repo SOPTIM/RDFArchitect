@@ -32,7 +32,7 @@
         <jacoco.version>0.8.16</jacoco.version>
         <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
         <mycila-license-plugin.version>5.1.2</mycila-license-plugin.version>
-        <spotless-maven-plugin.version>3.11.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.12.0</spotless-maven-plugin.version>
         <google-java-format.version>1.35.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>14.4.0</checkstyle.version>
@@ -383,19 +383,19 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.2.0</version>
     </parent>
     <dependencies>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>apache-jena-libs</artifactId>
             <type>pom</type>
-            <version>6.2.0</version>
+            <version>6.3.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-querybuilder</artifactId>
-            <version>6.2.0</version>
+            <version>6.3.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -431,14 +431,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>4.1.2</version>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>3.2.0</version>
+            <version>3.2.1</version>
         </dependency>
 
         <dependency>
